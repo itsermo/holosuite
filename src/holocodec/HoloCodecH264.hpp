@@ -49,10 +49,10 @@ namespace holo
 			
 			bool isInit_;
 
-			boost::shared_ptr<std::vector<unsigned char>> encodeColorFrame(cv::Mat rgba);
+			boost::shared_ptr<std::vector<unsigned char>> encodeColorFrame(cv::Mat& rgba);
 			boost::shared_ptr<cv::Mat> decodeColorFrame(std::vector<unsigned char>::iterator dataBegin, std::vector<unsigned char>::iterator dataEnd);
 
-			boost::shared_ptr<std::vector<unsigned char>> encodeZFrame(cv::Mat z);
+			boost::shared_ptr<std::vector<unsigned char>> encodeZFrame(cv::Mat& z);
 			boost::shared_ptr<cv::Mat> decodeZFrame(std::vector<unsigned char>::iterator dataBegin, std::vector<unsigned char>::iterator dataEnd);
 
 			SwsContext * swScaleEncodeCtx_;

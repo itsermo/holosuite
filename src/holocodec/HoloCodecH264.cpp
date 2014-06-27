@@ -241,11 +241,10 @@ void HoloCodecH264::deinit()
 
 void HoloCodecH264::encode(boost::shared_ptr<HoloRGBAZMat> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut)
 {
-	//auto colorEncodeFunc = std::bind(&HoloCodecH264::encodeColorFrame, this, rawData->rgba, std::placeholders::_2);
-	auto futureColor = std::async(std::launch::async, &HoloCodecH264::encodeColorFrame, this, rawData->rgba);
 
-	//auto zEncodeFunc = std::bind(&HoloCodecH264::encodeZFrame, this, std::placeholders::_1);
-	auto futureZ = std::async(std::launch::async, &HoloCodecH264::encodeZFrame, this, rawData->z);
+	auto futureColor = std::async(std::launch::async, &HoloCodecH264::encodeColorFrame, this, std::ref(rawData->rgba));
+
+	auto futureZ = std::async(std::launch::async, &HoloCodecH264::encodeZFrame, this, std::ref(rawData->z));
 
 	auto color = (boost::shared_ptr<std::vector<unsigned char>>)futureColor.get();
 	auto z = (boost::shared_ptr<std::vector<unsigned char>>)futureZ.get();
@@ -287,7 +286,7 @@ void HoloCodecH264::decode(boost::shared_ptr<std::vector<unsigned char>> encoded
 		decodeOut = nullptr;
 }
 
-boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv::Mat rgba)
+boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv::Mat& rgba)
 {
 	av_init_packet(&encodePacket_);
 	encodePacket_.data = NULL;
@@ -355,7 +354,7 @@ boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned 
 		return nullptr;
 }
 
-boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeZFrame(cv::Mat z)
+boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeZFrame(cv::Mat& z)
 {
 	auto encodeData = boost::shared_ptr <std::vector<unsigned char>>(new std::vector<unsigned char>());
 	std::vector<int> compression_params;
