@@ -16,7 +16,7 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 	{
 		for (int j = 0; j < rgbaz.z.cols; j++, idx++, pp ++, depthPix++, point++)
 		{
-			if (*depthPix <= 0 || *depthPix > 1000)
+			if (*depthPix <= 0)
 			{
 				point->x = point->y = point->z = HOLO_CLOUD_BAD_POINT;
 				point->r = point->g = point->b = 0;

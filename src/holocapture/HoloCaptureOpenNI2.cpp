@@ -224,7 +224,7 @@ void HoloCaptureOpenNI2::waitAndGetNextPointCloud(HoloCloudPtr& pointCloud)
 		{
 			for (int j = 0; j < zWidth_; j++, idx++, pp+=3, depthPix++, point++)
 			{
-				if (*depthPix <= 0 || *depthPix > 1000)
+				if (*depthPix <= 0)
 				{
 					point->x = point->y = point->z = HOLO_CLOUD_BAD_POINT;
 					point->r = point->g = point->b = 0;
