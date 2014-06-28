@@ -100,16 +100,18 @@ void HoloNetSession::sendLoop()
 		{
 			int dataLength = packet->length;
 
-			std::vector<unsigned char> theData = std::vector<unsigned char>(packet->length + sizeof(int)* 2);
-			*(int*)&theData[0] = htonl(packet->type);
-			*(int*)&theData[4] = htonl(packet->length);
-			std::copy(packet->value.begin(), packet->value.end(), theData.begin() + sizeof(int)* 2);
-			//packet->type = htonl(packet->type);
-			//packet->length = htonl(packet->length);
+			//std::vector<unsigned char> theData = std::vector<unsigned char>(packet->length + sizeof(int)* 2);
+			//*(int*)&theData[0] = htonl(packet->type);
+			//*(int*)&theData[4] = htonl(packet->length);
+			//std::copy(packet->value.begin(), packet->value.end(), theData.begin() + sizeof(int)* 2);
+			packet->type = htonl(packet->type);
+			packet->length = htonl(packet->length);
 
 			//socket_->send(boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), 0, error);
 			//socket_->send(boost::asio::buffer(&packet->length, sizeof(uint32_t)), 0, error);
-			socket_->send(boost::asio::buffer(theData, dataLength + sizeof(int)* 2), 0, error);
+			boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
+			boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
+			//socket_->send(boost::asio::buffer(theData, dataLength + sizeof(int)* 2), 0, error);
 
 			if (error)
 				throw boost::system::system_error(boost::asio::error::interrupted);
