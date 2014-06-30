@@ -21,6 +21,11 @@ namespace holo
 				return std::unique_ptr<IHoloCodec<holo::HoloCloud>>(new HoloCodecPassthroughCloud());
 			}
 
+			static std::unique_ptr<IHoloCodec<holo::HoloCloud>> fromPCLPassthrough(int width, int height)
+			{
+				return std::unique_ptr<IHoloCodec<holo::HoloCloud>>(new HoloCodecPassthroughCloud(width, height));
+			}
+
 			static std::unique_ptr<IHoloCodec<holo::HoloCloud>> fromPCLOctreeCompression()
 			{
 				return std::unique_ptr<IHoloCodec<holo::HoloCloud>>(new HoloCodecOctree());
@@ -36,9 +41,9 @@ namespace holo
 				return std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>>(new HoloCodecH264());
 			}
 
-			static std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>> fromH264(int bitRate, int width, int height, AVRational timeBase, int gopSize, int maxBFrames, AVPixelFormat pixFmt)
+			static std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>> fromH264(HoloCodecH264Args args)
 			{
-				return std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>>(new HoloCodecH264(bitRate, width, height, timeBase, gopSize, maxBFrames, pixFmt));
+				return std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>>(new HoloCodecH264(args));
 			}
 
 		private:

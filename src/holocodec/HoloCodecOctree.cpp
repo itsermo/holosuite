@@ -39,15 +39,14 @@ HoloCodecOctree::~HoloCodecOctree()
 	LOG4CXX_DEBUG(logger_, "HoloCodecOctree object destroyed");
 }
 
-bool HoloCodecOctree::init(CODEC_TYPE codecType)
+bool HoloCodecOctree::init(CODEC_MODE codecMode)
 {
 	deinit();
 
-	codecType_ = codecType;
+	codecMode_ = codecMode;
 
-	switch (codecType_)
+	if (codecMode_ == CODEC_MODE_ENCODER || codecMode_ == CODEC_MODE_BOTH)
 	{
-	case holo::codec::CODEC_TYPE_ENCODER:
 		LOG4CXX_INFO(logger_, "Initializing PCL octree codec...");
 		LOG4CXX_DEBUG(logger_, "Using custom args: \n"
 			<< "Show statistics: " << args_.showStatistics << std::endl
@@ -57,28 +56,26 @@ bool HoloCodecOctree::init(CODEC_TYPE codecType)
 			<< "Framerate: " << args_.frameRate << std::endl
 			<< "Encode color info: " << args_.doEncodeColorInfo << std::endl
 			<< "Color bit resolution: " << args_.colorBitResolution << std::endl);
-		encoder_ = boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>>(new pcl::io::OctreePointCloudCompression<HoloPoint3D>(compressionProfile_)
+		encoder_ = boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>>(new pcl::io::OctreePointCloudCompression<HoloPoint3D>(compressionProfile_,
+			args_.showStatistics,
+			args_.pointResolution,
+			args_.octreeResolution,
+			args_.doVoxelGridDownsampling,
+			args_.frameRate,
+			args_.doEncodeColorInfo,
+			args_.colorBitResolution
+			)
 			);
-		break;
-	case holo::codec::CODEC_TYPE_DECODER:
+	}
+
+	if (codecMode_ == CODEC_MODE_DECODER || codecMode_ == CODEC_MODE_BOTH)
+	{
 		LOG4CXX_INFO(logger_, "Initializing PCL octree decoder only...");
 		decoder_ = boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>>(new pcl::io::OctreePointCloudCompression<HoloPoint3D>());
 		LOG4CXX_INFO(logger_, "PCL octree decoder intialized");
-		break;
-	case holo::codec::CODEC_TYPE_BOTH:
-	{
-		decoder_ = boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>>(new pcl::io::OctreePointCloudCompression<HoloPoint3D>());
-		encoder_ = boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>>(new pcl::io::OctreePointCloudCompression<HoloPoint3D>(compressionProfile_));
-	}
-			break;
-	default:
-		LOG4CXX_ERROR(logger_, "Could not initialize PCL octree compression because codec type was set to invalid value");
-		return false;
-		break;
 	}
 
 	isInit_ = true;
-
 
 	return true;
 }
@@ -102,11 +99,11 @@ void HoloCodecOctree::encode(boost::shared_ptr<HoloCloud> rawData, boost::shared
 	{
 		std::stringstream compressedData;
 
-		auto t_start = std::chrono::high_resolution_clock::now();
+		//auto t_start = std::chrono::high_resolution_clock::now();
 
 		encoder_->encodePointCloud((HoloCloud::ConstPtr)rawData, compressedData);
-		auto t_end = std::chrono::high_resolution_clock::now();
-		std::cout << "Encode took " << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count() << "ms" << std::endl;
+		//auto t_end = std::chrono::high_resolution_clock::now();
+		//std::cout << "Encode took " << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count() << "ms" << std::endl;
 
 		std::string compressedString = compressedData.str();
 		encodeOut = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>(compressedString.begin(), compressedString.end()));

@@ -12,14 +12,14 @@ namespace holo
 		class IHoloCodec 
 		{
 		public:
-			virtual bool init(CODEC_TYPE encodeOrDecode) = 0;
+			virtual bool init(CODEC_MODE encodeOrDecode) = 0;
 			virtual void deinit() = 0;
 			virtual bool isInit() = 0;
 
 			virtual void encode(boost::shared_ptr<T> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut) = 0;
 			virtual void decode(boost::shared_ptr<std::vector<unsigned char>> encodedStream, boost::shared_ptr<T>& decodeOut) = 0;
 
-			virtual CODEC_TYPE getCodecType() = 0;
+			virtual CODEC_MODE getcodecMode() = 0;
 		};
 	}
 }

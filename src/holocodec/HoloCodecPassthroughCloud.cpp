@@ -3,7 +3,12 @@
 using namespace holo;
 using namespace holo::codec;
 
-HoloCodecPassthroughCloud::HoloCodecPassthroughCloud() : isInit_(false)
+HoloCodecPassthroughCloud::HoloCodecPassthroughCloud() : isInit_(false), width_(HOLO_CAPTURE_DEFAULT_Z_WIDTH), height_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT)
+{
+
+}
+
+HoloCodecPassthroughCloud::HoloCodecPassthroughCloud(int width, int height) : isInit_(false), width_(width), height_(height)
 {
 
 }
@@ -14,9 +19,9 @@ HoloCodecPassthroughCloud::~HoloCodecPassthroughCloud()
 
 }
 
-bool HoloCodecPassthroughCloud::init(CODEC_TYPE codecType)
+bool HoloCodecPassthroughCloud::init(CODEC_MODE codecMode)
 {
-	codecType_ = codecType;
+	codecMode_ = codecMode;
 	isInit_ = true;
 
 	return isInit_;
@@ -25,8 +30,7 @@ bool HoloCodecPassthroughCloud::init(CODEC_TYPE codecType)
 
 void HoloCodecPassthroughCloud::deinit()
 {
-
-
+	isInit_ = false;
 }
 
 void HoloCodecPassthroughCloud::encode(boost::shared_ptr<HoloCloud> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut)
@@ -37,7 +41,7 @@ void HoloCodecPassthroughCloud::encode(boost::shared_ptr<HoloCloud> rawData, boo
 
 void HoloCodecPassthroughCloud::decode(boost::shared_ptr<std::vector<unsigned char>> encodedStream, boost::shared_ptr<HoloCloud>& decodeOut)
 {
-	decodeOut = boost::shared_ptr<HoloCloud>(new HoloCloud(640,480));
+	decodeOut = boost::shared_ptr<HoloCloud>(new HoloCloud(width_,height_));
 	decodeOut->is_dense = false;
 	
 	memcpy(decodeOut->points.data(), encodedStream->data(), 28 * decodeOut->size());

@@ -1,4 +1,5 @@
 #include "HoloCaptureOpenNI2.hpp"
+#include "../holoutils/HoloUtils.hpp"
 #include <future>
 
 using namespace holo;
@@ -58,7 +59,7 @@ HoloCaptureOpenNI2::~HoloCaptureOpenNI2()
 
 bool HoloCaptureOpenNI2::init(int which)
 {
-	LOG4CXX_INFO(logger_, "Initializing OpenNI2 capture device")
+	LOG4CXX_INFO(logger_, "Initializing OpenNI2 capture device...")
 		LOG4CXX_DEBUG(logger_, "Using capture mode: \n"
 		<< "Camera index: " << which << std::endl
 		<< "RGB Width: " << rgbWidth_ << std::endl
@@ -66,7 +67,7 @@ bool HoloCaptureOpenNI2::init(int which)
 		<< "RGB Framerate: " << rgbFPS_ << std::endl
 		<< "Z Width: " << zWidth_ << std::endl
 		<< "Z Height: " << zHeight_ << std::endl
-		<< "Z FPS: " << zFPS_ << std::endl);
+		<< "Z FPS: " << zFPS_);
 
 	Status rc = Status::STATUS_OK;
 
@@ -75,33 +76,51 @@ bool HoloCaptureOpenNI2::init(int which)
 	openni::Array<openni::DeviceInfo> deviceArray;
 	OpenNI::enumerateDevices(&deviceArray);
 
-	if ((deviceArray.getSize() < which || which < 0) && filePath_.empty())
+	if (deviceArray.getSize() == 0 && filePath_.empty())
 	{
-		logger_->error("Depth camera device selection index was out of bounds");
+		LOG4CXX_ERROR(logger_, "Did not find any OpenNI2 devices");
+		return false;
+	}
+	else if ((deviceArray.getSize() < which || which < 0) && filePath_.empty())
+	{
+		LOG4CXX_ERROR(logger_, "Depth camera device selection index was out of bounds");
 		return false;
 	}
 
+	LOG4CXX_INFO(logger_, "Opening device " << deviceArray[which].getVendor() << " " << deviceArray[which].getName() << " @ " << deviceArray[which].getUri());
 	rc = filePath_.empty() ? device_.open(deviceArray[which].getUri()) : device_.open(filePath_.c_str());
 	if (rc != Status::STATUS_OK)
 	{
-		logger_->error("Could not open device");
+		LOG4CXX_ERROR(logger_, "Could not open device");
 		return false;
 	}
 
 	if (device_.isFile())
 	{
 		rc = device_.setProperty<int>(openni::DEVICE_PROPERTY_PLAYBACK_REPEAT_ENABLED, 1);
-		LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not set repeat mode enabled for .oni file playback");
+		if (rc != Status::STATUS_OK)
+		{
+			LOG4CXX_WARN(logger_, "Could not set repeat mode enabled for .oni file playback");
+		}
 	}
 
 	rc = device_.setDepthColorSyncEnabled(true);
-	LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not framelock depth and color streams");
+	if (rc != Status::STATUS_OK)
+		LOG4CXX_WARN(logger_, "Could not framelock depth and color streams");
 
 	rc = depthStream_.create(device_, openni::SENSOR_DEPTH);
-	LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not create depth stream");
+	if (rc != Status::STATUS_OK)
+	{
+		LOG4CXX_ERROR(logger_, "Could not create depth stream");
+		return false;
+	}
 
 	rc = colorStream_.create(device_, openni::SENSOR_COLOR);
-	LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not create color stream");
+	if (rc != Status::STATUS_OK)
+	{
+		LOG4CXX_ERROR(logger_, "Could not create color stream");
+		return false;
+	}
 
 	VideoMode colorstreamMode;
 	colorstreamMode.setPixelFormat(PixelFormat::PIXEL_FORMAT_RGB888);
@@ -116,26 +135,37 @@ bool HoloCaptureOpenNI2::init(int which)
 	if (!device_.isFile())
 	{
 		rc = colorStream_.setVideoMode(colorstreamMode);
-		LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not set color stream mode");
+		if (rc != Status::STATUS_OK)
+		{
+			LOG4CXX_ERROR(logger_, "Could not set color stream mode");
+			return false;
+		}
 
 		rc = depthStream_.setVideoMode(depthstreamMode);
-		LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not set depth stream mode");
+		if (rc != Status::STATUS_OK)
+		{
+			LOG4CXX_ERROR(logger_, "Could not set depth stream mode");
+			return false;
+		}
 	}
 
 	if (colorStream_.start() != Status::STATUS_OK)
 	{
-		logger_->error("Could not start either color stream");
+		LOG4CXX_ERROR(logger_, "Could not start either color stream");
 		return false;
 	}
 
 	if (depthStream_.start() != Status::STATUS_OK)
 	{
-		logger_->error("Could not start either depth stream");
+		LOG4CXX_ERROR(logger_, "Could not start either depth stream");
 		return false;
 	}
 
 	rc = device_.setImageRegistrationMode(openni::ImageRegistrationMode::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
-	LOG4CXX_ASSERT(logger_, rc == Status::STATUS_OK, "Could not register the depth map to color map");
+	if (rc != Status::STATUS_OK)
+	{
+		LOG4CXX_WARN(logger_, "Could not register the depth map to color map");
+	}
 
 	colorstreamMode = colorStream_.getVideoMode();
 	depthstreamMode = depthStream_.getVideoMode();
@@ -153,13 +183,13 @@ bool HoloCaptureOpenNI2::init(int which)
 
 	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &hov_) != Status::STATUS_OK)
 	{
-		logger_->error("Could not get horizontal field-of-view from depth stream");
+		LOG4CXX_ERROR(logger_, "Could not get horizontal field-of-view from depth stream");
 		return false;
 	}
 
 	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &vov_) != Status::STATUS_OK)
 	{
-		logger_->error("Could not get vertical field-of-view from depth stream");
+		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
 		return false;
 	}
 
@@ -176,6 +206,8 @@ bool HoloCaptureOpenNI2::init(int which)
 
 	isOpen_ = true;
 
+	LOG4CXX_INFO(logger_, "OpenNI2 capture device intitalized")
+
 	return isOpen_;
 }
 
@@ -191,12 +223,16 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		depthStream_.readFrame(&depth);
 
 		rgbImage_ = cv::Mat(cv::Size(rgbWidth_, rgbHeight_), CV_8UC3, (void*)color.getData(), color.getStrideInBytes() );
-		cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
+		
+		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
+		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
 		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
 
-		rgbaImage = rgbaImage_;
 		zImage = depthImage_;
+
+		futureRGBA.get();
+		rgbaImage = rgbaImage_;
 	}
 	
 }
@@ -275,7 +311,7 @@ void HoloCaptureOpenNI2::deinit()
 
 std::list<std::string> HoloCaptureOpenNI2::enumerateDevices()
 {
-	LOG4CXX_INFO(logger_, "Enumerating OpenNI2 devices...")
+	LOG4CXX_DEBUG(logger_, "Enumerating OpenNI2 devices...")
 	std::list<std::string> deviceList;
 	bool wasOpenNI2AlreadyInit = isOpenNI2Init_ ? true : false;
 
@@ -288,10 +324,10 @@ std::list<std::string> HoloCaptureOpenNI2::enumerateDevices()
 	for (int i = 0; i < deviceArray.getSize(); i++)
 	{
 		deviceList.push_back(std::string(deviceArray[i].getName()));
-		LOG4CXX_DEBUG(logger_, "Found device " << deviceArray[0].getName() << " with URI " << deviceArray[0].getUri());
+		LOG4CXX_DEBUG(logger_, "Found device " << deviceArray[0].getName() << " @ " << deviceArray[0].getUri());
 	}
 
-	LOG4CXX_INFO(logger_, "Done enumerating OpenNI devices")
+	LOG4CXX_DEBUG(logger_, "Done enumerating OpenNI devices")
 
 	if (!wasOpenNI2AlreadyInit)
 		deinitOpenNI2();
@@ -314,7 +350,7 @@ bool HoloCaptureOpenNI2::initOpenNI2()
 		else
 		{
 			isOpenNI2Init_ = true;
-			LOG4CXX_INFO(logger_, "Initialized OpenNI2 library")
+			LOG4CXX_DEBUG(logger_, "Initialized OpenNI2 library")
 		}
 	}
 
@@ -326,6 +362,6 @@ void HoloCaptureOpenNI2::deinitOpenNI2()
 	LOG4CXX_DEBUG(logger_,"Calling OpenNI2::shutdown...");
 	openni::OpenNI::shutdown();
 	isOpenNI2Init_ = false;
-	LOG4CXX_INFO(logger_, "Deinitialized OpenNI2 library");
+	LOG4CXX_DEBUG(logger_, "Deinitialized OpenNI2 library");
 
 }

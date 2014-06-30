@@ -35,19 +35,19 @@ namespace holo
 			HoloCodecOctree(HoloCodecOctreeEncodeArgs args);
 			~HoloCodecOctree();
 
-			virtual bool init(CODEC_TYPE codecType_);
+			virtual bool init(CODEC_MODE codecMode_);
 			virtual void deinit();
 
 			virtual void encode(boost::shared_ptr<HoloCloud> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut);
 			virtual void decode(boost::shared_ptr<std::vector<unsigned char>> encodedStream, boost::shared_ptr<HoloCloud>& decodeOut);
 
-			virtual CODEC_TYPE getCodecType() { return codecType_; }
+			virtual CODEC_MODE getcodecMode() { return codecMode_; }
 
 			virtual bool isInit() { return isInit_; }
 
 		private:
 			bool isInit_;
-			CODEC_TYPE codecType_;
+			CODEC_MODE codecMode_;
 			pcl::io::compression_Profiles_e compressionProfile_;
 			boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>> encoder_;
 			boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>> decoder_;

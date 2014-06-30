@@ -15,12 +15,7 @@ using namespace holo::codec;
 
 HoloCodecH264::HoloCodecH264() :
 	isInit_(false),
-	bitRate_(HOLO_CODEC_H264_DEFAULT_BITRATE),
-	width_(HOLO_CODEC_H264_DEFAULT_WIDTH),
-	height_(HOLO_CODEC_H264_DEFAULT_HEIGHT),
-	gopSize_(HOLO_CODEC_H264_DEFAULT_GOPSIZE),
-	maxBFrames_(HOLO_CODEC_H264_DEFAULT_MAXBFRAMES),
-	pixelFormat_(HOLO_CODEC_H264_DEFAULT_PIXELFMT),
+	args_(),
 	encoder_(NULL),
 	decoder_(NULL),
 	encoderCtx_(NULL),
@@ -29,28 +24,25 @@ HoloCodecH264::HoloCodecH264() :
 	decodeOutFrame_(NULL),
 	swScaleEncodeCtx_(NULL),
 	swScaleDecodeCtx_(NULL),
+	encodePacket_(),
+	decodePacket_(),
 	encodeBufferSize_(0)
 {
+	args_.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
+	args_.width = HOLO_CODEC_H264_DEFAULT_WIDTH;
+	args_.height = HOLO_CODEC_H264_DEFAULT_HEIGHT;
+	args_.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
+	args_.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
+	args_.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN };
+	args_.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
+	args_.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
 
-	AVRational rat;
-	rat.den = HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN;
-	rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
-
-	timeBase_ = rat;
-
-	logger_->debug("HoloCodecH264 object instantiated with default values");
-
+	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object instantiated with default values");
 }
 
-HoloCodecH264::HoloCodecH264(int bitRate, int width, int height, AVRational timeBase, int gopSize, int maxBFrames, AVPixelFormat pixFmt) :
+HoloCodecH264::HoloCodecH264(HoloCodecH264Args args) :
 	isInit_(false),
-	bitRate_(bitRate),
-	width_(width),
-	height_(height),
-	timeBase_(timeBase),
-	gopSize_(gopSize),
-	maxBFrames_(maxBFrames),
-	pixelFormat_(pixFmt),
+	args_(args),
 	encoder_(NULL),
 	decoder_(NULL),
 	encoderCtx_(NULL),
@@ -59,129 +51,133 @@ HoloCodecH264::HoloCodecH264(int bitRate, int width, int height, AVRational time
 	decodeOutFrame_(NULL),
 	swScaleEncodeCtx_(NULL),
 	swScaleDecodeCtx_(NULL),
+	encodePacket_(),
+	decodePacket_(),
 	encodeBufferSize_(0)
 {
-	logger_->debug("HoloCodecH264 object instantiated with custom values");
+	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object instantiated with custom values");
 }
 
 HoloCodecH264::~HoloCodecH264()
 {
-	logger_->debug("Destroying HoloCodecH264 object");
+	LOG4CXX_DEBUG(logger_, "Destroying HoloCodecH264 object");
 	deinit();
-	logger_->debug("HoloCodecH264 object destroyed");
+	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object destroyed");
 }
 
-bool HoloCodecH264::init(CODEC_TYPE encodeOrDecode)
+bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 {
 	deinit();
 
 	bool encoderIsInit = false;
 	bool decoderIsInit = false;
 
-	codecType_ = encodeOrDecode;
+	codecMode_ = encodeOrDecode;
 
 	avcodec_register_all();
 
-	if (codecType_ == CODEC_TYPE_BOTH || codecType_ == CODEC_TYPE_ENCODER)
+	if (codecMode_ == CODEC_MODE_BOTH || codecMode_ == CODEC_MODE_ENCODER)
 	{
-		logger_->debug("Initializing FFMPEG H264 encoder...");
+		LOG4CXX_DEBUG(logger_, "Initializing FFMPEG H264 encoder...");
 
 		encoder_ = avcodec_find_encoder(AV_CODEC_ID_H264);
 		if (!encoder_)
 		{
-			logger_->error("Could not find FFMPEG encoder with ID AV_CODEC_ID_H264");
+			LOG4CXX_ERROR(logger_, "Could not find FFMPEG encoder with ID AV_CODEC_ID_H264");
 			return false;
 		}
 
 		encoderCtx_ = avcodec_alloc_context3(encoder_);
 		if (!encoderCtx_)
 		{
-			logger_->error("Could not create encoder context");
+			LOG4CXX_ERROR(logger_, "Could not create encoder context");
 			return false;
 		}
 
-		logger_->debug("Setting H264 encoder settings...");
-		encoderCtx_->bit_rate = bitRate_;
-		encoderCtx_->width = width_;
-		encoderCtx_->height = height_;
-		encoderCtx_->time_base = timeBase_;
-		encoderCtx_->gop_size = gopSize_;
-		encoderCtx_->max_b_frames = maxBFrames_;
-		encoderCtx_->pix_fmt = pixelFormat_;
+		LOG4CXX_DEBUG(logger_, "Setting H264 encoder settings...");
+		encoderCtx_->bit_rate = args_.bitRate;
+		encoderCtx_->width = args_.width;
+		encoderCtx_->height = args_.height;
+		encoderCtx_->time_base = args_.timeBase;
+		encoderCtx_->gop_size = args_.gopSize;
+		encoderCtx_->max_b_frames = args_.maxBFrames;
+		encoderCtx_->pix_fmt = args_.pixelFormat;
+		//encoderCtx_->thread_count = 2;
+		encoderCtx_->delay = 0;
 
 		av_opt_set(encoderCtx_->priv_data, "preset", "ultrafast", 0);
 		av_opt_set(encoderCtx_->priv_data, "tune", "zerolatency", 0);
 		av_opt_set(encoderCtx_->priv_data, "qp", "4", 0);
-
+		
 		if (avcodec_open2(encoderCtx_, encoder_, NULL) < 0)
 		{
-			logger_->error("Could not open H264 encoder from context");
+			LOG4CXX_ERROR(logger_, "Could not open H264 encoder from context");
 			return false;
 		}
 
 		encodeInFrame_ = avcodec_alloc_frame();
-		encodeInFrame_->format = pixelFormat_;
+		encodeInFrame_->format = args_.pixelFormat;
 		encodeInFrame_->width = encoderCtx_->width;
 		encodeInFrame_->height = encoderCtx_->height;
 
 		encodeBufferSize_ = av_image_alloc(encodeInFrame_->data, encodeInFrame_->linesize, encoderCtx_->width, encoderCtx_->height, encoderCtx_->pix_fmt, 32);
 		if (encodeBufferSize_ <= 0)
 		{
-			logger_->error("Could not allocate encode frame data buffer");
+			LOG4CXX_ERROR(logger_, "Could not allocate encode frame data buffer");
 			return false;
 		}
 
-		swScaleEncodeCtx_ = sws_getContext(width_, height_, AV_PIX_FMT_RGBA, width_, height_, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+		swScaleEncodeCtx_ = sws_getContext(args_.width, args_.height, AV_PIX_FMT_RGBA, args_.width, args_.height, AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 		if (!swScaleEncodeCtx_)
 		{
-			logger_->error("Could not create swscale context for encoder image color conversion");
+			LOG4CXX_ERROR(logger_, "Could not create swscale context for encoder image color conversion");
 			return false;
 		}
 		
-		logger_->info("Initialized FFMPEG H264 encoder");
+		LOG4CXX_INFO(logger_, "Initialized FFMPEG H264 encoder");
 
 		encoderIsInit = true;
 	}
 
-	if (codecType_ == CODEC_TYPE_BOTH || codecType_ == CODEC_TYPE_DECODER)
+	if (codecMode_ == CODEC_MODE_BOTH || codecMode_ == CODEC_MODE_DECODER)
 	{
-		logger_->debug("Initializing FFMPEG H264 decoder...");
+		LOG4CXX_INFO(logger_, "Initializing FFMPEG H264 decoder...");
 
 		decoder_ = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!decoder_)
 		{
-			logger_->error("Could not find FFMPEG decoder with ID AV_CODEC_ID_H264");
+			LOG4CXX_ERROR(logger_, "Could not find FFMPEG decoder with ID AV_CODEC_ID_H264");
 			return false;
 		}
 
 		decoderCtx_ = avcodec_alloc_context3(decoder_);
 		if (!decoderCtx_)
 		{
-			logger_->error("Could not create H264 decoder context");
+			LOG4CXX_ERROR(logger_, "Could not create H264 decoder context");
 			return false;
 		}
 
 		if (avcodec_open2(decoderCtx_, decoder_, NULL) < 0)
 		{
-			logger_->error("Could not open H264 decoder");
+			LOG4CXX_ERROR(logger_, "Could not open H264 decoder");
 			return false;
 		}
 
 		decodeOutFrame_ = avcodec_alloc_frame();
 
-		swScaleDecodeCtx_ = sws_getContext(width_, height_, AV_PIX_FMT_YUV420P, width_, height_, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+		swScaleDecodeCtx_ = sws_getContext(args_.width, args_.height, AV_PIX_FMT_YUV420P, args_.width, args_.height, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 		if (!swScaleDecodeCtx_)
 		{
-			logger_->error("Could not swscale context for decoder image color conversion");
+			LOG4CXX_ERROR(logger_, "Could not swscale context for decoder image color conversion");
 			return false;
 		}
 
-		logger_->info("Initialized FFMPEG H264 decoder");
+		LOG4CXX_INFO(logger_, "Initialized FFMPEG H264 decoder");
 
 		decoderIsInit = true;
 	}
 
-	isInit_ = codecType_ == CODEC_TYPE_BOTH ? decoderIsInit && encoderIsInit : codecType_ == CODEC_TYPE_DECODER ? decoderIsInit : encoderIsInit;
+	isInit_ = codecMode_ == CODEC_MODE_BOTH ? decoderIsInit && encoderIsInit : codecMode_ == CODEC_MODE_DECODER ? decoderIsInit : encoderIsInit;
 
 	return isInit();
 }
@@ -190,50 +186,72 @@ void HoloCodecH264::deinit()
 {
 	if (isInit_)
 	{
-
-		logger_->debug("Deinitializing H264 codec...");
-
-		if (codecType_ == CODEC_TYPE_BOTH || codecType_ == CODEC_TYPE_ENCODER)
+		if (codecMode_ == CODEC_MODE_BOTH || codecMode_ == CODEC_MODE_ENCODER)
 		{
+			LOG4CXX_DEBUG(logger_, "Deinitializing H264 encoder...");
+
+			if (swScaleEncodeCtx_)
+			{
+				LOG4CXX_DEBUG(logger_, "Freeing encoder swscale context");
+				av_freep(&swScaleEncodeCtx_);
+			}
+
 			if (encodeInFrame_)
 			{
-				logger_->debug("Freeing encoder frame data");
+				LOG4CXX_DEBUG(logger_, "Freeing encoder frame data");
 				if (encodeInFrame_->data[0])
 					av_freep(&encodeInFrame_->data[0]);
 
-				logger_->debug("Freeing encoder frame object");
+				LOG4CXX_DEBUG(logger_, "Freeing encoder frame object");
 				avcodec_free_frame(&encodeInFrame_);
 			}
 
 			if (encoderCtx_)
 			{
-				logger_->debug("Closing encoder");
+				LOG4CXX_DEBUG(logger_, "Closing encoder");
 				avcodec_close(encoderCtx_);
-				logger_->debug("Freeing encoder context");
-				av_freep(encoderCtx_);
-				logger_->debug("Freeing encoder object");
-				av_freep(encoder_);
+				LOG4CXX_DEBUG(logger_, "Freeing encoder context");
+				av_freep(&encoderCtx_);
+				LOG4CXX_DEBUG(logger_, "Freeing encoder object");
+				av_freep(&encoder_);
 			}
+
+			LOG4CXX_DEBUG(logger_, "H264 encoder deinitialized");
+
 		}
 
-		if (codecType_ == CODEC_TYPE_BOTH || codecType_ == CODEC_TYPE_ENCODER)
+		if (codecMode_ == CODEC_MODE_BOTH || codecMode_ == CODEC_MODE_DECODER)
 		{
+
+			LOG4CXX_DEBUG(logger_, "Deinitializing H264 decoder...");
+
+			if (swScaleDecodeCtx_)
+			{
+				LOG4CXX_DEBUG(logger_, "Freeing decoder swscale context");
+				av_freep(&swScaleDecodeCtx_);
+			}
+
 			if (decodeOutFrame_)
 			{
-				logger_->debug("Freeing decoder frame object");
+				LOG4CXX_DEBUG(logger_, "Freeing decoder frame object");
 				avcodec_free_frame(&decodeOutFrame_);
 			}
 
 			if (decoderCtx_)
 			{
-				logger_->debug("Closing decoder");
+				LOG4CXX_DEBUG(logger_, "Closing decoder");
 				avcodec_close(decoderCtx_);
-				logger_->debug("Freeing encoder context");
-				av_freep(decoderCtx_);
-				logger_->debug("Freeing encoder object");
-				av_freep(decoder_);
+				LOG4CXX_DEBUG(logger_, "Freeing encoder context");
+				av_freep(&decoderCtx_);
+				LOG4CXX_DEBUG(logger_, "Freeing encoder object");
+				av_freep(&decoder_);
 			}
+
+			LOG4CXX_DEBUG(logger_, "H264 decoder deinitialized");
 		}
+
+		
+
 	}
 	
 	isInit_ = false;
@@ -241,7 +259,6 @@ void HoloCodecH264::deinit()
 
 void HoloCodecH264::encode(boost::shared_ptr<HoloRGBAZMat> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut)
 {
-
 	auto futureColor = std::async(std::launch::async, &HoloCodecH264::encodeColorFrame, this, std::ref(rawData->rgba));
 
 	auto futureZ = std::async(std::launch::async, &HoloCodecH264::encodeZFrame, this, std::ref(rawData->z));
@@ -291,7 +308,7 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv
 	av_init_packet(&encodePacket_);
 	encodePacket_.data = NULL;
 	encodePacket_.size = 0;
-	int gotOutput;
+	int gotOutput = 0;
 
 	uint8_t * rgbaBuf[4];
 	rgbaBuf[0] = rgba.data;
@@ -299,7 +316,7 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv
 	rgbaBuf[2] = NULL;
 	rgbaBuf[3] = NULL;
 
-	int stride[4] = { width_ << 2, 0, 0, 0 };
+	int stride[4] = { args_.width << 2, 0, 0, 0 };
 
 	sws_scale(swScaleEncodeCtx_, rgbaBuf, stride, 0, rgba.rows, encodeInFrame_->data, encodeInFrame_->linesize);
 
@@ -326,13 +343,15 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv
 boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned char>::iterator dataBegin, std::vector<unsigned char>::iterator dataEnd)
 {
 	auto encodedRGBA = std::vector<unsigned char>(dataBegin, dataEnd);
-	auto rgba = boost::shared_ptr<cv::Mat>(new cv::Mat(height_, width_, CV_8UC4));
+	auto rgba = boost::shared_ptr<cv::Mat>(new cv::Mat(args_.height, args_.width, CV_8UC4));
 	int gotPicture = 0;
 	av_new_packet(&decodePacket_, encodedRGBA.size());
 
 	memcpy(decodePacket_.data, encodedRGBA.data(), decodePacket_.size);
 
 	int len = avcodec_decode_video2(decoderCtx_, decodeOutFrame_, &gotPicture, &decodePacket_);
+
+	av_free_packet(&decodePacket_);
 
 	if (gotPicture > 0)
 	{
@@ -344,7 +363,7 @@ boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned 
 		rgbaBuf[2] = NULL;
 		rgbaBuf[3] = NULL;
 
-		int stride[4] = { width_ << 2, 0, 0, 0 };
+		int stride[4] = { args_.width << 2, 0, 0, 0 };
 
 		sws_scale(swScaleDecodeCtx_, decodeOutFrame_->data, decodeOutFrame_->linesize, 0, rgba->rows, rgbaBuf, stride);
 
@@ -359,7 +378,7 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeZFrame(cv::Ma
 	auto encodeData = boost::shared_ptr <std::vector<unsigned char>>(new std::vector<unsigned char>());
 	std::vector<int> compression_params;
 	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-	compression_params.push_back(9);
+	compression_params.push_back(args_.zCompressionLevel);
 
 	if (cv::imencode(".png", z, *encodeData, compression_params))
 		return encodeData;

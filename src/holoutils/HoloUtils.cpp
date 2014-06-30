@@ -34,3 +34,8 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 		}
 	}
 }
+
+void holo::utils::ConvertRGBToRGBA(cv::Mat& rgbMat, cv::Mat& rgbaMatOut)
+{
+	cv::cvtColor(rgbMat, rgbaMatOut, CV_BGR2RGBA, 4);
+}
