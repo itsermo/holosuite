@@ -227,7 +227,13 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
 		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
-		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+		//memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+
+		short * dsrc = (short*)depth.getData();
+		short * ddst = (short*)depthImage_.datastart;
+
+		for (size_t i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddst++)
+			*ddst = *dsrc > 1000 ? 0 : *dsrc;
 
 		zImage = depthImage_;
 
@@ -260,7 +266,7 @@ void HoloCaptureOpenNI2::waitAndGetNextPointCloud(HoloCloudPtr& pointCloud)
 		{
 			for (int j = 0; j < zWidth_; j++, idx++, pp+=3, depthPix++, point++)
 			{
-				if (*depthPix <= 0)
+				if (*depthPix <= 0 || *depthPix > 1000)
 				{
 					point->x = point->y = point->z = HOLO_CLOUD_BAD_POINT;
 					point->r = point->g = point->b = 0;
