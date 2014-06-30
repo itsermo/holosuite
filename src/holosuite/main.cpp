@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 		boost::program_options::value<std::string>()->default_value("visualizer"),
 		"valid setting is [visualizer]")
 		("visualizer-settings",
-		boost::program_options::value<std::vector<std::string>>()->composing(),
+		boost::program_options::value<std::string>()->composing(),
 		"PCL visualizer settings [voxel size]")
 		;
 
@@ -405,7 +405,31 @@ int main(int argc, char *argv[])
 	{
 		if (vm["render-output"].as<std::string>().compare("visualizer") == 0)
 		{
-			renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer();
+			int voxelSize = HOLO_RENDER_DEFAULT_VOXEL_SIZE;
+
+			if (vm.count("visualizer-settings"))
+			{
+				auto visSettingsString = vm["visualizer-settings"].as<std::string>();
+				std::vector<std::string> visSettings;
+				boost::char_separator<char> sep(", ");
+				boost::tokenizer<boost::char_separator<char>> tokens(visSettingsString, sep);
+				for (const auto& t : tokens) {
+					visSettings.push_back(t);
+				}
+
+				if (visSettings.size() == 1)
+				{
+					voxelSize = atoi(visSettings[0].c_str());
+				}
+				else
+				{
+					std::cout << "The visualizer settings entered are invalid. Please check the number of arguments and separate values by a comma." << std::endl << std::endl;
+					std::cout << render_options << std::endl;
+					return -1;
+				}
+			}
+
+			renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, captureInfo.zWidth, captureInfo.zHeight);
 		}
 		else
 		{
