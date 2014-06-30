@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
 			captureInfo.rgbaWidth = captureInfo.zWidth = vm["capture-width"].as<int>();
 
 		if (vm.count("capture-height"))
-			captureInfo.rgbaHeight = captureInfo.rgbaHeight = vm["capture-height"].as<int>();
+			captureInfo.rgbaHeight = captureInfo.zHeight = vm["capture-height"].as<int>();
 
 		if (vm.count("capture-fps"))
 			captureInfo.rgbFPS = captureInfo.zFPS = vm["capture-fps"].as<float>();
