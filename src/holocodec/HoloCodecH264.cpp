@@ -95,7 +95,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		}
 
 		LOG4CXX_DEBUG(logger_, "Setting H264 encoder settings...");
-		encoderCtx_->bit_rate = args_.bitRate;
+		//encoderCtx_->bit_rate = args_.bitRate;
 		encoderCtx_->width = args_.width;
 		encoderCtx_->height = args_.height;
 		encoderCtx_->time_base = args_.timeBase;
@@ -107,7 +107,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 
 		av_opt_set(encoderCtx_->priv_data, "preset", "ultrafast", 0);
 		av_opt_set(encoderCtx_->priv_data, "tune", "zerolatency", 0);
-		av_opt_set(encoderCtx_->priv_data, "qp", "4", 0);
+		av_opt_set(encoderCtx_->priv_data, "crf", "23", 0);
 		
 		if (avcodec_open2(encoderCtx_, encoder_, NULL) < 0)
 		{
