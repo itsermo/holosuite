@@ -59,6 +59,15 @@ bool HoloSession::start()
 {
 	LOG4CXX_INFO(logger_, "Starting session threads...");
 
+	haveLocalCloud_ = false;
+	haveLocalRGBAZ_ = false;
+	haveRemoteCloud_ = false;
+	haveRemoteCloudCompressed_ = false;
+	haveRemoteAudio_ = false;
+	haveRemoteAudioCompressed_ = false;
+	haveRemoteRGBAZ_ = false;
+	haveRemoteRGBAZCompressed_ = false;
+
 	//allocate and setup remote cloud
 	remoteCloud_ = HoloCloudPtr(new HoloCloud(remoteInfo_.rgbazWidth, remoteInfo_.rgbazHeight));
 	remoteCloud_->is_dense = false;
@@ -81,6 +90,8 @@ bool HoloSession::start()
 	shouldEncode_ = shouldCapture_.load();
 	shouldDecode_ = shouldRender_.load();
 
+	shouldRecv_ = netSession_ ? true : false;
+
 	if (shouldCapture_)
 		captureThread_ = std::thread(&HoloSession::captureLoop, this);
 
@@ -93,7 +104,8 @@ bool HoloSession::start()
 	if (shouldRender_)
 		renderThread_ = std::thread(&HoloSession::renderLoop, this);
 
-	netRecvThread_ = std::thread(&HoloSession::netRecvLoop, this);
+	if (shouldRecv_)
+		netRecvThread_ = std::thread(&HoloSession::netRecvLoop, this);
 
 	isRunning_ = true;
 
@@ -102,6 +114,30 @@ bool HoloSession::start()
 
 void HoloSession::stop()
 {
+	if (shouldRecv_)
+	{
+		shouldRecv_ = false;
+		netRecvThread_.join();
+	}
+
+	if (shouldRender_)
+	{
+		shouldRender_ = false;
+		renderThread_.join();
+	}
+
+	if (shouldDecode_)
+	{
+		shouldDecode_ = false;
+		decodeThread_.join();
+	}
+
+	if (shouldEncode_)
+	{
+		shouldEncode_ = false;
+		encodeThread_.join();
+	}
+
 	isRunning_ = false;
 }
 
@@ -122,11 +158,20 @@ HoloSession::~HoloSession()
 
 void HoloSession::netRecvLoop()
 {
-	for (;;)
+	boost::shared_ptr<HoloNetPacket> recvPacket;
+
+	while (shouldRecv_)
 	{
 
-		boost::shared_ptr<HoloNetPacket> recvPacket;
-		netSession_->recvPacket(recvPacket);
+		try{
+			netSession_->recvPacket(recvPacket);
+		}
+		catch (boost::system::system_error error)
+		{
+			shouldRecv_ = false;
+			this->stop();
+			break;
+		}
 
 		switch (recvPacket->type)
 		{
@@ -141,7 +186,8 @@ void HoloSession::netRecvLoop()
 			std::unique_lock<std::mutex> rccLock(remoteCloudCompressedMutex_);
 			remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
 			rccLock.unlock();
-			haveRemoteCloudCompressed_.notify_all();
+			haveRemoteCloudCompressed_ = true;
+			haveRemoteCloudCompressedCV_.notify_all();
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED:
@@ -149,7 +195,8 @@ void HoloSession::netRecvLoop()
 			std::unique_lock<std::mutex> racLock(remoteAudioCompressedMutex_);
 			*remoteAudioCompressed_ = recvPacket->value;
 			racLock.unlock();
-			haveRemoteAudioCompressed_.notify_all();
+			haveRemoteAudioCompressed_ = true;
+			haveRemoteAudioCompressedCV_.notify_all();
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED:
@@ -157,7 +204,8 @@ void HoloSession::netRecvLoop()
 			std::unique_lock<std::mutex> rgbazLock(remoteRGBAZCompressedMutex_);
 			remoteRGBAZCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
 			rgbazLock.unlock();
-			haveRemoteRGBAZCompressed_.notify_all();
+			haveRemoteRGBAZCompressed_ = true;
+			haveRemoteRGBAZCompressedCV_.notify_all();
 		}
 		case HOLO_NET_PACKET_TYPE_UNKNOWN:
 		default:
@@ -171,8 +219,8 @@ void HoloSession::captureLoop()
 	if (rgbazCodec_)
 	{
 		localRGBAZ_ = boost::shared_ptr<HoloRGBAZMat>(new HoloRGBAZMat);
-		localRGBAZ_->rgba = cv::Mat(480, 640, CV_8UC4);
-		localRGBAZ_->z = cv::Mat(480, 640, CV_16UC1);
+		localRGBAZ_->rgba = cv::Mat(remoteInfo_.rgbazHeight, remoteInfo_.rgbazWidth, CV_8UC4);
+		localRGBAZ_->z = cv::Mat(remoteInfo_.rgbazHeight, remoteInfo_.rgbazWidth, CV_16UC1);
 	}
 
 	while (shouldCapture_)
@@ -183,7 +231,8 @@ void HoloSession::captureLoop()
 			std::unique_lock<std::mutex> ulLocalPixMaps(localRGBAZMutex_);
 			capture_->waitAndGetNextFrame(localRGBAZ_->rgba, localRGBAZ_->z);
 			ulLocalPixMaps.unlock();
-			haveLocalRGBAZ_.notify_all();
+			haveLocalRGBAZ_ = true;
+			haveLocalRGBAZCV_.notify_all();
 		}
 		else
 		{
@@ -192,7 +241,8 @@ void HoloSession::captureLoop()
 			std::unique_lock<std::mutex> ulLocalCloud(localCloudMutex_);
 			localCloud_ = localCloud;
 			ulLocalCloud.unlock();
-			haveLocalCloud_.notify_all();
+			haveLocalCloud_ = true;
+			haveLocalCloudCV_.notify_all();
 		}
 
 	}
@@ -205,7 +255,8 @@ void HoloSession::decodeLoop()
 		if (rgbazCodec_)
 		{
 			std::unique_lock<std::mutex> ulRemoteRGBAZCompressed(remoteRGBAZCompressedMutex_);
-			haveRemoteRGBAZCompressed_.wait(ulRemoteRGBAZCompressed);
+			if (!haveRemoteRGBAZCompressed_)
+				haveRemoteRGBAZCompressedCV_.wait(ulRemoteRGBAZCompressed);
 
 			boost::shared_ptr<HoloRGBAZMat> decodedMats;
 			rgbazCodec_->decode(remoteRGBAZCompressed_, decodedMats);
@@ -214,15 +265,19 @@ void HoloSession::decodeLoop()
 			{
 				std::unique_lock<std::mutex> ulRemoteRGBAZ(remoteRGBAZMutex_);
 				remoteRGBAZ_ = decodedMats;
-				ulRemoteRGBAZ.unlock();
 
-				haveRemoteRGBAZ_.notify_all();
+				haveRemoteRGBAZCompressed_ = false;
+				haveRemoteRGBAZ_ = true;
+
+				ulRemoteRGBAZ.unlock();
+				haveRemoteRGBAZCV_.notify_all();
 			}
 		}
 		else if (cloudCodec_)
 		{
 			std::unique_lock<std::mutex> ulRemoteCloudCompressed(remoteCloudCompressedMutex_);
-			haveRemoteCloudCompressed_.wait(ulRemoteCloudCompressed);
+			if (!haveRemoteCloudCompressed_)
+				haveRemoteCloudCompressedCV_.wait(ulRemoteCloudCompressed);
 
 			auto remoteCloud = boost::shared_ptr<HoloCloud>(new HoloCloud);
 			cloudCodec_->decode(remoteCloudCompressed_, remoteCloud);
@@ -233,7 +288,10 @@ void HoloSession::decodeLoop()
 			ulRemoteCloud.unlock();
 			ulRemoteCloudCompressed.unlock();
 
-			haveRemoteCloud_.notify_all();
+			haveRemoteCloudCompressed_ = false;
+			haveRemoteCloud_ = true;
+
+			haveRemoteCloudCV_.notify_all();
 		}
 	}
 }
@@ -247,10 +305,14 @@ void HoloSession::encodeLoop()
 		if (rgbazCodec_)
 		{
 			std::unique_lock<std::mutex> ulLocalRGBAZ(localRGBAZMutex_);
-			haveLocalRGBAZ_.wait(ulLocalRGBAZ);
+			if (!haveLocalRGBAZ_)
+				haveLocalRGBAZCV_.wait(ulLocalRGBAZ);
 
 			boost::shared_ptr<std::vector<uchar>> encodedData;
 			rgbazCodec_->encode(localRGBAZ_, encodedData);
+			
+			haveLocalRGBAZ_ = false;
+
 			ulLocalRGBAZ.unlock();
 
 			if (encodedData)
@@ -260,17 +322,27 @@ void HoloSession::encodeLoop()
 				packet->length = encodedData->size();
 				packet->value = *encodedData;
 
-				netSession_->sendPacket(std::move(packet));
+				try{
+					netSession_->sendPacket(std::move(packet));
+				}
+				catch (boost::system::system_error error)
+				{
+					shouldRecv_ = false;
+					break;
+				}
 			}
 		}
 		else if (cloudCodec_)
 		{
 			std::unique_lock<std::mutex> ulLocalCloud(localCloudMutex_);
-			haveLocalCloud_.wait(ulLocalCloud);
+			if(!haveLocalCloud_)
+				haveLocalCloudCV_.wait(ulLocalCloud);
 
 
 			boost::shared_ptr<std::vector<uchar>> encodedData;
 			cloudCodec_->encode(localCloud_, encodedData);
+
+			haveLocalCloud_ = false;
 
 			ulLocalCloud.unlock();
 
@@ -291,9 +363,13 @@ void HoloSession::renderLoop()
 		if (rgbazCodec_)
 		{
 			std::unique_lock<std::mutex> ulRemoteRGBAZData(remoteRGBAZMutex_);
-			haveRemoteRGBAZ_.wait(ulRemoteRGBAZData);
+			if (!haveRemoteRGBAZ_)
+				haveRemoteRGBAZCV_.wait(ulRemoteRGBAZData);
+
 			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
 			holo::utils::ReprojectToRealWorld(remoteCloud_, *remoteRGBAZ_, worldConvertCache_);
+
+			haveRemoteRGBAZ_ = false;
 
 			ulRemoteRGBAZData.unlock();
 			ulRemoteCloud.unlock();
@@ -304,8 +380,11 @@ void HoloSession::renderLoop()
 		else
 		{
 			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
-			haveRemoteCloud_.wait(ulRemoteCloud);
+			if(!haveRemoteCloud_)
+				haveRemoteCloudCV_.wait(ulRemoteCloud);
 			HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
+			
+			haveRemoteCloud_ = false;
 			ulRemoteCloud.unlock();
 
 			render_->updateFromPointCloud(std::move(renderCloud));

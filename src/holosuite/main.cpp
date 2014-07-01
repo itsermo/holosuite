@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 		}
 		else if (!vm["capture-input"].as<std::string>().empty())
 		{
-			boost::filesystem::path filePath = boost::filesystem::path(vm["capture-input"].as<std::vector<std::string>>()[0]);
+			boost::filesystem::path filePath = boost::filesystem::path(vm["capture-input"].as<std::string>());
 			if (boost::filesystem::exists(filePath))
 			{
 				if (".oni" == boost::filesystem::extension(filePath))

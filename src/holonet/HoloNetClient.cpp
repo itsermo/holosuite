@@ -44,8 +44,6 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	socket_->set_option(boost::asio::ip::tcp::no_delay(true));
 	socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
-
-	this->start();
 	
 	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
 
@@ -70,8 +68,9 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 void HoloNetClient::disconnect()
 {
-	if (isConnected())
+	if (socket_ && isConnected())
 	{
+		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 		socket_.reset();
 	}

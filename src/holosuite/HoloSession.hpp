@@ -76,14 +76,23 @@ namespace holo
 		std::mutex remoteRGBAZMutex_;
 		std::mutex remoteRGBAZCompressedMutex_;
 		
-		std::condition_variable haveLocalCloud_;
-		std::condition_variable haveLocalRGBAZ_;
-		std::condition_variable haveRemoteCloud_;
-		std::condition_variable haveRemoteCloudCompressed_;
-		std::condition_variable haveRemoteAudio_;
-		std::condition_variable haveRemoteAudioCompressed_;
-		std::condition_variable haveRemoteRGBAZ_;
-		std::condition_variable haveRemoteRGBAZCompressed_;
+		std::condition_variable haveLocalCloudCV_;
+		std::condition_variable haveLocalRGBAZCV_;
+		std::condition_variable haveRemoteCloudCV_;
+		std::condition_variable haveRemoteCloudCompressedCV_;
+		std::condition_variable haveRemoteAudioCV_;
+		std::condition_variable haveRemoteAudioCompressedCV_;
+		std::condition_variable haveRemoteRGBAZCV_;
+		std::condition_variable haveRemoteRGBAZCompressedCV_;
+
+		std::atomic<bool> haveLocalCloud_;
+		std::atomic<bool> haveLocalRGBAZ_;
+		std::atomic<bool> haveRemoteCloud_;
+		std::atomic<bool> haveRemoteCloudCompressed_;
+		std::atomic<bool> haveRemoteAudio_;
+		std::atomic<bool> haveRemoteAudioCompressed_;
+		std::atomic<bool> haveRemoteRGBAZ_;
+		std::atomic<bool> haveRemoteRGBAZCompressed_;
 
 		std::unique_ptr<holo::capture::IHoloCapture> capture_;
 		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudCodec_;
@@ -95,6 +104,7 @@ namespace holo
 		std::atomic<bool> shouldEncode_;
 		std::atomic<bool> shouldDecode_;
 		std::atomic<bool> shouldRender_;
+		std::atomic<bool> shouldRecv_;
 
 		std::atomic<bool> isRunning_;
 

@@ -35,8 +35,6 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 	socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
-	this->start();
-
 	this->performHandshake(localInfo);
 	
 	LOG4CXX_DEBUG(logger_, "Trying to get handshake info from client" << port);
@@ -58,8 +56,9 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 
 void HoloNetServer::disconnect()
 {
-	if (isConnected())
+	if (socket_ && isConnected())
 	{
+		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 		socket_.reset();
 	}
