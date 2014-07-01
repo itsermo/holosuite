@@ -194,6 +194,7 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo)
 	localInfo.captureFPS = htonl(static_cast<u_long>(localInfo.captureFPS));
 	localInfo.captureHOV = htonl(static_cast<u_long>(localInfo.captureHOV));
 	localInfo.captureVOV = htonl(static_cast<u_long>(localInfo.captureVOV));
+	localInfo.codecType = htonl(localInfo.codecType);
 
 	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
 
@@ -213,7 +214,7 @@ HoloNetProtocolHandshake HoloNetSession::GetHandshakeFromPacket(boost::shared_pt
 	hs.captureFPS = static_cast<float>(ntohl(hs.captureFPS));
 	hs.captureHOV = static_cast<float>(ntohl(hs.captureHOV));
 	hs.captureVOV = static_cast<float>(ntohl(hs.captureVOV));
-
+	hs.codecType = ntohl(hs.codecType);
 	return hs;
 }
 

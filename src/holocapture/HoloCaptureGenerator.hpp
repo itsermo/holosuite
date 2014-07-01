@@ -18,7 +18,7 @@ namespace holo
 				return std::unique_ptr<IHoloCapture>(new HoloCaptureOpenNI2());
 			}
 
-			static std::unique_ptr<IHoloCapture> fromOpenNI(unsigned int rgbWidth,
+			static std::unique_ptr<IHoloCapture> fromOpenNI2(unsigned int rgbWidth,
 				unsigned int rgbHeight,
 				float rgbFPS,
 				unsigned int zWidth,
@@ -33,7 +33,7 @@ namespace holo
 					zFPS));
 			}
 
-			static std::unique_ptr<IHoloCapture> fromOpenNI(std::string filePath)
+			static std::unique_ptr<IHoloCapture> fromOpenNI2(std::string filePath)
 			{
 				return std::unique_ptr<IHoloCapture>(new HoloCaptureOpenNI2(filePath));
 			}

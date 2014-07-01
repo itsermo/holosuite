@@ -20,14 +20,6 @@
 log4cxx::LoggerPtr logger_main(log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite"));
 
 
-enum HOLO_SESSION_MODE
-{
-	HOLO_SESSION_MODE_SERVER,
-	HOLO_SESSION_MODE_CLIENT,
-	HOLO_SESSION_MODE_FEEDBACK
-};
-
-
 int main(int argc, char *argv[])
 {
 
@@ -41,14 +33,20 @@ int main(int argc, char *argv[])
 	log4cxx::BasicConfigurator::configure(logAppenderPtr);
 
 	int captureIndex = 0;
-
+	int voxelSize = HOLO_RENDER_DEFAULT_VOXEL_SIZE;
 	std::string sessionName;
 	std::string remoteAddress;
-	HOLO_SESSION_MODE sessionMode;
-	holo::net::HoloNetProtocolHandshake localInfo;
-	holo::net::HoloNetProtocolHandshake infoFromClient;
-	holo::net::HoloNetProtocolHandshake infoFromServer;
+	holo::HOLO_SESSION_MODE sessionMode;
+	boost::filesystem::path filePath;
+	holo::capture::CAPTURE_TYPE captureType;
+	holo::codec::CODEC_TYPE codecType;
+	holo::render::RENDER_TYPE renderType;
+	holo::net::HoloNetProtocolHandshake localInfo = {0};
+	holo::net::HoloNetProtocolHandshake infoFromClient = {0};
+	holo::net::HoloNetProtocolHandshake infoFromServer = {0};
 	holo::capture::HoloCaptureInfo captureInfo = {0};
+	holo::codec::HoloCodecOctreeEncodeArgs octreeArgs = {0};
+	holo::codec::HoloCodecH264Args h264Args = {0};
 	captureInfo.rgbaWidth = HOLO_CAPTURE_DEFAULT_RGB_WIDTH;
 	captureInfo.rgbaHeight = HOLO_CAPTURE_DEFAULT_RGB_HEIGHT;
 	captureInfo.rgbFPS = HOLO_CAPTURE_DEFAULT_RGB_FPS;
@@ -57,10 +55,10 @@ int main(int argc, char *argv[])
 	captureInfo.zFPS = HOLO_CAPTURE_DEFAULT_Z_FPS;
 
 	std::unique_ptr<holo::capture::IHoloCapture> capture = nullptr;
-	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> codecClient = nullptr;
-	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> codecServer = nullptr;
-	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> codecClientRGBAZ = nullptr;
-	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> codecServerRGBAZ = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> encoderCloud = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> decoderCloud = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> encoderRGBAZ = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> decoderRGBAZ = nullptr;
 	std::shared_ptr<holo::net::HoloNetClient> client = nullptr;
 	std::shared_ptr<holo::net::HoloNetServer> server = nullptr;
 	std::unique_ptr<holo::render::IHoloRender> renderer = nullptr;
@@ -199,8 +197,8 @@ int main(int argc, char *argv[])
 
 	if (vm.count("server"))
 	{
-		server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
-		sessionMode = HOLO_SESSION_MODE_SERVER;
+		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
+		sessionMode = holo::HOLO_SESSION_MODE_SERVER;
 	}
 	else if (vm.count("client"))
 	{
@@ -212,16 +210,16 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient());
+			//client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient());
 			remoteAddress = vm["client"].as<std::string>();
-			sessionMode = HOLO_SESSION_MODE_CLIENT;
+			sessionMode = holo::HOLO_SESSION_MODE_CLIENT;
 		}
 	}
 	else if (vm.count("feedback"))
 	{
-		client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient());
-		server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
-		sessionMode = HOLO_SESSION_MODE_FEEDBACK;
+		//client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient());
+		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
+		sessionMode = holo::HOLO_SESSION_MODE_FEEDBACK;
 	}
 	else
 	{
@@ -248,16 +246,18 @@ int main(int argc, char *argv[])
 
 		if (vm["capture-input"].as<std::string>().compare("openni2") == 0)
 		{
-			capture = holo::capture::HoloCaptureGenerator::fromOpenNI(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
+			captureType = holo::capture::CAPTURE_TYPE_OPENNI2;
+			//capture = holo::capture::HoloCaptureGenerator::fromOpenNI(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
 		}
 		else if (!vm["capture-input"].as<std::string>().empty())
 		{
-			boost::filesystem::path filePath = boost::filesystem::path(vm["capture-input"].as<std::string>());
+			filePath = boost::filesystem::path(vm["capture-input"].as<std::string>());
 			if (boost::filesystem::exists(filePath))
 			{
 				if (".oni" == boost::filesystem::extension(filePath))
 				{
-					capture = holo::capture::HoloCaptureGenerator::fromOpenNI(filePath.string());
+					//capture = holo::capture::HoloCaptureGenerator::fromOpenNI(filePath.string());
+					captureType = holo::capture::CAPTURE_TYPE_FILE_ONI;
 				}
 				else
 				{
@@ -291,14 +291,13 @@ int main(int argc, char *argv[])
 	{
 		if (vm["codec"].as<std::string>().compare("octree") == 0)
 		{
-			holo::codec::HoloCodecOctreeEncodeArgs args;
-			args.showStatistics = HOLO_CODEC_OCTREE_DEFAULT_SHOW_STATISTICS;
-			args.pointResolution = HOLO_CODEC_OCTREE_DEFAULT_POINT_RESOLUTION;
-			args.octreeResolution = HOLO_CODEC_OCTREE_DEFAULT_OCTREE_RESOLUTION;
-			args.doVoxelGridDownsampling = HOLO_CODEC_OCTREE_DEFAULT_DO_VOXEL_GRID_DOWNSAMPLING;
-			args.frameRate = HOLO_CODEC_OCTREE_DEFAULT_FRAMERATE;
-			args.doEncodeColorInfo = HOLO_CODEC_OCTREE_DEFAULT_DO_ENCODE_COLOR_INFO;
-			args.colorBitResolution = HOLO_CODEC_OCTREE_DEFAULT_COLOR_BIT_RESOLUTION;
+			octreeArgs.showStatistics = HOLO_CODEC_OCTREE_DEFAULT_SHOW_STATISTICS;
+			octreeArgs.pointResolution = HOLO_CODEC_OCTREE_DEFAULT_POINT_RESOLUTION;
+			octreeArgs.octreeResolution = HOLO_CODEC_OCTREE_DEFAULT_OCTREE_RESOLUTION;
+			octreeArgs.doVoxelGridDownsampling = HOLO_CODEC_OCTREE_DEFAULT_DO_VOXEL_GRID_DOWNSAMPLING;
+			octreeArgs.frameRate = HOLO_CODEC_OCTREE_DEFAULT_FRAMERATE;
+			octreeArgs.doEncodeColorInfo = HOLO_CODEC_OCTREE_DEFAULT_DO_ENCODE_COLOR_INFO;
+			octreeArgs.colorBitResolution = HOLO_CODEC_OCTREE_DEFAULT_COLOR_BIT_RESOLUTION;
 
 			if (vm.count("octree-settings"))
 			{
@@ -312,13 +311,13 @@ int main(int argc, char *argv[])
 
 				if (octreeSettings.size() == 7)
 				{
-					args.showStatistics = atoi(octreeSettings[0].c_str());
-					args.pointResolution = atof(octreeSettings[1].c_str());
-					args.octreeResolution = atof(octreeSettings[2].c_str());
-					args.doVoxelGridDownsampling = atoi(octreeSettings[3].c_str());
-					args.frameRate = atoi(octreeSettings[4].c_str());
-					args.doEncodeColorInfo = atoi(octreeSettings[5].c_str());
-					args.colorBitResolution = atoi(octreeSettings[6].c_str());
+					octreeArgs.showStatistics = atoi(octreeSettings[0].c_str());
+					octreeArgs.pointResolution = atof(octreeSettings[1].c_str());
+					octreeArgs.octreeResolution = atof(octreeSettings[2].c_str());
+					octreeArgs.doVoxelGridDownsampling = atoi(octreeSettings[3].c_str());
+					octreeArgs.frameRate = atoi(octreeSettings[4].c_str());
+					octreeArgs.doEncodeColorInfo = atoi(octreeSettings[5].c_str());
+					octreeArgs.colorBitResolution = atoi(octreeSettings[6].c_str());
 				}
 				else
 				{
@@ -328,30 +327,37 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-				codecServer = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
-			if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-			    codecClient = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
+			codecType = holo::codec::CODEC_TYPE_OCTREE;
+
+			//if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			//{
+			//	codecType
+			//}
+			//	//codecServer = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
+			//if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			//{
+
+			//}
+			    //codecClient = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
 		}
 		else if (vm["codec"].as<std::string>().compare("passthrough-cloud") == 0)
 		{
-			if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-				codecServer = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
-			if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-				codecClient = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
+			//if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
+			//	codecServer = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
+			//if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
+			//	codecClient = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
+
+			codecType = holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD;
 
 		}
 		else if (vm["codec"].as<std::string>().compare("h264") == 0)
 		{
-			holo::codec::HoloCodecH264Args args = { 0 };
-			args.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
-			args.width = captureInfo.zWidth;
-			args.height = captureInfo.zHeight;
-			args.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
-			args.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
-			args.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, captureInfo.zFPS };
-			args.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
-			args.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
+			h264Args.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
+			h264Args.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
+			h264Args.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
+			h264Args.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, static_cast<int>(captureInfo.zFPS) };
+			h264Args.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
+			h264Args.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
 
 			if (vm.count("h264-settings"))
 			{
@@ -365,9 +371,9 @@ int main(int argc, char *argv[])
 
 				if (h264Settings.size() == 3)
 				{
-					args.bitRate = atoi(h264Settings[0].c_str());
-					args.gopSize = atoi(h264Settings[1].c_str());
-					args.maxBFrames = atoi(h264Settings[2].c_str());
+					h264Args.bitRate = atoi(h264Settings[0].c_str());
+					h264Args.gopSize = atoi(h264Settings[1].c_str());
+					h264Args.maxBFrames = atoi(h264Settings[2].c_str());
 				}
 				else
 				{
@@ -379,13 +385,15 @@ int main(int argc, char *argv[])
 
 			if (vm.count("h264-z-level"))
 			{
-				args.zCompressionLevel = vm["h264-z-level"].as<int>();
+				h264Args.zCompressionLevel = vm["h264-z-level"].as<int>();
 			}
 
-			if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-				codecServerRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
-			if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-				codecClientRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
+			//if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
+			//	codecServerRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
+			//if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
+			//	codecClientRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
+
+			codecType = holo::codec::CODEC_TYPE_H264;
 		}
 		else
 		{
@@ -401,11 +409,12 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	localInfo.codecType = codecType;
+
 	if (vm.count("render-output"))
 	{
 		if (vm["render-output"].as<std::string>().compare("visualizer") == 0)
 		{
-			int voxelSize = HOLO_RENDER_DEFAULT_VOXEL_SIZE;
 
 			if (vm.count("visualizer-settings"))
 			{
@@ -429,7 +438,8 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, captureInfo.zWidth, captureInfo.zHeight);
+			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
+			//renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, captureInfo.zWidth, captureInfo.zHeight);
 		}
 		else
 		{
@@ -474,13 +484,13 @@ int main(int argc, char *argv[])
 	
 	switch (sessionMode)
 	{
-	case HOLO_SESSION_MODE_SERVER:
+	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER:
 		LOG4CXX_INFO(logger_main, "Holosuite starting in server mode...");
 		break;
-	case HOLO_SESSION_MODE_CLIENT:
+	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT:
 		LOG4CXX_INFO(logger_main, "Holosuite starting in client mode...");
 		break;
-	case HOLO_SESSION_MODE_FEEDBACK:
+	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK:
 		LOG4CXX_INFO(logger_main, "Holosuite starting in feedback mode...");
 		break;
 	default:
@@ -489,6 +499,27 @@ int main(int argc, char *argv[])
 
 	bool success = false;
 	
+	switch (captureType)
+	{
+	case holo::capture::CAPTURE_TYPE_FILE_PLY:
+		//TODO: get PLY file support
+		break;
+	case holo::capture::CAPTURE_TYPE_FILE_PCD:
+		//TODO: get PCD files in
+		break;
+	case holo::capture::CAPTURE_TYPE_FILE_OBJ:
+		//TODO: get OBJ file support
+		break;
+	case holo::capture::CAPTURE_TYPE_FILE_ONI:
+		capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(filePath.string());
+		break;
+	case holo::capture::CAPTURE_TYPE_OPENNI2:
+		capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
+		break;
+	default:
+		break;
+	}
+
 	if (capture)
 	{
 		if (!capture->init(captureIndex))
@@ -498,107 +529,185 @@ int main(int argc, char *argv[])
 		}
 
 		captureInfo = capture->getCaptureInfo();
-	}
 
-	switch (sessionMode)
-	{
-	case HOLO_SESSION_MODE_SERVER:
-		if(codecServer)
-			success = codecServer->init(holo::codec::CODEC_MODE_BOTH);
-		else if (codecServerRGBAZ)
-			success = codecServerRGBAZ->init(holo::codec::CODEC_MODE_BOTH);
-		break;
-	case HOLO_SESSION_MODE_CLIENT:
-		if (codecClient)
-			success = codecClient->init(holo::codec::CODEC_MODE_BOTH);
-		else if (codecClientRGBAZ)
-			success = codecClientRGBAZ->init(holo::codec::CODEC_MODE_BOTH);
-		break;
-	case HOLO_SESSION_MODE_FEEDBACK:
-		if (codecServer)
-			success = codecServer->init(holo::codec::CODEC_MODE_BOTH) && codecClient->init(holo::codec::CODEC_MODE_BOTH);
-		else if (codecServerRGBAZ)
-			success = codecServerRGBAZ->init(holo::codec::CODEC_MODE_ENCODER) && codecClientRGBAZ->init(holo::codec::CODEC_MODE_DECODER);
-		break;
-	default:
-		break;
-	}
-	
-	if (!success)
-	{
-		logger_main->fatal("Could not initialize the codec. Exiting holosuite...");
-		return -1;
-	}
-
-	if (renderer)
-		if (!renderer->init())
-		{
-			logger_main->fatal("Could not initialize the renderer. Exiting holosuite...");
-			return -1;
-		}
-
-		strcpy((char*)localInfo.clientName, sessionName.c_str());
 		localInfo.rgbazWidth = captureInfo.zWidth;
 		localInfo.rgbazHeight = captureInfo.zHeight;
 		localInfo.captureFPS = captureInfo.zFPS;
 		localInfo.captureHOV = captureInfo.zHOV;
 		localInfo.captureVOV = captureInfo.zVOV;
 
-	switch (sessionMode)
-	{
-	case HOLO_SESSION_MODE_SERVER:
-	{
-		infoFromClient = server->listenAndWait(HOLO_NET_DEFAULT_PORT, localInfo);
-		if (codecServer)
-			serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecServer), server, infoFromClient, std::move(renderer)));
-		else
-			serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecServerRGBAZ), server, infoFromClient, std::move(renderer)));
-		serverSession->start();
-	}
-		break;
-	case HOLO_SESSION_MODE_CLIENT:
-	{
-		 infoFromServer = client->connect(remoteAddress, HOLO_NET_DEFAULT_PORT, localInfo);
-		if (codecClient)
-			clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecClient), client, infoFromServer, std::move(renderer)));
-		else
-			clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecClientRGBAZ), client, infoFromServer, std::move(renderer)));
-		
-		clientSession->start();
-	}
-		break;
-	case HOLO_SESSION_MODE_FEEDBACK:
-	{
-		auto serverFunc = std::bind<holo::net::HoloNetProtocolHandshake>(&holo::net::HoloNetServer::listenAndWait, server, HOLO_NET_DEFAULT_PORT, std::placeholders::_1);
-		auto servhandle = std::future<holo::net::HoloNetProtocolHandshake>(std::async(std::launch::async,serverFunc, localInfo));
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-		infoFromServer = client->connect(remoteAddress, HOLO_NET_DEFAULT_PORT, localInfo);
-
-		infoFromClient = servhandle.get();
-
-		if (codecClient)
-			clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(nullptr), std::move(codecClient), client, infoFromServer, std::move(renderer)));
-		else
-			clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(nullptr), std::move(codecClientRGBAZ), client, infoFromServer, std::move(renderer)));
-
-		if (codecServer)
-			serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecServer), server, infoFromClient, std::move(nullptr)));
-		else serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(std::move(capture), std::move(codecServerRGBAZ), server, infoFromClient, std::move(nullptr)));
-				
-		clientSession->start();
-		serverSession->start();
-
-	}
-		break;
-	default:
-		break;
+		h264Args.width = captureInfo.zWidth;
+		h264Args.height = captureInfo.zHeight;
 	}
 
+	bool shouldConnect = true;
 	while (true)
 	{
+		if (shouldConnect)
+		{
+			std::future<holo::net::HoloNetProtocolHandshake> serverHandle;
+
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			{
+				server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer);
+				auto serverFunc = std::bind<holo::net::HoloNetProtocolHandshake>(&holo::net::HoloNetServer::listenAndWait, server, HOLO_NET_DEFAULT_PORT, std::placeholders::_1);
+				serverHandle = std::future<holo::net::HoloNetProtocolHandshake>(std::async(std::launch::async, serverFunc, localInfo));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			}
+			
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			{
+				client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient);
+				infoFromServer = client->connect(remoteAddress, HOLO_NET_DEFAULT_PORT, localInfo);
+			}
+			
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+				infoFromClient = serverHandle.get();
+
+			switch (codecType)
+			{
+			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
+					encoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(localInfo.rgbazWidth, localInfo.rgbazHeight);
+				break;
+			case holo::codec::CODEC_TYPE_PASSTHROUGH_RGBAZ:
+					//TODO: implement passthrough RGBAZ
+				break;
+			case holo::codec::CODEC_TYPE_OCTREE:
+				encoderCloud = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(octreeArgs);
+				break;
+			case holo::codec::CODEC_TYPE_H264:
+				encoderRGBAZ = holo::codec::HoloCodecGenerator::fromH264(h264Args);
+				break;
+			default:
+				break;
+			}
+
+			if (encoderCloud)
+			{
+				if (!encoderCloud->init(holo::codec::CODEC_MODE_ENCODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not initialize the cloud encoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			if (encoderRGBAZ)
+			{
+				if (!encoderRGBAZ->init(holo::codec::CODEC_MODE_ENCODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the RGBAZ encoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.codecType : infoFromClient.codecType)
+			{
+			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
+				decoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
+				break;
+			case holo::codec::CODEC_TYPE_PASSTHROUGH_RGBAZ:
+				//TODO: implement passthrough RGBAZ
+				break;
+			case holo::codec::CODEC_TYPE_OCTREE:
+				decoderCloud = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(octreeArgs);
+				break;
+			case holo::codec::CODEC_TYPE_H264:
+			{
+				holo::codec::HoloCodecH264Args args = { 0 };
+				args.width = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth;
+				args.height = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight;
+				decoderRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
+			}
+				break;
+			default:
+				break;
+			}
+
+			if (decoderCloud)
+			{
+				if (!decoderCloud->init(holo::codec::CODEC_MODE_DECODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not initialize the cloud decoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			if (decoderRGBAZ)
+			{
+				if (!decoderRGBAZ->init(holo::codec::CODEC_MODE_DECODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the RGBAZ decoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			switch (renderType)
+			{
+			case holo::render::RENDER_TYPE_VIS2D:
+				//TODO: implement 2D VIS
+				break;
+			case holo::render::RENDER_TYPE_VIS3D:
+				renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
+				break;
+			case holo::render::RENDER_TYPE_DSCP_MKII:
+				//TODO: implement mk ii dscp algo
+				break;
+			case holo::render::RENDER_TYPE_DSCP_MKIV:
+				//TODO: implement mk iv dscp algo
+				break;
+			default:
+				break;
+			}
+
+			if (renderer)
+			{
+				if (!renderer->init())
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the renderer.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
+			{
+				serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(capture) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderRGBAZ) : nullptr,
+					std::move(decoderRGBAZ),
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderCloud) : nullptr,
+					std::move(decoderCloud),
+					server,
+					infoFromClient,
+					std::move(renderer)
+					));
+				serverSession->start();
+			}
+
+			if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
+			{
+				clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
+					std::move(capture),
+					std::move(encoderRGBAZ),
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderRGBAZ) : nullptr,
+					std::move(encoderCloud),
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderCloud) : nullptr,
+					client,
+					infoFromServer,
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr
+					));
+				clientSession->start();
+			}
+
+
+			shouldConnect = false;
+		}
+
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
 	}
+
+
 
 
 	return 0;

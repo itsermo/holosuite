@@ -33,8 +33,26 @@ namespace holo
 		cv::Mat z;
 	};
 
+	enum HOLO_SESSION_MODE
+	{
+		HOLO_SESSION_MODE_SERVER = 0,
+		HOLO_SESSION_MODE_CLIENT = 1,
+		HOLO_SESSION_MODE_FEEDBACK = 2,
+		HOLO_SESSION_MODE_DIRECT = 3
+	};
+
 	namespace capture
 	{
+		
+		enum CAPTURE_TYPE
+		{
+			CAPTURE_TYPE_FILE_PLY = 0,
+			CAPTURE_TYPE_FILE_PCD = 1,
+			CAPTURE_TYPE_FILE_OBJ = 2,
+			CAPTURE_TYPE_FILE_ONI = 3,
+			CAPTURE_TYPE_OPENNI2 = 4
+		};
+
 		struct WorldConvertCache
 		{
 			float xzFactor;
@@ -50,6 +68,14 @@ namespace holo
 
 	namespace codec
 	{
+		enum CODEC_TYPE
+		{
+			CODEC_TYPE_PASSTHROUGH_CLOUD,
+			CODEC_TYPE_PASSTHROUGH_RGBAZ,
+			CODEC_TYPE_OCTREE,
+			CODEC_TYPE_H264
+		};
+
 		enum CODEC_MODE
 		{
 			CODEC_MODE_ENCODER = 0,
@@ -61,6 +87,17 @@ namespace holo
 		{
 			CODEC_METHOD_PIXMAP = 0,
 			CODEC_METHOD_CLOUD = 1
+		};
+	}
+
+	namespace render
+	{
+		enum RENDER_TYPE
+		{
+			RENDER_TYPE_VIS2D = 0,
+			RENDER_TYPE_VIS3D = 1,
+			RENDER_TYPE_DSCP_MKII = 2,
+			RENDER_TYPE_DSCP_MKIV = 3
 		};
 	}
 };

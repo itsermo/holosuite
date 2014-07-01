@@ -15,6 +15,8 @@
 #include <atomic>
 #include <condition_variable>
 
+#define HOLO_SESSION_CV_WAIT_TIMEOUT_MS 500
+
 namespace holo
 {
 
@@ -22,16 +24,18 @@ namespace holo
 	{
 	public:
 		HoloSession();
+		//HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
+		//	std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> && codec,
+		//	std::shared_ptr<holo::net::HoloNetSession> netsession,
+		//	holo::net::HoloNetProtocolHandshake remoteInfo,
+		//	std::unique_ptr<holo::render::IHoloRender> && render
+		//	);
 		HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
-			std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> && codec,
-			std::shared_ptr<holo::net::HoloNetSession> netsession,
-			holo::net::HoloNetProtocolHandshake remoteInfo,
-			std::unique_ptr<holo::render::IHoloRender> && render
-			);
-		HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
-			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && codec,
-			std::shared_ptr<holo::net::HoloNetSession> netSession,
-			holo::net::HoloNetProtocolHandshake remoteInfo,
+			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
+			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
+			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && encoderCloud,
+			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && decoderCloud,
+			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
 			std::unique_ptr<holo::render::IHoloRender> && render
 			);
 		~HoloSession();
@@ -95,8 +99,10 @@ namespace holo
 		std::atomic<bool> haveRemoteRGBAZCompressed_;
 
 		std::unique_ptr<holo::capture::IHoloCapture> capture_;
-		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudCodec_;
-		std::unique_ptr<holo::codec::IHoloCodec<HoloRGBAZMat>> rgbazCodec_;
+		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudEncoder_;
+		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudDecoder_;
+		std::unique_ptr<holo::codec::IHoloCodec<HoloRGBAZMat>> rgbazEncoder_;
+		std::unique_ptr<holo::codec::IHoloCodec<HoloRGBAZMat>> rgbazDecoder_;
 		std::shared_ptr<holo::net::HoloNetSession> netSession_;
 		std::unique_ptr<holo::render::IHoloRender> render_;
 

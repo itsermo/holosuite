@@ -30,6 +30,7 @@ namespace holo
 			uint32_t magicNumber;
 			uint32_t protocolVersion;
 			uint8_t clientName[HOLO_NET_NAME_STR_SIZE];
+			int codecType;
 			uint32_t rgbazWidth;
 			uint32_t rgbazHeight;
 			float captureFPS;
