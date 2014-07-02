@@ -214,7 +214,7 @@ bool HoloCaptureOpenNI2::init(int which)
 
 void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage)
 {
-	if (isOpen())
+	if (isOpen_)
 	{
 		openni::VideoFrameRef color;
 		openni::VideoFrameRef depth;
@@ -304,7 +304,7 @@ HoloCloudPtr HoloCaptureOpenNI2::createNewCloud()
 
 void HoloCaptureOpenNI2::deinit()
 {
-	if (isOpen())
+	if (isOpen_)
 	{
 		depthStream_.stop();
 		colorStream_.stop();

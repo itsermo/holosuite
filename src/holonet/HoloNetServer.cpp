@@ -51,15 +51,21 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 		<< "Capture FPS: " << hs.captureFPS << std::endl
 		<< "Horizontal Field-of-View: " << hs.captureHOV << std::endl
 		<< "Vertical Field-of-View: " << hs.captureVOV);
+
+	isConnected_ = true;
+
 	return hs;
 }
 
 void HoloNetServer::disconnect()
 {
+
 	if (socket_ && isConnected())
 	{
 		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 		socket_.reset();
 	}
+
+	isConnected_ = false;
 }

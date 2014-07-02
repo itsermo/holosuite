@@ -34,8 +34,8 @@ HoloCodecOctree::HoloCodecOctree(HoloCodecOctreeEncodeArgs args) :
 
 HoloCodecOctree::~HoloCodecOctree()
 {
-	if (isInit_)
-		deinit();
+
+	deinit();
 	LOG4CXX_DEBUG(logger_, "HoloCodecOctree object destroyed");
 }
 

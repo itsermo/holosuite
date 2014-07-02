@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 		boost::program_options::value<std::string>()->default_value("h264"),
 		"selects which encoder/decoder to use. valid settings are [h264, octree, passthrough-cloud]")
 		("h264-settings", boost::program_options::value<std::string>()->multitoken(),
-		"h.264 encoder arguments [bitrate,gopsize,maxbframes]")
+		"h.264 encoder arguments [maxbitrate,gopsize,maxbframes,crf]")
 		("h264-z-level", boost::program_options::value<int>()->default_value(HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL),
 		"h.264 z image encoder level [0-9]")
 		("octree-settings", boost::program_options::value<std::string>()->multitoken(),
@@ -358,6 +358,7 @@ int main(int argc, char *argv[])
 			h264Args.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, static_cast<int>(captureInfo.zFPS) };
 			h264Args.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
 			h264Args.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
+			h264Args.crf = HOLO_CODEC_H264_DEFAULT_CRF;
 
 			if (vm.count("h264-settings"))
 			{
@@ -369,11 +370,12 @@ int main(int argc, char *argv[])
 					h264Settings.push_back(t);
 				}
 
-				if (h264Settings.size() == 3)
+				if (h264Settings.size() == 4)
 				{
 					h264Args.bitRate = atoi(h264Settings[0].c_str());
 					h264Args.gopSize = atoi(h264Settings[1].c_str());
 					h264Args.maxBFrames = atoi(h264Settings[2].c_str());
+					h264Args.crf = atoi(h264Settings[3].c_str());
 				}
 				else
 				{
@@ -558,7 +560,18 @@ int main(int argc, char *argv[])
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
 			{
 				client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient);
-				infoFromServer = client->connect(remoteAddress, HOLO_NET_DEFAULT_PORT, localInfo);
+
+				do{
+					try{
+						infoFromServer = client->connect(remoteAddress, HOLO_NET_DEFAULT_PORT, localInfo);
+					}
+					catch (boost::system::system_error error)
+					{
+						LOG4CXX_INFO(logger_main, "Trying to connect to " << remoteAddress);
+						std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					}
+
+				} while (!client->isConnected());
 			}
 			
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
@@ -702,6 +715,17 @@ int main(int argc, char *argv[])
 			shouldConnect = false;
 		}
 
+		if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT)
+		{
+			if (!clientSession->isRunning())
+				shouldConnect = true;
+		}
+
+		if (sessionMode == holo::HOLO_SESSION_MODE_SERVER)
+		{
+			if (!serverSession->isRunning())
+				shouldConnect = true;
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 

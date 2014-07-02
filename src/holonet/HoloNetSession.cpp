@@ -3,7 +3,7 @@
 using namespace holo;
 using namespace holo::net;
 
-HoloNetSession::HoloNetSession()
+HoloNetSession::HoloNetSession() : isConnected_(false)
 {
 	LOG4CXX_DEBUG(logger_, "HoloNetSession object instantiated")
 }
@@ -16,10 +16,7 @@ HoloNetSession::~HoloNetSession()
 
 bool HoloNetSession::isConnected()
 {
-	if (socket_)
-		return socket_->is_open();
-	else
-		return false;
+	return isConnected_;
 }
 
 void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> && packet)
@@ -34,11 +31,17 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> && packet)
 
 	boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 	if (error)
+	{
+		isConnected_ = false;
 		throw boost::system::system_error(boost::asio::error::interrupted);
+	}
 
 	boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
 	if (error)
+	{
+		isConnected_ = false;
 		throw boost::system::system_error(boost::asio::error::interrupted);
+	}
 }
 
 void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet)
@@ -52,7 +55,10 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet)
 	std::vector<uint32_t> typeLength(sizeof(uint32_t)* 2);
 	boost::asio::read(*socket_, boost::asio::buffer(typeLength), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 	if (error)
+	{
+		isConnected_ = false;
 		throw boost::system::system_error(boost::asio::error::interrupted);
+	}
 
 
 	packet->type = ntohl(typeLength[0]);
@@ -62,7 +68,10 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet)
 
 	boost::asio::read(*socket_, boost::asio::buffer(packet->value), boost::asio::transfer_exactly(packet->length), error);
 	if (error)
+	{
+		isConnected_ = false;
 		throw boost::system::system_error(boost::asio::error::interrupted);
+	}
 }
 
 //void HoloNetSession::pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet)

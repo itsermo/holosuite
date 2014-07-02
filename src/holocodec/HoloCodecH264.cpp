@@ -35,6 +35,7 @@ HoloCodecH264::HoloCodecH264() :
 	args_.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
 	args_.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN };
 	args_.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
+	args_.crf = HOLO_CODEC_H264_DEFAULT_CRF;
 	args_.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
 
 	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object instantiated with default values");
@@ -95,7 +96,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		}
 
 		LOG4CXX_DEBUG(logger_, "Setting H264 encoder settings...");
-		//encoderCtx_->bit_rate = args_.bitRate;
+		encoderCtx_->rc_max_rate = args_.bitRate;
 		encoderCtx_->width = args_.width;
 		encoderCtx_->height = args_.height;
 		encoderCtx_->time_base = args_.timeBase;
@@ -104,10 +105,14 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		encoderCtx_->pix_fmt = args_.pixelFormat;
 		//encoderCtx_->thread_count = 2;
 		encoderCtx_->delay = 0;
+		encoderCtx_->rc_buffer_size = 20000000;
+
+		char crf[33];
+		itoa(args_.crf, crf, 10);
 
 		av_opt_set(encoderCtx_->priv_data, "preset", "ultrafast", 0);
 		av_opt_set(encoderCtx_->priv_data, "tune", "zerolatency", 0);
-		av_opt_set(encoderCtx_->priv_data, "crf", "23", 0);
+		av_opt_set(encoderCtx_->priv_data, "crf", crf, 0);
 		
 		if (avcodec_open2(encoderCtx_, encoder_, NULL) < 0)
 		{
@@ -216,7 +221,7 @@ void HoloCodecH264::deinit()
 				av_freep(&encoder_);
 			}
 
-			LOG4CXX_DEBUG(logger_, "H264 encoder deinitialized");
+			LOG4CXX_INFO(logger_, "H264 encoder deinitialized");
 
 		}
 
@@ -247,11 +252,8 @@ void HoloCodecH264::deinit()
 				av_freep(&decoder_);
 			}
 
-			LOG4CXX_DEBUG(logger_, "H264 decoder deinitialized");
+			LOG4CXX_INFO(logger_, "H264 decoder deinitialized");
 		}
-
-		
-
 	}
 	
 	isInit_ = false;

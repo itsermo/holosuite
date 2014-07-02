@@ -63,6 +63,8 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 		<< "Horizontal Field-of-View: " << hs.captureHOV << std::endl
 		<< "Vertical Field-of-View: " << hs.captureVOV);
 
+	isConnected_ = true;
+
 	return hs;
 }
 
@@ -74,5 +76,7 @@ void HoloNetClient::disconnect()
 		socket_->close();
 		socket_.reset();
 	}
+
+	isConnected_ = false;
 }
 

@@ -18,6 +18,7 @@ extern "C" {
 #define HOLO_CODEC_H264_DEFAULT_GOPSIZE HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN
 #define HOLO_CODEC_H264_DEFAULT_MAXBFRAMES 0
 #define HOLO_CODEC_H264_DEFAULT_PIXELFMT AV_PIX_FMT_YUV420P
+#define HOLO_CODEC_H264_DEFAULT_CRF 20
 #define HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL 7
 
 namespace holo
@@ -33,6 +34,7 @@ namespace holo
 			int gopSize;
 			int maxBFrames;
 			AVPixelFormat pixelFormat;
+			int crf;
 			int zCompressionLevel;
 		};
 
