@@ -108,7 +108,9 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		encoderCtx_->rc_buffer_size = 20000000;
 
 		char crf[33];
-		itoa(args_.crf, crf, 10);
+		//itoa(args_.crf, crf, 10);
+
+		sprintf(crf, "%d", args_.crf);
 
 		av_opt_set(encoderCtx_->priv_data, "preset", "ultrafast", 0);
 		av_opt_set(encoderCtx_->priv_data, "tune", "zerolatency", 0);
