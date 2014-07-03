@@ -28,6 +28,8 @@ namespace holo
 
 			static HoloNetProtocolHandshake GetHandshakeFromPacket(boost::shared_ptr<HoloNetPacket> & packet);
 
+			void disconnect();
+
 		protected:
 			//void start();
 

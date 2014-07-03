@@ -18,7 +18,7 @@ namespace holo
 			~HoloNetClient();
 
 			HoloNetProtocolHandshake connect(std::string address, int port, HoloNetProtocolHandshake localInfo);
-			void disconnect();
+			//void disconnect();
 
 		private:
 

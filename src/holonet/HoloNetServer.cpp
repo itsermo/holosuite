@@ -3,14 +3,14 @@
 using namespace holo;
 using namespace holo::net;
 
-HoloNetServer::HoloNetServer()
+HoloNetServer::HoloNetServer() : HoloNetSession()
 {
 	 logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.server");
 }
 
 HoloNetServer::~HoloNetServer()
 {
-
+	disconnect();
 }
 
 HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloNetProtocolHandshake localInfo)
@@ -57,15 +57,15 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 	return hs;
 }
 
-void HoloNetServer::disconnect()
-{
-
-	if (socket_ && isConnected())
-	{
-		socket_->shutdown(boost::asio::socket_base::shutdown_both);
-		socket_->close();
-		socket_.reset();
-	}
-
-	isConnected_ = false;
-}
+//void HoloNetServer::disconnect()
+//{
+//
+//	if (socket_ && isConnected())
+//	{
+//		socket_->shutdown(boost::asio::socket_base::shutdown_both);
+//		socket_->close();
+//		socket_.reset();
+//	}
+//
+//	isConnected_ = false;
+//}

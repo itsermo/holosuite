@@ -10,7 +10,7 @@
 using namespace holo;
 using namespace holo::codec;
 
-HoloCodecOctree::HoloCodecOctree() : 
+HoloCodecOctree::HoloCodecOctree() : IHoloCodec<HoloCloud>(),
 	isInit_(false),
 	compressionProfile_((pcl::io::compression_Profiles_e)pcl::io::LOW_RES_ONLINE_COMPRESSION_WITH_COLOR),
 	args_()
@@ -29,7 +29,7 @@ HoloCodecOctree::HoloCodecOctree() :
 
 }
 
-HoloCodecOctree::HoloCodecOctree(HoloCodecOctreeEncodeArgs args) :
+HoloCodecOctree::HoloCodecOctree(HoloCodecOctreeEncodeArgs args) : IHoloCodec<HoloCloud>(),
 	isInit_(false),
 	compressionProfile_((pcl::io::compression_Profiles_e)pcl::io::MANUAL_CONFIGURATION),
 	args_(args)

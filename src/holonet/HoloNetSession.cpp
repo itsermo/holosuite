@@ -76,6 +76,22 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet)
 	}
 }
 
+void HoloNetSession::disconnect()
+{
+	if (socket_)
+	{
+		if (socket_->is_open())
+		{
+			boost::system::error_code error;
+			socket_->shutdown(boost::asio::socket_base::shutdown_both, error);
+			socket_->close();
+		}
+		socket_.reset();
+	}
+
+	isConnected_ = false;
+}
+
 //void HoloNetSession::pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet)
 //{
 //	if (sendQueue_.size() < HOLO_NET_PACKET_BUFFER_SIZE)

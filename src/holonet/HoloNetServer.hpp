@@ -16,7 +16,7 @@ namespace holo
 			~HoloNetServer();
 
 			HoloNetProtocolHandshake listenAndWait(unsigned short port, HoloNetProtocolHandshake localInfo);
-			void disconnect();
+			//void disconnect();
 
 		private:
 			boost::shared_ptr<boost::asio::io_service> io_service_;

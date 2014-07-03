@@ -504,53 +504,53 @@ int main(int argc, char *argv[])
 	}
 
 	bool success = false;
-	
-	switch (captureType)
-	{
-	case holo::capture::CAPTURE_TYPE_FILE_PLY:
-		//TODO: get PLY file support
-		break;
-	case holo::capture::CAPTURE_TYPE_FILE_PCD:
-		//TODO: get PCD files in
-		break;
-	case holo::capture::CAPTURE_TYPE_FILE_OBJ:
-		//TODO: get OBJ file support
-		break;
-	case holo::capture::CAPTURE_TYPE_FILE_ONI:
-		capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(filePath.string());
-		break;
-	case holo::capture::CAPTURE_TYPE_OPENNI2:
-		capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
-		break;
-	default:
-		break;
-	}
-
-	if (capture)
-	{
-		if (!capture->init(captureIndex))
-		{
-			LOG4CXX_FATAL(logger_main, "Could not open the capture input.  Exiting holosuite...");
-			return -1;
-		}
-
-		captureInfo = capture->getCaptureInfo();
-
-		localInfo.rgbazWidth = captureInfo.zWidth;
-		localInfo.rgbazHeight = captureInfo.zHeight;
-		localInfo.captureFPS = captureInfo.zFPS;
-		localInfo.captureHOV = captureInfo.zHOV;
-		localInfo.captureVOV = captureInfo.zVOV;
-
-		h264Args.width = captureInfo.zWidth;
-		h264Args.height = captureInfo.zHeight;
-	}
 
 	bool shouldConnect = true;
 	while (true)
 	{
 		if (shouldConnect)
 		{
+			switch (captureType)
+			{
+			case holo::capture::CAPTURE_TYPE_FILE_PLY:
+				//TODO: get PLY file support
+				break;
+			case holo::capture::CAPTURE_TYPE_FILE_PCD:
+				//TODO: get PCD files in
+				break;
+			case holo::capture::CAPTURE_TYPE_FILE_OBJ:
+				//TODO: get OBJ file support
+				break;
+			case holo::capture::CAPTURE_TYPE_FILE_ONI:
+				capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(filePath.string());
+				break;
+			case holo::capture::CAPTURE_TYPE_OPENNI2:
+				capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
+				break;
+			default:
+				break;
+			}
+
+			if (capture)
+			{
+				if (!capture->init(captureIndex))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not open the capture input.  Exiting holosuite...");
+					return -1;
+				}
+
+				captureInfo = capture->getCaptureInfo();
+
+				localInfo.rgbazWidth = captureInfo.zWidth;
+				localInfo.rgbazHeight = captureInfo.zHeight;
+				localInfo.captureFPS = captureInfo.zFPS;
+				localInfo.captureHOV = captureInfo.zHOV;
+				localInfo.captureVOV = captureInfo.zVOV;
+
+				h264Args.width = captureInfo.zWidth;
+				h264Args.height = captureInfo.zHeight;
+			}
+
 			std::future<holo::net::HoloNetProtocolHandshake> serverHandle;
 
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)

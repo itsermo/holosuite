@@ -18,7 +18,7 @@ extern "C"
 using namespace holo;
 using namespace holo::codec;
 
-HoloCodecH264::HoloCodecH264() :
+HoloCodecH264::HoloCodecH264() : IHoloCodec<HoloRGBAZMat>(),
 	isInit_(false),
 	args_(),
 	encoder_(NULL),
@@ -52,7 +52,7 @@ HoloCodecH264::HoloCodecH264() :
 	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object instantiated with default values");
 }
 
-HoloCodecH264::HoloCodecH264(HoloCodecH264Args args) :
+HoloCodecH264::HoloCodecH264(HoloCodecH264Args args) : IHoloCodec<HoloRGBAZMat>(),
 	isInit_(false),
 	args_(args),
 	encoder_(NULL),
@@ -261,10 +261,10 @@ void HoloCodecH264::deinit()
 			{
 				LOG4CXX_DEBUG(logger_, "Closing decoder");
 				avcodec_close(decoderCtx_);
-				LOG4CXX_DEBUG(logger_, "Freeing encoder context");
+				LOG4CXX_DEBUG(logger_, "Freeing decoder context");
 				av_freep(&decoderCtx_);
-				LOG4CXX_DEBUG(logger_, "Freeing encoder object");
-				av_freep(&decoder_);
+				LOG4CXX_DEBUG(logger_, "Freeing decoder object");
+				//av_freep(&decoder_);
 			}
 
 			LOG4CXX_INFO(logger_, "H264 decoder deinitialized");

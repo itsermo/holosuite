@@ -11,7 +11,7 @@ using namespace holo;
 using namespace holo::capture;
 using namespace openni;
 
-HoloCaptureOpenNI2::HoloCaptureOpenNI2() :
+HoloCaptureOpenNI2::HoloCaptureOpenNI2() : IHoloCapture(),
 rgbWidth_(HOLO_CAPTURE_DEFAULT_RGB_WIDTH),
 rgbHeight_(HOLO_CAPTURE_DEFAULT_RGB_HEIGHT),
 rgbFPS_(HOLO_CAPTURE_DEFAULT_RGB_FPS),
@@ -26,7 +26,7 @@ isOpenNI2Init_(false), worldConvertCache_()
 	LOG4CXX_DEBUG(logger_, "HoloCaptureOpenNI2 object instantiated");
 }
 
-HoloCaptureOpenNI2::HoloCaptureOpenNI2(std::string filePath) :
+HoloCaptureOpenNI2::HoloCaptureOpenNI2(std::string filePath) : IHoloCapture(),
 rgbWidth_(HOLO_CAPTURE_DEFAULT_RGB_WIDTH),
 rgbHeight_(HOLO_CAPTURE_DEFAULT_RGB_HEIGHT),
 rgbFPS_(HOLO_CAPTURE_DEFAULT_RGB_FPS),

@@ -3,7 +3,7 @@
 using namespace holo;
 using namespace holo::codec;
 
-HoloCodecPassthroughCloud::HoloCodecPassthroughCloud() : isInit_(false), width_(HOLO_CAPTURE_DEFAULT_Z_WIDTH), height_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT)
+HoloCodecPassthroughCloud::HoloCodecPassthroughCloud() : IHoloCodec<HoloCloud>(), isInit_(false), width_(HOLO_CAPTURE_DEFAULT_Z_WIDTH), height_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.passthroughcloud");
 }

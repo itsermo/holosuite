@@ -4,7 +4,7 @@
 
 using namespace holo::net;
 
-HoloNetClient::HoloNetClient()
+HoloNetClient::HoloNetClient() : HoloNetSession()
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.client");
 
@@ -70,15 +70,5 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	return hs;
 }
 
-void HoloNetClient::disconnect()
-{
-	if (socket_ && isConnected())
-	{
-		socket_->shutdown(boost::asio::socket_base::shutdown_both);
-		socket_->close();
-		socket_.reset();
-	}
 
-	isConnected_ = false;
-}
 
