@@ -276,11 +276,17 @@ void HoloCodecH264::deinit()
 
 void HoloCodecH264::encode(boost::shared_ptr<HoloRGBAZMat> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut)
 {
-	auto futureColor = std::async(std::launch::async, &HoloCodecH264::encodeColorFrame, this, std::ref(rawData->rgba));
+	//auto futureColor = std::async(std::launch::async, &HoloCodecH264::encodeColorFrame, this, std::ref(rawData->rgba));
+
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
 
 	auto futureZ = std::async(std::launch::async, &HoloCodecH264::encodeZFrame, this, std::ref(rawData->z));
 
-	auto color = (boost::shared_ptr<std::vector<unsigned char>>)futureColor.get();
+	auto color = encodeColorFrame(rawData->rgba);
+
+	//auto color = (boost::shared_ptr<std::vector<unsigned char>>)futureColor.get();
 	auto z = (boost::shared_ptr<std::vector<unsigned char>>)futureZ.get();
 
 	if (color && z)
@@ -291,6 +297,12 @@ void HoloCodecH264::encode(boost::shared_ptr<HoloRGBAZMat> rawData, boost::share
 
 		std::copy(color->begin(), color->end(), encodeOut->begin() + sizeof(int)* 2);
 		std::copy(z->begin(), z->end(), encodeOut->begin() + color->size() + sizeof(int)* 2);
+
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "h.264 encoded full rgb+z " << encodeOut->size() << " byte color frame in " << duration.count() << "ms");
+#endif
+
 	}
 	else
 		encodeOut = nullptr;
