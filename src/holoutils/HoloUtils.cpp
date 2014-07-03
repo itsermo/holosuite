@@ -1,7 +1,14 @@
 #include "HoloUtils.hpp"
 
+#ifdef TRACE_LOG_ENABLED
+#include <ctime>
+#include <chrono>
+#endif
+
 using namespace holo;
 using namespace holo::utils;
+
+log4cxx::LoggerPtr logger_utils(log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.utils"));
 
 void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgbaz, holo::capture::WorldConvertCache& worldConvertCache)
 {
@@ -11,6 +18,10 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 	HoloPoint3D * point = &cloudOut->points[0];
 
 	float depthVal = HOLO_CLOUD_BAD_POINT;
+
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
 
 	for (int i = 0, idx = 0; i < rgbaz.z.rows; i++)
 	{
@@ -33,6 +44,11 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 			point->rgba = *pp;
 		}
 	}
+
+#ifdef TRACE_LOG_ENABLED
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+	LOG4CXX_TRACE(logger_utils, "Cloud generated in " << duration.count() << "ms");
+#endif
 }
 
 void holo::utils::ConvertRGBToRGBA(cv::Mat& rgbMat, cv::Mat& rgbaMatOut)

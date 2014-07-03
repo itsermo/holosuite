@@ -10,6 +10,11 @@ extern "C"
 
 #include <opencv2/opencv.hpp>
 
+#ifdef TRACE_LOG_ENABLED
+#include <ctime>
+#include <chrono>
+#endif
+
 using namespace holo;
 using namespace holo::codec;
 
@@ -330,7 +335,20 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeColorFrame(cv
 
 	encodeInFrame_->pts = nextPTS();
 
-	avcodec_encode_video2(encoderCtx_, &encodePacket_, encodeInFrame_, &gotOutput);
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
+
+	if (avcodec_encode_video2(encoderCtx_, &encodePacket_, encodeInFrame_, &gotOutput) != 0)
+	{
+		LOG4CXX_DEBUG(logger_, "Failed to encode h.264 color frame");
+		return nullptr;
+	}
+
+#ifdef TRACE_LOG_ENABLED
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+	LOG4CXX_TRACE(logger_, "h.264 encoded a " << encodePacket_.size << " byte color frame in " << duration.count() << "ms");
+#endif
 
 	if (gotOutput > 0)
 	{
@@ -353,7 +371,16 @@ boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned 
 
 	memcpy(decodePacket_.data, encodedRGBA.data(), decodePacket_.size);
 
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
+
 	int len = avcodec_decode_video2(decoderCtx_, decodeOutFrame_, &gotPicture, &decodePacket_);
+
+#ifdef TRACE_LOG_ENABLED
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+	LOG4CXX_TRACE(logger_, "h.264 decoded a " << len << " byte color frame in " << duration.count() << "ms");
+#endif
 
 	av_free_packet(&decodePacket_);
 
@@ -383,9 +410,20 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeZFrame(cv::Ma
 	std::vector<int> compression_params;
 	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
 	compression_params.push_back(args_.zCompressionLevel);
+	compression_params.push_back(CV_IMWRITE_PNG_STRATEGY);
+	compression_params.push_back(CV_IMWRITE_PNG_STRATEGY_RLE);
 
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
 	if (cv::imencode(".png", z, *encodeData, compression_params))
+	{
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "h.264 encoded a " << encodeData->size() << " byte png z-frame in " << duration.count() << "ms");
+#endif
 		return encodeData;
+	}
 	else
 		return nullptr;
 }
@@ -393,7 +431,17 @@ boost::shared_ptr<std::vector<unsigned char>> HoloCodecH264::encodeZFrame(cv::Ma
 boost::shared_ptr<cv::Mat> HoloCodecH264::decodeZFrame(std::vector<unsigned char>::iterator dataBegin, std::vector<unsigned char>::iterator dataEnd)
 {
 	auto encodedRGBA = std::vector<unsigned char>(dataBegin, dataEnd);
+
+#ifdef TRACE_LOG_ENABLED
+	auto startTime = std::chrono::system_clock::now();
+#endif
+
 	auto decodeMat = boost::shared_ptr<cv::Mat>(new cv::Mat(cv::imdecode(encodedRGBA, CV_LOAD_IMAGE_ANYDEPTH)));
+
+#ifdef TRACE_LOG_ENABLED
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+	LOG4CXX_TRACE(logger_, "h.264 decoded a " << encodedRGBA.size() << " byte png z-frame in " << duration.count() << "ms");
+#endif
 
 	if (!decodeMat->empty())
 		return decodeMat;

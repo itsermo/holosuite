@@ -1,7 +1,11 @@
 #include "HoloCodecOctree.hpp"
 #include <sstream>
 #include <cstdint>
+
+#ifdef TRACE_LOG_ENABLED
+#include <ctime>
 #include <chrono>
+#endif
 
 using namespace holo;
 using namespace holo::codec;
@@ -99,11 +103,16 @@ void HoloCodecOctree::encode(boost::shared_ptr<HoloCloud> rawData, boost::shared
 	{
 		std::stringstream compressedData;
 
-		//auto t_start = std::chrono::high_resolution_clock::now();
+#ifdef TRACE_LOG_ENABLED
+		auto startTime = std::chrono::system_clock::now();
+#endif
 
 		encoder_->encodePointCloud((HoloCloud::ConstPtr)rawData, compressedData);
-		//auto t_end = std::chrono::high_resolution_clock::now();
-		//std::cout << "Encode took " << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count() << "ms" << std::endl;
+
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "octree encoded a " << compressedData.tellp() << " byte compressed cloud frame in " << duration.count() << "ms");
+#endif
 
 		std::string compressedString = compressedData.str();
 		encodeOut = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>(compressedString.begin(), compressedString.end()));
@@ -115,6 +124,13 @@ void HoloCodecOctree::decode(boost::shared_ptr<std::vector<unsigned char>> encod
 	if (isInit_)
 	{
 		std::istringstream encodedStringStream(std::string(encodedStream->begin(), encodedStream->end()));
+#ifdef TRACE_LOG_ENABLED
+		auto startTime = std::chrono::system_clock::now();
+#endif
 		decoder_->decodePointCloud(encodedStringStream, decodeOut);
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "octree decoded a " << encodedStream->size() << " byte compressed cloud frame in " << duration.count() << "ms");
+#endif
 	}
 }

@@ -12,6 +12,7 @@ namespace holo
 		class IHoloCodec 
 		{
 		public:
+			virtual ~IHoloCodec<T>() = 0;
 			virtual bool init(CODEC_MODE encodeOrDecode) = 0;
 			virtual void deinit() = 0;
 			virtual bool isInit() = 0;
@@ -21,5 +22,8 @@ namespace holo
 
 			virtual CODEC_MODE getcodecMode() = 0;
 		};
+
+		template<class T>
+		inline IHoloCodec<T>::~IHoloCodec() { }
 	}
 }

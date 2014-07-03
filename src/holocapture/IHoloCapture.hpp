@@ -14,6 +14,7 @@ namespace holo
 		class IHoloCapture
 		{
 		public:
+			virtual ~IHoloCapture() = 0;
 			virtual bool init(int which) = 0;
 			virtual bool isOpen() = 0;
 			virtual void waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage) = 0;
@@ -22,5 +23,7 @@ namespace holo
 			virtual std::list<std::string> enumerateDevices() = 0;
 			virtual HoloCaptureInfo getCaptureInfo() = 0;
 		};
+
+		inline IHoloCapture::~IHoloCapture() { }
 	};
 };

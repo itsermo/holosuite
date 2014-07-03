@@ -2,6 +2,11 @@
 #include "../holoutils/HoloUtils.hpp"
 #include <future>
 
+#ifdef TRACE_LOG_ENABLED
+#include <chrono>
+#include <ctime>
+#endif
+
 using namespace holo;
 using namespace holo::capture;
 using namespace openni;
@@ -221,7 +226,9 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 
 		colorStream_.readFrame(&color);
 		depthStream_.readFrame(&depth);
-
+#ifdef TRACE_LOG_ENABLED
+		auto startTime = std::chrono::system_clock::now();
+#endif
 		rgbImage_ = cv::Mat(cv::Size(rgbWidth_, rgbHeight_), CV_8UC3, (void*)color.getData(), color.getStrideInBytes() );
 		
 		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
@@ -238,6 +245,11 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 
 		futureRGBA.get();
 		rgbaImage = rgbaImage_;
+
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "OpenNI2 frame copied Z-frame and converted RGB to RGBA in " << duration.count() << "ms");
+#endif
 	}
 	
 }
@@ -261,6 +273,9 @@ void HoloCaptureOpenNI2::waitAndGetNextPointCloud(HoloCloudPtr& pointCloud)
 
 		float depthVal = HOLO_CLOUD_BAD_POINT;
 
+#ifdef TRACE_LOG_ENABLED
+		auto startTime = std::chrono::system_clock::now();
+#endif
 		for (int i = 0, idx = 0; i < zHeight_; i++)
 		{
 			for (int j = 0; j < zWidth_; j++, idx++, pp+=3, depthPix++, point++)
@@ -290,6 +305,12 @@ void HoloCaptureOpenNI2::waitAndGetNextPointCloud(HoloCloudPtr& pointCloud)
 		pointCloud = (HoloCloudPtr)futureCloud.get();
 
 		pointCloud_.swap(pointCloud);
+
+#ifdef TRACE_LOG_ENABLED
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
+		LOG4CXX_TRACE(logger_, "OpenNI2 frame copied Z-frame and converted RGB to RGBA in " << duration.count() << "ms");
+#endif
+
 	}
 }
 
