@@ -31,7 +31,7 @@ namespace holo
 			bool isInit_;
 			CODEC_MODE codecMode_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.passthroughcloud");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

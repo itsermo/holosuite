@@ -53,7 +53,7 @@ namespace holo
 			boost::shared_ptr<pcl::io::OctreePointCloudCompression<HoloPoint3D>> decoder_;
 			HoloCodecOctreeEncodeArgs args_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.octree");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

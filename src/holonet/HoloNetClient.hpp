@@ -26,7 +26,7 @@ namespace holo
 			boost::shared_ptr<boost::asio::ip::tcp::resolver> resolver_;
 			
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.client");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

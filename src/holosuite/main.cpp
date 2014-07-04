@@ -352,10 +352,14 @@ int main(int argc, char *argv[])
 		}
 		else if (vm["codec"].as<std::string>().compare("h264") == 0)
 		{
+			AVRational rat;
+			rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
+			rat.den = static_cast<int>(captureInfo.zFPS);
+
 			h264Args.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
 			h264Args.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
 			h264Args.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
-			h264Args.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, static_cast<int>(captureInfo.zFPS) };
+			h264Args.timeBase = rat;
 			h264Args.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
 			h264Args.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
 			h264Args.crf = HOLO_CODEC_H264_DEFAULT_CRF;

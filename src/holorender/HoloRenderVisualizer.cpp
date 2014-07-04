@@ -11,6 +11,8 @@ HoloRenderVisualizer::HoloRenderVisualizer() :
 	haveNewCloud_(false),
 	isInit_(false)
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
+
 	LOG4CXX_DEBUG(logger_, "HoloRenderVisualizer object instantiated with default args");
 }
 
@@ -22,6 +24,8 @@ HoloRenderVisualizer::HoloRenderVisualizer(int voxelSize, int zWidth, int zHeigh
 	haveNewCloud_(false),
 	isInit_(false)
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
+
 	LOG4CXX_DEBUG(logger_, "HoloRenderVisualizer object instantiated with custom args");
 }
 

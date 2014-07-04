@@ -5,6 +5,8 @@ using namespace holo::net;
 
 HoloNetSession::HoloNetSession() : isConnected_(false)
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.session");
+
 	LOG4CXX_DEBUG(logger_, "HoloNetSession object instantiated")
 }
 

@@ -28,12 +28,18 @@ HoloCodecH264::HoloCodecH264() :
 	decodePacket_(),
 	encodeBufferSize_(0)
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.h264");
+
+	AVRational rat;
+	rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
+	rat.den = HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN;
+
 	args_.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
 	args_.width = HOLO_CODEC_H264_DEFAULT_WIDTH;
 	args_.height = HOLO_CODEC_H264_DEFAULT_HEIGHT;
 	args_.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
 	args_.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
-	args_.timeBase = AVRational{ HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN };
+	args_.timeBase = rat;
 	args_.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
 	args_.crf = HOLO_CODEC_H264_DEFAULT_CRF;
 	args_.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
@@ -56,6 +62,8 @@ HoloCodecH264::HoloCodecH264(HoloCodecH264Args args) :
 	decodePacket_(),
 	encodeBufferSize_(0)
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.h264");
+
 	LOG4CXX_DEBUG(logger_, "HoloCodecH264 object instantiated with custom values");
 }
 

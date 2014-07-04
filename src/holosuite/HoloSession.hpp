@@ -122,7 +122,7 @@ namespace holo
 
 		holo::capture::WorldConvertCache worldConvertCache_;
 
-		log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.session");
+		log4cxx::LoggerPtr logger_;
 
 	};
 }

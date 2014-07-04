@@ -22,7 +22,7 @@ namespace holo
 			boost::shared_ptr<boost::asio::io_service> io_service_;
 			boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.server");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

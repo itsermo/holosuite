@@ -16,6 +16,8 @@ zFPS_(HOLO_CAPTURE_DEFAULT_Z_FPS),
 isOpen_(false),
 isOpenNI2Init_(false), worldConvertCache_()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
+
 	LOG4CXX_DEBUG(logger_, "HoloCaptureOpenNI2 object instantiated");
 }
 
@@ -30,6 +32,8 @@ isOpen_(false),
 isOpenNI2Init_(false),
 filePath_(filePath), worldConvertCache_()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
+
 	LOG4CXX_DEBUG(logger_, "HoloCaptureOpenNI2 object instantiated");
 }
 
@@ -48,6 +52,8 @@ zFPS_(zFPS),
 isOpen_(false),
 isOpenNI2Init_(false), worldConvertCache_()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
+
 	LOG4CXX_DEBUG(logger_, "HoloCaptureOpenNI2 object instantiated");
 }
 

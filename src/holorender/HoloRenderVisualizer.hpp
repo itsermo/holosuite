@@ -47,7 +47,7 @@ namespace holo
 
 			bool isInit_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

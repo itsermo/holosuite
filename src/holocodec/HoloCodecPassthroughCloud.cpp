@@ -5,12 +5,12 @@ using namespace holo::codec;
 
 HoloCodecPassthroughCloud::HoloCodecPassthroughCloud() : isInit_(false), width_(HOLO_CAPTURE_DEFAULT_Z_WIDTH), height_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT)
 {
-
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.passthroughcloud");
 }
 
 HoloCodecPassthroughCloud::HoloCodecPassthroughCloud(int width, int height) : isInit_(false), width_(width), height_(height)
 {
-
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.passthroughcloud");
 }
 
 HoloCodecPassthroughCloud::~HoloCodecPassthroughCloud()

@@ -91,7 +91,7 @@ namespace holo
 
 			CODEC_MODE codecMode_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.h264");
+			log4cxx::LoggerPtr logger_;
 
 		};
 	}

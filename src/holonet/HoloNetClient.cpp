@@ -6,6 +6,8 @@ using namespace holo::net;
 
 HoloNetClient::HoloNetClient()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.client");
+
 	LOG4CXX_TRACE(logger_, "Instantiating HoloClient object");
 	resolver_ = boost::shared_ptr<boost::asio::ip::tcp::resolver>(new boost::asio::ip::tcp::resolver(io_service_));
 }

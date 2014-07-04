@@ -5,7 +5,7 @@ using namespace holo::net;
 
 HoloNetServer::HoloNetServer()
 {
-
+	 logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.server");
 }
 
 HoloNetServer::~HoloNetServer()

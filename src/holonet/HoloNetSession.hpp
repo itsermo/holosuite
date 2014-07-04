@@ -56,7 +56,7 @@ namespace holo
 			//std::condition_variable haveNewRemotePacket_;
 
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.session");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }

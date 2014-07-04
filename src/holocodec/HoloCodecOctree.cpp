@@ -11,6 +11,8 @@ HoloCodecOctree::HoloCodecOctree() :
 	compressionProfile_((pcl::io::compression_Profiles_e)pcl::io::LOW_RES_ONLINE_COMPRESSION_WITH_COLOR),
 	args_()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.octree");
+
 	args_.showStatistics = HOLO_CODEC_OCTREE_DEFAULT_SHOW_STATISTICS;
 	args_.pointResolution = HOLO_CODEC_OCTREE_DEFAULT_POINT_RESOLUTION;
 	args_.octreeResolution = HOLO_CODEC_OCTREE_DEFAULT_OCTREE_RESOLUTION;
@@ -28,8 +30,9 @@ HoloCodecOctree::HoloCodecOctree(HoloCodecOctreeEncodeArgs args) :
 	compressionProfile_((pcl::io::compression_Profiles_e)pcl::io::MANUAL_CONFIGURATION),
 	args_(args)
 {
-	LOG4CXX_DEBUG(logger_, "HoloCodecOctree object instantiated with custom args");
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.octree");
 
+	LOG4CXX_DEBUG(logger_, "HoloCodecOctree object instantiated with custom args");
 }
 
 HoloCodecOctree::~HoloCodecOctree()

@@ -52,6 +52,8 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	remoteInfo_(remoteInfo),
 	worldConvertCache_()
 {
+	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.session");
+
 	capture_ = std::move(capture);
 	rgbazDecoder_ = std::move(decoderRGBAZ);
 	rgbazEncoder_ = std::move(encoderRGBAZ);

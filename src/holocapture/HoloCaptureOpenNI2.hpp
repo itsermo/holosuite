@@ -80,7 +80,7 @@ namespace holo
 
 			std::string filePath_;
 
-			log4cxx::LoggerPtr logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
+			log4cxx::LoggerPtr logger_;
 		};
 	}
 }
