@@ -248,7 +248,7 @@ void HoloSession::captureLoop()
 			haveLocalRGBAZ_ = true;
 			haveLocalRGBAZCV_.notify_all();
 		}
-		else
+		else if (cloudEncoder_)
 		{
 			HoloCloudPtr localCloud;
 			capture_->waitAndGetNextPointCloud(localCloud);
@@ -258,6 +258,12 @@ void HoloSession::captureLoop()
 			haveLocalCloud_ = true;
 			haveLocalCloudCV_.notify_all();
 		}
+		else
+			shouldCapture_ = false;
+
+#ifndef WIN32
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
 
 	}
 }
@@ -336,7 +342,6 @@ void HoloSession::encodeLoop()
 			rgbazEncoder_->encode(localRGBAZ_, encodedData);
 			
 			haveLocalRGBAZ_ = false;
-
 			ulLocalRGBAZ.unlock();
 
 			if (encodedData)
