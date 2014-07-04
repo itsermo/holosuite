@@ -23,7 +23,7 @@ log4cxx::LoggerPtr logger_main(log4cxx::Logger::getLogger("edu.mit.media.obmg.ho
 int main(int argc, char *argv[])
 {
 
-#if (WIN32)
+#ifdef WIN32
 	log4cxx::PatternLayoutPtr logLayoutPtr = new log4cxx::PatternLayout(L"%-5p %m%n");
 #else
 	log4cxx::PatternLayoutPtr logLayoutPtr = new log4cxx::PatternLayout("%-5p %m%n");
@@ -722,13 +722,19 @@ int main(int argc, char *argv[])
 		if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT)
 		{
 			if (!clientSession->isRunning())
+			{
 				shouldConnect = true;
+				clientSession.reset();
+			}
 		}
 
 		if (sessionMode == holo::HOLO_SESSION_MODE_SERVER)
 		{
 			if (!serverSession->isRunning())
+			{
+				serverSession.reset();
 				shouldConnect = true;
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));

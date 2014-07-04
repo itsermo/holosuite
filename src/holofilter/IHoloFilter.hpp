@@ -18,5 +18,8 @@ namespace holo
 
 			virtual void doFilter(boost::shared_ptr<const T> inputFrame, boost::shared_ptr<T>& outputFrame) = 0;
 		};
+
+		template<class T>
+		inline IHoloFilter<T>::~IHoloFilter() {}
 	}
 }
