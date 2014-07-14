@@ -2,13 +2,12 @@
 
 #include "IHoloCapture.hpp"
 #include "HoloCaptureInfo.hpp"
+#include "HoloCaptureOpenNI2Listener.hpp"
 
 #include <OpenNI.h>
 #include <log4cxx/log4cxx.h>
 
 #include <log4cxx/logger.h>
-
-
 
 namespace holo
 {
@@ -51,12 +50,18 @@ namespace holo
 				return info;
 			}
 
+			void onNewFrame(openni::VideoStream& stream);
+
 		private:
+
 			bool initOpenNI2();
 			void deinitOpenNI2();
 			openni::Device device_;
 			openni::VideoStream depthStream_;
 			openni::VideoStream colorStream_;
+
+			HoloCaptureOpenNI2Listener depthListener_;
+			HoloCaptureOpenNI2Listener colorListener_;
 
 			cv::Mat rgbImage_;
 			cv::Mat rgbaImage_;
