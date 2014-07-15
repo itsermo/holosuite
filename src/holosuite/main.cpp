@@ -195,6 +195,8 @@ int main(int argc, char *argv[])
 		sessionName = boost::asio::ip::host_name();
 	}
 
+	strcpy((char*)localInfo.clientName, sessionName.c_str());
+
 	if (vm.count("server"))
 	{
 		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
