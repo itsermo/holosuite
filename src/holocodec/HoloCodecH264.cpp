@@ -128,6 +128,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		av_opt_set(encoderCtx_->priv_data, "preset", "ultrafast", 0);
 		av_opt_set(encoderCtx_->priv_data, "tune", "zerolatency", 0);
 		av_opt_set(encoderCtx_->priv_data, "crf", crf, 0);
+		av_opt_set(encoderCtx_->priv_data, "vbv-bufsize", "2000000", 0);
 		
 		if (avcodec_open2(encoderCtx_, encoder_, NULL) < 0)
 		{
