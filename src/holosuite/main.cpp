@@ -195,6 +195,8 @@ int main(int argc, char *argv[])
 		sessionName = boost::asio::ip::host_name();
 	}
 
+	strcpy((char*)localInfo.clientName, sessionName.c_str());
+
 	if (vm.count("server"))
 	{
 		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
@@ -247,7 +249,10 @@ int main(int argc, char *argv[])
 		if (vm["capture-input"].as<std::string>().compare("openni2") == 0)
 		{
 			captureType = holo::capture::CAPTURE_TYPE_OPENNI2;
-			//capture = holo::capture::HoloCaptureGenerator::fromOpenNI(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
+		}
+		else if (vm["capture-input"].as<std::string>().compare("none") == 0)
+		{
+			captureType = holo::capture::CAPTURE_TYPE_NONE;
 		}
 		else if (!vm["capture-input"].as<std::string>().empty())
 		{
@@ -394,12 +399,11 @@ int main(int argc, char *argv[])
 				h264Args.zCompressionLevel = vm["h264-z-level"].as<int>();
 			}
 
-			//if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-			//	codecServerRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
-			//if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-			//	codecClientRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
-
 			codecType = holo::codec::CODEC_TYPE_H264;
+		}
+		else if (vm["codec"].as<std::string>().compare("none") == 0)
+		{
+			codecType = holo::codec::CODEC_TYPE_NONE;
 		}
 		else
 		{
@@ -447,9 +451,13 @@ int main(int argc, char *argv[])
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
 			//renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, captureInfo.zWidth, captureInfo.zHeight);
 		}
+		else if (vm["render-output"].as<std::string>().compare("none") == 0)
+		{
+			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_NONE;
+		}
 		else
 		{
-			std::cout << "Invalid renderer selection. Please use a valid renderer such as --reneder-output=\"visualizer\"." << std::endl << std::endl;
+			std::cout << "Invalid renderer selection. Please use a valid renderer such as --render-output=\"visualizer\"." << std::endl << std::endl;
 			std::cout << render_options << std::endl;
 			return -1;
 		}
@@ -512,6 +520,9 @@ int main(int argc, char *argv[])
 		{
 			switch (captureType)
 			{
+			case holo::capture::CAPTURE_TYPE_NONE:
+				capture = nullptr;
+				break;
 			case holo::capture::CAPTURE_TYPE_FILE_PLY:
 				//TODO: get PLY file support
 				break;
@@ -583,6 +594,10 @@ int main(int argc, char *argv[])
 
 			switch (codecType)
 			{
+			case holo::codec::CODEC_TYPE_NONE:
+				encoderCloud = nullptr;
+				encoderRGBAZ = nullptr;
+				break;
 			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
 					encoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(localInfo.rgbazWidth, localInfo.rgbazHeight);
 				break;
@@ -619,6 +634,10 @@ int main(int argc, char *argv[])
 
 			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.codecType : infoFromClient.codecType)
 			{
+			case holo::codec::CODEC_TYPE_NONE:
+				decoderCloud = nullptr;
+				decoderRGBAZ = nullptr;
+				break;
 			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
 				decoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
 				break;
@@ -660,6 +679,9 @@ int main(int argc, char *argv[])
 
 			switch (renderType)
 			{
+			case holo::render::RENDER_TYPE_NONE:
+				renderer = nullptr;
+				break;
 			case holo::render::RENDER_TYPE_VIS2D:
 				//TODO: implement 2D VIS
 				break;
