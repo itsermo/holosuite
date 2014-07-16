@@ -4,6 +4,10 @@
 #include "HoloCodecOctree.hpp"
 #include "HoloCodecH264.hpp"
 
+#ifdef ENABLE_HOLO_AUDIO
+#include "HoloCodecOpus.hpp"
+#endif
+
 #include <memory>
 
 namespace holo
@@ -45,6 +49,18 @@ namespace holo
 			{
 				return std::unique_ptr<IHoloCodec<holo::HoloRGBAZMat>>(new HoloCodecH264(args));
 			}
+
+#ifdef ENABLE_HOLO_AUDIO
+			static std::unique_ptr<IHoloCodec<std::vector<unsigned char>>> fromOpus()
+			{
+				return std::unique_ptr<IHoloCodec<std::vector<unsigned char>>>(new HoloCodecOpus());
+			}
+
+			static std::unique_ptr<IHoloCodec<std::vector<unsigned char>>> fromOpus(HoloAudioFormat audioFormat, int bitRate)
+			{
+				return std::unique_ptr<IHoloCodec<std::vector<unsigned char>>>(new HoloCodecOpus(audioFormat, bitRate));
+			}
+#endif
 
 		private:
 

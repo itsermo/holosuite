@@ -35,15 +35,15 @@ namespace holo
 			HoloCodecOctree(HoloCodecOctreeEncodeArgs args);
 			~HoloCodecOctree();
 
-			virtual bool init(CODEC_MODE codecMode_);
-			virtual void deinit();
+			bool init(CODEC_MODE codecMode_);
+			void deinit();
 
-			virtual void encode(boost::shared_ptr<HoloCloud> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut);
-			virtual void decode(boost::shared_ptr<std::vector<unsigned char>> encodedStream, boost::shared_ptr<HoloCloud>& decodeOut);
+			void encode(boost::shared_ptr<HoloCloud> rawData, boost::shared_ptr<std::vector<unsigned char>>& encodeOut);
+			void decode(boost::shared_ptr<std::vector<unsigned char>> encodedStream, boost::shared_ptr<HoloCloud>& decodeOut);
 
-			virtual CODEC_MODE getcodecMode() { return codecMode_; }
+			CODEC_MODE getcodecMode() { return codecMode_; }
 
-			virtual bool isInit() { return isInit_; }
+			bool isInit() { return isInit_; }
 
 		private:
 			bool isInit_;

@@ -21,6 +21,18 @@
 
 #define HOLO_NET_PACKET_BUFFER_SIZE 100
 
+#ifdef ENABLE_HOLO_AUDIO
+#define HOLO_AUDIO_DEFAULT_FMT_FREQ 48000
+#define HOLO_AUDIO_DEFAULT_FMT_CHAN 2
+#define HOLO_AUDIO_DEFAULT_FMT_DEPTH 16
+#define HOLO_AUDIO_DEFAULT_VOLUME_MIN 0.0f
+#define HOLO_AUDIO_DEFAULT_VOLUME_MAX 1.0f
+#define HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE 960
+#define HOLO_AUDIO_DEFAULT_ENCODE_SIGNAL OPUS_AUTO
+#define HOLO_AUDIO_DEFAULT_ENCODE_BITRATE 48000
+#define HOLO_AUDIO_DEFAULT_ENCODE_BANDWIDTH OPUS_BANDWIDTH_FULLBAND
+#endif
+
 const float HOLO_CLOUD_BAD_POINT = std::numeric_limits<float>().quiet_NaN();
 
 namespace holo
@@ -31,6 +43,13 @@ namespace holo
 	struct HoloRGBAZMat { 
 		cv::Mat rgba;
 		cv::Mat z;
+	};
+
+	struct HoloAudioFormat
+	{
+		unsigned int frequency;
+		unsigned int numChannels;
+		unsigned int depth;
 	};
 
 	enum HOLO_SESSION_MODE
