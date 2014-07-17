@@ -16,7 +16,7 @@ namespace holo
 			virtual bool isOpen() = 0;
 			virtual void waitAndGetNextChunk(std::vector<unsigned char>& audioOut) = 0;
 			virtual void deinit() = 0;
-			virtual std::list<std::string> enumerateDevices() = 0;
+			virtual std::vector<std::string> enumerateDevices() = 0;
 			virtual HoloAudioFormat getAudioFormat() = 0;
 		};
 

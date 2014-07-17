@@ -149,10 +149,11 @@ void HoloCodecOpus::encode(boost::shared_ptr<std::vector<unsigned char>> rawData
 	//followed by n number of ints describing the encoded length of each frame (where n is # of frames)
 	//after the header, encoded audio frames are packed one after another
 	const int finalDataHeaderSize = sizeof(int)*(numFrames + 1);
-	std::vector<unsigned char> finalData(finalDataHeaderSize);
+	//std::vector<unsigned char> finalData(finalDataHeaderSize);
+	encodeOut->resize(finalDataHeaderSize);
 
 	//set first int in the header to the number of frames we will encode
-	((int*)finalData.data())[0] = numFrames;
+	((int*)encodeOut->data())[0] = numFrames;
 
 	//create the raw buffer and copy overflow + chunk into it
 	unsigned char * rawBuffer = new unsigned char[rawSize];
@@ -174,10 +175,10 @@ void HoloCodecOpus::encode(boost::shared_ptr<std::vector<unsigned char>> rawData
 		int realLength = opus_encode(audioEncoder_, (const opus_int16*)(rawPtr), HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE, encodeBuffer, rawFrameLength_);
 
 		//set the finaldata buffer size
-		((int*)finalData.data())[i + 1] = realLength;
+		((int*)encodeOut->data())[i + 1] = realLength;
 
 		//add a frame to the end of finalData
-		finalData.insert(finalData.end(), &encodeBuffer[0], &encodeBuffer[realLength]);
+		encodeOut->insert(encodeOut->end(), &encodeBuffer[0], &encodeBuffer[realLength]);
 		rawPtr += rawFrameLength_;
 	}
 
