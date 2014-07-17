@@ -63,7 +63,12 @@ namespace holo
 
 	namespace capture
 	{
-		
+		enum CAPTURE_AUDIO_TYPE
+		{
+			CAPTURE_AUDIO_TYPE_NONE = -1,
+			CAPTURE_AUDIO_TYPE_PORTAUDIO = 0
+		};
+
 		enum CAPTURE_TYPE
 		{
 			CAPTURE_TYPE_NONE = -1,
@@ -71,7 +76,7 @@ namespace holo
 			CAPTURE_TYPE_FILE_PCD = 1,
 			CAPTURE_TYPE_FILE_OBJ = 2,
 			CAPTURE_TYPE_FILE_ONI = 3,
-			CAPTURE_TYPE_OPENNI2 = 4
+			CAPTURE_TYPE_OPENNI2 = 4,
 		};
 
 		struct WorldConvertCache
@@ -89,13 +94,15 @@ namespace holo
 
 	namespace codec
 	{
+
 		enum CODEC_TYPE
 		{
 			CODEC_TYPE_NONE = -1,
 			CODEC_TYPE_PASSTHROUGH_CLOUD = 0,
 			CODEC_TYPE_PASSTHROUGH_RGBAZ = 1,
 			CODEC_TYPE_OCTREE = 2,
-			CODEC_TYPE_H264 = 3
+			CODEC_TYPE_H264 = 3,
+			CODEC_TYPE_OPUS = 4
 		};
 
 		enum CODEC_MODE
@@ -108,12 +115,19 @@ namespace holo
 		enum CODEC_METHOD
 		{
 			CODEC_METHOD_PIXMAP = 0,
-			CODEC_METHOD_CLOUD = 1
+			CODEC_METHOD_CLOUD = 1,
+			CODEC_METHOD_AUDIO = 2,
 		};
 	}
 
 	namespace render
 	{
+		enum RENDER_AUDIO_TYPE
+		{
+			RENDER_AUDIO_TYPE_NONE = -1,
+			RENDER_AUDIO_TYPE_PORTAUDIO = 0
+		};
+
 		enum RENDER_TYPE
 		{
 			RENDER_TYPE_NONE = -1,
