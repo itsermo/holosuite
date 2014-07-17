@@ -44,12 +44,12 @@ namespace holo
 			}
 
 #ifdef ENABLE_HOLO_AUDIO
-			static std::unique_ptr<IHoloCaptureAudio> fromPortAudio()
+			static std::unique_ptr<IHoloCaptureAudio> fromPortaudio()
 			{
 				return std::unique_ptr<IHoloCaptureAudio>(new HoloCaptureAudioPortaudio());
 			}
 
-			static std::unique_ptr<IHoloCaptureAudio> fromPortAudio(HoloAudioFormat audioFormat)
+			static std::unique_ptr<IHoloCaptureAudio> fromPortaudio(HoloAudioFormat audioFormat)
 			{
 				return std::unique_ptr<IHoloCaptureAudio>(new HoloCaptureAudioPortaudio(audioFormat));
 			}

@@ -32,32 +32,6 @@ int main(int argc, char *argv[])
 	log4cxx::ConsoleAppenderPtr logAppenderPtr = new log4cxx::ConsoleAppender(logLayoutPtr);
 	log4cxx::BasicConfigurator::configure(logAppenderPtr);
 
-	auto audiocapture = holo::capture::HoloCaptureGenerator::fromPortAudio();
-	audiocapture->init(0);
-
-	auto audiocodec = holo::codec::HoloCodecGenerator::fromOpus();
-	audiocodec->init(holo::codec::CODEC_MODE_BOTH);
-
-	std::vector<unsigned char> audioData;
-
-	for (int i = 0; i < 256; i++)
-	{
-		auto newSample = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
-		auto newEnc = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
-		auto newDec = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
-		
-		audiocapture->waitAndGetNextChunk(*newSample);
-
-		audiocodec->encode(newSample, newEnc);
-		audiocodec->decode(newEnc, newDec);
-
-		audioData.insert(audioData.end(), newDec->begin(), newDec->end());
-	}
-
-	ofstream outfile("nanocube.wav", ios::out | ios::binary);
-	outfile.write((const char*)&audioData[0], audioData.size());
-	outfile.close();
-
 	int captureIndex = 0;
 	int voxelSize = HOLO_RENDER_DEFAULT_VOXEL_SIZE;
 	std::string sessionName;

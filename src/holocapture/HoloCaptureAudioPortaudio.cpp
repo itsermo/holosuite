@@ -5,7 +5,7 @@ using namespace holo;
 using namespace holo::capture;
 
 
-HoloCaptureAudioPortaudio::HoloCaptureAudioPortaudio() : IHoloCaptureAudio(), isOpen_(false), isInit_(false), audioStream_(nullptr)
+HoloCaptureAudioPortaudio::HoloCaptureAudioPortaudio() : IHoloCaptureAudio(), isInit_(false), audioStream_(nullptr)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.portaudio");
 	audioFormat_.depth = HOLO_AUDIO_DEFAULT_FMT_DEPTH;
@@ -13,14 +13,14 @@ HoloCaptureAudioPortaudio::HoloCaptureAudioPortaudio() : IHoloCaptureAudio(), is
 	audioFormat_.numChannels = HOLO_AUDIO_DEFAULT_FMT_CHAN;
 }
 
-HoloCaptureAudioPortaudio::HoloCaptureAudioPortaudio(HoloAudioFormat audioFormat) : IHoloCaptureAudio(), isOpen_(false), isInit_(false), audioFormat_(audioFormat), audioStream_(nullptr)
+HoloCaptureAudioPortaudio::HoloCaptureAudioPortaudio(HoloAudioFormat audioFormat) : IHoloCaptureAudio(), isInit_(false), audioFormat_(audioFormat), audioStream_(nullptr)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.portaudio");
 }
 
 HoloCaptureAudioPortaudio::~HoloCaptureAudioPortaudio()
 {
-
+	deinit();
 }
 
 PaHostApiTypeId HoloCaptureAudioPortaudio::getHostType()
@@ -53,8 +53,8 @@ bool HoloCaptureAudioPortaudio::init(int which)
 		}
 
 		PaError errorCode = paNoError;
-		errorCode = Pa_Initialize();
 
+		errorCode = Pa_Initialize();
 		if (errorCode != paNoError)
 		{
 			LOG4CXX_ERROR(logger_, "Could not intitalize PortAudio library: " << Pa_GetErrorText(errorCode));
@@ -102,7 +102,7 @@ bool HoloCaptureAudioPortaudio::init(int which)
 		isInit_ = true;
 	}
 
-	return isInit_;
+	return isOpen();
 }
 
 void HoloCaptureAudioPortaudio::deinit()
@@ -122,6 +122,7 @@ void HoloCaptureAudioPortaudio::deinit()
 		{
 			LOG4CXX_WARN(logger_, "Could not close audio input stream: " << Pa_GetErrorText(errorCode));
 		}
+		audioStream_ = nullptr;
 
 		errorCode = Pa_Terminate();
 
@@ -134,8 +135,8 @@ void HoloCaptureAudioPortaudio::deinit()
 
 void HoloCaptureAudioPortaudio::waitAndGetNextChunk(std::vector<unsigned char>& audioOut)
 {
-	audioOut.resize(4*HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE * audioFormat_.numChannels * sizeof(short));
-	auto errorCode = Pa_ReadStream(audioStream_, audioOut.data(), HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE * 4);
+	audioOut.resize(HOLO_AUDIO_DEFAULT_NUM_FRAMES * audioFormat_.numChannels * sizeof(short));
+	auto errorCode = Pa_ReadStream(audioStream_, audioOut.data(), HOLO_AUDIO_DEFAULT_NUM_FRAMES);
 	if (errorCode != paNoError)
 		LOG4CXX_WARN(logger_, "Could not get data from audio input device: " << Pa_GetErrorText(errorCode));
 }

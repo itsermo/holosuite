@@ -341,10 +341,10 @@ void HoloCaptureOpenNI2::deinit()
 	}	
 }
 
-std::list<std::string> HoloCaptureOpenNI2::enumerateDevices()
+std::vector<std::string> HoloCaptureOpenNI2::enumerateDevices()
 {
 	LOG4CXX_DEBUG(logger_, "Enumerating OpenNI2 devices...")
-	std::list<std::string> deviceList;
+	std::vector<std::string> deviceList;
 	bool wasOpenNI2AlreadyInit = isOpenNI2Init_ ? true : false;
 
 	initOpenNI2();

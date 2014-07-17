@@ -33,7 +33,7 @@ namespace holo
 			virtual void waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage);
 			virtual void waitAndGetNextPointCloud(HoloCloudPtr& pointCloud);
 			virtual void deinit();
-			std::list<std::string> enumerateDevices();
+			std::vector<std::string> enumerateDevices();
 			virtual HoloCaptureInfo getCaptureInfo()
 			{
 				HoloCaptureInfo info;

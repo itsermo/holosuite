@@ -18,7 +18,7 @@ namespace holo
 			bool init(int which);
 
 			bool isOpen() {
-				return isOpen_;
+				return isInit_;
 			}
 
 			void waitAndGetNextChunk(std::vector<unsigned char>& audioOut);
@@ -37,7 +37,6 @@ namespace holo
 			PaStream *audioStream_;
 
 			bool isInit_;
-			bool isOpen_;
 			HoloAudioFormat audioFormat_;
 			log4cxx::LoggerPtr logger_;
 		};

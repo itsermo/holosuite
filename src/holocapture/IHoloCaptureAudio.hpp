@@ -1,5 +1,4 @@
 #pragma once
-#ifdef ENABLE_HOLO_AUDIO
 
 #include "../common/CommonDefs.hpp"
 #include <list>
@@ -23,5 +22,3 @@ namespace holo
 		inline IHoloCaptureAudio::~IHoloCaptureAudio() { }
 	};
 };
-
-#endif
