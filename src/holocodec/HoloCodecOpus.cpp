@@ -9,8 +9,7 @@ HoloCodecOpus::HoloCodecOpus() : IHoloCodec<std::vector<unsigned char>>(),
 	audioFormat_(),
 	bitRate_(HOLO_AUDIO_DEFAULT_ENCODE_BITRATE),
 	audioEncoder_(nullptr),
-	audioDecoder_(nullptr),
-	rawFrameLength_(HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE * audioFormat_.numChannels * sizeof(opus_int16))
+	audioDecoder_(nullptr)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.opus");
 	audioFormat_.frequency = HOLO_AUDIO_DEFAULT_FMT_FREQ;
@@ -27,11 +26,12 @@ HoloCodecOpus::HoloCodecOpus(HoloAudioFormat audioFormat, int bitRate) : IHoloCo
 	audioFormat_(audioFormat),
 	bitRate_(bitRate),
 	audioEncoder_(nullptr),
-	audioDecoder_(nullptr),
-	rawFrameLength_(HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE * audioFormat_.numChannels * sizeof(opus_int16))
+	audioDecoder_(nullptr)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.opus");
-	
+
+	rawFrameLength_ = HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE * audioFormat_.numChannels * sizeof(opus_int16);
+
 	LOG4CXX_DEBUG(logger_, "Opus audio encoder object instantiated with specific values");
 }
 
