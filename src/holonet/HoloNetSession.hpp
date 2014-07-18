@@ -6,7 +6,7 @@
 #include <mutex>
 #include <queue>
 #include <condition_variable>
-
+#include <atomic>
 
 
 namespace holo
@@ -19,6 +19,7 @@ namespace holo
 			HoloNetSession();
 			~HoloNetSession();
 			
+			void sendPacketAsync(boost::shared_ptr<HoloNetPacket> && packet);
 			void sendPacket(boost::shared_ptr<HoloNetPacket> && packet);
 			void recvPacket(boost::shared_ptr<HoloNetPacket> & packet);
 
@@ -31,30 +32,31 @@ namespace holo
 			void disconnect();
 
 		protected:
-			//void start();
+			void start();
 
-			//std::thread sendQueueThread_;
+			std::thread sendQueueThread_;
 			//std::thread recvQueueThread_;
 			boost::shared_ptr<boost::asio::ip::tcp::socket> socket_;
-			//void sendLoop();
+			void sendLoop();
 			//void recvLoop();
 
 			bool isConnected_;
 
 		private:
 
-			//void popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet);
-			//void pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet);
+			void popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet);
+			void pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet);
 
 			//void popRemotePacket(boost::shared_ptr<HoloNetPacket> & packet);
 			//void pushRemotePacket(boost::shared_ptr<HoloNetPacket> && packet);
 
-			//std::queue<boost::shared_ptr<HoloNetPacket>> sendQueue_;
+			std::queue<boost::shared_ptr<HoloNetPacket>> sendQueue_;
 			//std::queue<boost::shared_ptr<HoloNetPacket>> recvQueue_;
-			//std::mutex sendQueueMutex_;
+			std::mutex sendQueueMutex_;
 			//std::mutex recvQueueMutex_;
 
-			//std::condition_variable haveLocalPacket_;
+			std::condition_variable haveLocalPacketCV_;
+			std::atomic<bool> haveLocalPacket_;
 			//std::condition_variable haveNewRemotePacket_;
 
 

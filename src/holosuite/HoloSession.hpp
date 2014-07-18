@@ -39,6 +39,10 @@ namespace holo
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && decoderCloud,
 			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
 			std::unique_ptr<holo::render::IHoloRender> && render
+			//std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
+			//std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioEncoder,
+			//std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
+			//std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender
 			);
 		~HoloSession();
 
@@ -65,7 +69,6 @@ namespace holo
 
 		boost::shared_ptr<std::vector<uchar>> remoteCloudCompressed_;
 		boost::shared_ptr<std::vector<uchar>> remoteRGBAZCompressed_;
-		boost::shared_ptr<std::vector<uchar>> remoteAudioCompressed_;
 
 		boost::shared_ptr<std::vector<uchar>> localAudio_;
 		boost::shared_ptr<std::vector<uchar>> remoteAudio_;
@@ -88,7 +91,6 @@ namespace holo
 		std::mutex localCloudMutex_;
 		std::mutex remoteCloudMutex_;
 		std::mutex remoteCloudCompressedMutex_;
-		std::mutex remoteAudioCompressedMutex_;
 
 		std::mutex localRGBAZMutex_;
 		std::mutex remoteRGBAZMutex_;
@@ -107,8 +109,6 @@ namespace holo
 		std::condition_variable haveRemoteAudioCompressedCV_;
 		std::condition_variable haveRemoteRGBAZCV_;
 		std::condition_variable haveRemoteRGBAZCompressedCV_;
-		std::condition_variable haveRemoteAudioCV_;
-		std::condition_variable haveRemoteAudioCompressedCV_;
 
 		std::atomic<bool> haveLocalCloud_;
 		std::atomic<bool> haveLocalAudio_;
@@ -119,8 +119,6 @@ namespace holo
 		std::atomic<bool> haveRemoteAudioCompressed_;
 		std::atomic<bool> haveRemoteRGBAZ_;
 		std::atomic<bool> haveRemoteRGBAZCompressed_;
-		std::atomic<bool> haveRemoteAudio_;
-		std::atomic<bool> haveRemoteAudioCompressed_;
 
 		std::unique_ptr<holo::capture::IHoloCapture> capture_;
 		std::unique_ptr<holo::capture::IHoloCaptureAudio> audioCapture_;

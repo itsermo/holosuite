@@ -67,6 +67,8 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	isConnected_ = true;
 
+	start();
+
 	return hs;
 }
 

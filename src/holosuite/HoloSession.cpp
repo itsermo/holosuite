@@ -15,27 +15,6 @@ HoloSession::HoloSession()
 
 }
 
-
-//HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
-//	std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> && codec,
-//	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
-//	std::unique_ptr<holo::render::IHoloRender> && render
-//	) :
-//	shouldCapture_(false),
-//	shouldEncode_(false),
-//	shouldDecode_(false),
-//	shouldRender_(false),
-//	isRunning_(false),
-//	remoteInfo_(remoteInfo),
-//	worldConvertCache_()
-//{
-//	capture_ = std::move(capture);
-//	cloudCodec_ = std::move(codec);
-//	netSession_ = netSession;
-//	render_ = std::move(render);
-//	LOG4CXX_DEBUG(logger_, "HoloSession object instantiated with custom objects");
-//}
-
 HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
@@ -352,7 +331,7 @@ void HoloSession::encodeLoop()
 				packet->value = *encodedData;
 
 				try{
-					netSession_->sendPacket(std::move(packet));
+					netSession_->sendPacketAsync(std::move(packet));
 				}
 				catch (boost::system::system_error error)
 				{
@@ -383,7 +362,7 @@ void HoloSession::encodeLoop()
 			packet->length = encodedData->size();
 			packet->value = *encodedData;
 
-			netSession_->sendPacket(std::move(packet));
+			netSession_->sendPacketAsync(std::move(packet));
 		}
 	}
 }
