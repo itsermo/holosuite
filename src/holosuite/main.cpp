@@ -42,16 +42,15 @@ int main(int argc, char *argv[])
 	holo::codec::CODEC_TYPE videoCodecType;
 	holo::render::RENDER_TYPE renderType;
 
-#ifdef ENABLE_HOLO_AUDIO
+	holo::capture::CAPTURE_AUDIO_TYPE audioCaptureType = holo::capture::CAPTURE_AUDIO_TYPE_NONE;
+	holo::codec::CODEC_TYPE audioCodecType = holo::codec::CODEC_TYPE_NONE;
+
 	int audioCaptureDevIndex = 0;
 	int audioRenderDevIndex = 0;
 	int audioEncoderBitrate = 0;
-	holo::capture::CAPTURE_AUDIO_TYPE audioCaptureType;
-	holo::codec::CODEC_TYPE audioCodecType;
-	holo::render::RENDER_AUDIO_TYPE audioRenderType;
+	holo::render::RENDER_AUDIO_TYPE audioRenderType = holo::render::RENDER_AUDIO_TYPE_NONE;
 	holo::HoloAudioFormat audioCaptureFormat = { 0 };
 	holo::HoloAudioFormat audioRenderFormat = { 0 };
-#endif
 
 	holo::net::HoloNetProtocolHandshake localInfo = {0};
 	holo::net::HoloNetProtocolHandshake infoFromClient = {0};
@@ -844,6 +843,7 @@ int main(int argc, char *argv[])
 
 			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioCodecType : infoFromClient.audioCodecType)
 			{
+#ifdef ENABLE_HOLO_AUDIO
 			case holo::codec::CODEC_TYPE_OPUS:
 			{
 				audioRenderFormat.numChannels = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioNumChan : infoFromClient.audioNumChan;
@@ -852,6 +852,7 @@ int main(int argc, char *argv[])
 				decoderAudio = holo::codec::HoloCodecGenerator::fromOpus(audioRenderFormat, 0);
 			}
 				break;
+#endif
 			case holo::codec::CODEC_TYPE_NONE:
 			default:
 				decoderAudio = nullptr;
@@ -916,12 +917,14 @@ int main(int argc, char *argv[])
 
 			switch (audioRenderType)
 			{
+#ifdef ENABLE_HOLO_AUDIO
 			case holo::render::RENDER_AUDIO_TYPE_PORTAUDIO:
 				audioRenderer = holo::render::HoloRenderGenerator::fromPortaudio(audioRenderFormat);
 				break;
+#endif
 			case holo::render::RENDER_TYPE_NONE:
-				audioRenderer = nullptr;
 			default:
+				audioRenderer = nullptr;
 				break;
 			}
 
