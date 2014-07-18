@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
 	holo::capture::CAPTURE_AUDIO_TYPE audioCaptureType;
 	holo::codec::CODEC_TYPE audioCodecType;
 	holo::render::RENDER_AUDIO_TYPE audioRenderType;
-	holo::HoloAudioFormat audioCaptureFormat;
+	holo::HoloAudioFormat audioCaptureFormat = { 0 };
+	holo::HoloAudioFormat audioRenderFormat = { 0 };
 #endif
 
 	holo::net::HoloNetProtocolHandshake localInfo = {0};
@@ -545,7 +546,7 @@ int main(int argc, char *argv[])
 
 			if (vm.count("audio-output-index"))
 			{
-				audioRenderDevIndex = vm["audio-input-index"].as<int>();
+				audioRenderDevIndex = vm["audio-output-index"].as<int>();
 			}
 		}
 		else
@@ -845,11 +846,10 @@ int main(int argc, char *argv[])
 			{
 			case holo::codec::CODEC_TYPE_OPUS:
 			{
-				holo::HoloAudioFormat decodeFormat = { 0 };
-				decodeFormat.numChannels = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioNumChan : infoFromClient.audioNumChan;
-				decodeFormat.frequency = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioFreq : infoFromClient.audioFreq;
-				decodeFormat.depth = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioBitDepth : infoFromClient.audioBitDepth;
-				decoderAudio = holo::codec::HoloCodecGenerator::fromOpus(decodeFormat, 0);
+				audioRenderFormat.numChannels = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioNumChan : infoFromClient.audioNumChan;
+				audioRenderFormat.frequency = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioFreq : infoFromClient.audioFreq;
+				audioRenderFormat.depth = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioBitDepth : infoFromClient.audioBitDepth;
+				decoderAudio = holo::codec::HoloCodecGenerator::fromOpus(audioRenderFormat, 0);
 			}
 				break;
 			case holo::codec::CODEC_TYPE_NONE:
@@ -887,9 +887,6 @@ int main(int argc, char *argv[])
 
 			switch (renderType)
 			{
-			case holo::render::RENDER_TYPE_NONE:
-				renderer = nullptr;
-				break;
 			case holo::render::RENDER_TYPE_VIS2D:
 				//TODO: implement 2D VIS
 				break;
@@ -902,7 +899,9 @@ int main(int argc, char *argv[])
 			case holo::render::RENDER_TYPE_DSCP_MKIV:
 				//TODO: implement mk iv dscp algo
 				break;
+			case holo::render::RENDER_TYPE_NONE:
 			default:
+				renderer = nullptr;
 				break;
 			}
 
@@ -915,17 +914,42 @@ int main(int argc, char *argv[])
 				}
 			}
 
+			switch (audioRenderType)
+			{
+			case holo::render::RENDER_AUDIO_TYPE_PORTAUDIO:
+				audioRenderer = holo::render::HoloRenderGenerator::fromPortaudio(audioRenderFormat);
+				break;
+			case holo::render::RENDER_TYPE_NONE:
+				audioRenderer = nullptr;
+			default:
+				break;
+			}
+
+
+			if (audioRenderer)
+			{
+				if (!audioRenderer->init(audioRenderDevIndex))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the audio output.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
 			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
 			{
 				serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(videoCapture) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(audioCapture) : nullptr,
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderRGBAZ) : nullptr,
 					std::move(decoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderCloud) : nullptr,
 					std::move(decoderCloud),
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderAudio) : nullptr,
+					std::move(decoderAudio),
+					std::move(renderer),
+					std::move(audioRenderer),
 					server,
-					infoFromClient,
-					std::move(renderer)
+					infoFromClient
 					));
 				serverSession->start();
 			}
@@ -934,13 +958,17 @@ int main(int argc, char *argv[])
 			{
 				clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					std::move(videoCapture),
+					std::move(audioCapture),
 					std::move(encoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderRGBAZ) : nullptr,
 					std::move(encoderCloud),
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderCloud) : nullptr,
+					std::move(encoderAudio),
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderAudio) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(audioRenderer) : nullptr,
 					client,
-					infoFromServer,
-					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr
+					infoFromServer
 					));
 				clientSession->start();
 			}

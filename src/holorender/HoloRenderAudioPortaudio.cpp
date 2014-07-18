@@ -147,7 +147,7 @@ void HoloRenderAudioPortaudio::deinit()
 
 void HoloRenderAudioPortaudio::playSoundBuffer(boost::shared_ptr<std::vector<uchar>> && soundBuffer)
 {
-	auto errorCode = Pa_WriteStream(audioStream_, soundBuffer->data(), HOLO_AUDIO_DEFAULT_NUM_FRAMES * 16);
+	auto errorCode = Pa_WriteStream(audioStream_, soundBuffer->data(), HOLO_AUDIO_DEFAULT_NUM_FRAMES);
 	if (errorCode != paNoError)
 	{
 		LOG4CXX_WARN(logger_, "Could not write to audio output stream: " << Pa_GetErrorText(errorCode));

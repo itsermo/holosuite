@@ -26,23 +26,17 @@ namespace holo
 	{
 	public:
 		HoloSession();
-		//HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
-		//	std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> && codec,
-		//	std::shared_ptr<holo::net::HoloNetSession> netsession,
-		//	holo::net::HoloNetProtocolHandshake remoteInfo,
-		//	std::unique_ptr<holo::render::IHoloRender> && render
-		//	);
 		HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
+			std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && encoderCloud,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && decoderCloud,
-			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
-			std::unique_ptr<holo::render::IHoloRender> && render
-			//std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
-			//std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioEncoder,
-			//std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
-			//std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender
+			std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioEncoder,
+			std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
+			std::unique_ptr<holo::render::IHoloRender> && render,
+			std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
+			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
 			);
 		~HoloSession();
 
