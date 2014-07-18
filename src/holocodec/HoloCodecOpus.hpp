@@ -2,9 +2,8 @@
 #ifdef ENABLE_HOLO_AUDIO
 
 #include "IHoloCodec.hpp"
-#include <opus.h>
+#include <opus/opus.h>
 #include <vector>
-#include <opus.h>
 
 namespace holo
 {

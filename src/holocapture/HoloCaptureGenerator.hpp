@@ -3,7 +3,7 @@
 #include "HoloCaptureOpenNI2.hpp"
 
 #ifdef ENABLE_HOLO_AUDIO
-#include "HoloCaptureAudioPortAudio.hpp"
+#include "HoloCaptureAudioPortaudio.hpp"
 #endif
 
 #include <memory>

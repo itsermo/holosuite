@@ -49,15 +49,9 @@
 
 # Look for the opusfile header file.
 find_path( OPUS_INCLUDE_DIR
-  NAMES opus/opusfile.h
+  NAMES opus/opus.h
   DOC "Opus include directory" )
 mark_as_advanced( OPUS_INCLUDE_DIR )
-
-# Look for the opusfile library.
-find_library( OPUSFILE_LIBRARY
-  NAMES opusfile
-  DOC "Path to OpusFile library" )
-mark_as_advanced( OPUSFILE_LIBRARY )
 
 # Look for the opus library.
 find_library( OPUS_LIBRARY
