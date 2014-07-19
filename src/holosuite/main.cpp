@@ -32,15 +32,26 @@ int main(int argc, char *argv[])
 	log4cxx::ConsoleAppenderPtr logAppenderPtr = new log4cxx::ConsoleAppender(logLayoutPtr);
 	log4cxx::BasicConfigurator::configure(logAppenderPtr);
 
-	int captureIndex = 0;
+	int videoCaptureDevIndex = 0;
 	int voxelSize = HOLO_RENDER_DEFAULT_VOXEL_SIZE;
 	std::string sessionName;
 	std::string remoteAddress;
 	holo::HOLO_SESSION_MODE sessionMode;
 	boost::filesystem::path filePath;
 	holo::capture::CAPTURE_TYPE captureType;
-	holo::codec::CODEC_TYPE codecType;
+	holo::codec::CODEC_TYPE videoCodecType;
 	holo::render::RENDER_TYPE renderType;
+
+	holo::capture::CAPTURE_AUDIO_TYPE audioCaptureType = holo::capture::CAPTURE_AUDIO_TYPE_NONE;
+	holo::codec::CODEC_TYPE audioCodecType = holo::codec::CODEC_TYPE_NONE;
+
+	int audioCaptureDevIndex = 0;
+	int audioRenderDevIndex = 0;
+	int audioEncoderBitrate = 0;
+	holo::render::RENDER_AUDIO_TYPE audioRenderType = holo::render::RENDER_AUDIO_TYPE_NONE;
+	holo::HoloAudioFormat audioCaptureFormat = { 0 };
+	holo::HoloAudioFormat audioRenderFormat = { 0 };
+
 	holo::net::HoloNetProtocolHandshake localInfo = {0};
 	holo::net::HoloNetProtocolHandshake infoFromClient = {0};
 	holo::net::HoloNetProtocolHandshake infoFromServer = {0};
@@ -54,11 +65,15 @@ int main(int argc, char *argv[])
 	captureInfo.zHeight = HOLO_CAPTURE_DEFAULT_Z_HEIGHT;
 	captureInfo.zFPS = HOLO_CAPTURE_DEFAULT_Z_FPS;
 
-	std::unique_ptr<holo::capture::IHoloCapture> capture = nullptr;
+	std::unique_ptr<holo::capture::IHoloCapture> videoCapture = nullptr;
+	std::unique_ptr<holo::capture::IHoloCaptureAudio> audioCapture = nullptr;
+	std::unique_ptr<holo::render::IHoloRenderAudio> audioRenderer = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> encoderCloud = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> decoderCloud = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> encoderRGBAZ = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> decoderRGBAZ = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<std::vector<unsigned char>>> decoderAudio = nullptr;
+	std::unique_ptr<holo::codec::IHoloCodec<std::vector<unsigned char>>> encoderAudio = nullptr;
 	std::shared_ptr<holo::net::HoloNetClient> client = nullptr;
 	std::shared_ptr<holo::net::HoloNetServer> server = nullptr;
 	std::unique_ptr<holo::render::IHoloRender> renderer = nullptr;
@@ -87,7 +102,7 @@ int main(int argc, char *argv[])
 	capture_options.add_options()
 		("capture-input,i",
 			 boost::program_options::value<std::string>()->default_value("openni2"), 
-			 "selects the capture method. valid setting is [openni2]")
+			 "selects the capture method. valid setting is [none,openni2]")
 			 ("capture-index", boost::program_options::value<int>()->default_value(0),
 			 "(optional) selects which capture device to open")
 			 ("capture-width", boost::program_options::value<int>()->default_value(HOLO_CAPTURE_DEFAULT_Z_WIDTH),
@@ -98,10 +113,48 @@ int main(int argc, char *argv[])
 			 "(optional) sets the capture rate")
 		;
 
-	// Codec options
-	boost::program_options::options_description codec_options("Codec");
+#ifdef ENABLE_HOLO_AUDIO
+	// audio input options
+	boost::program_options::options_description audio_input_options("Audio input source");
+	audio_input_options.add_options()
+		("audio-input,a",
+		boost::program_options::value<std::string>()->default_value("none"),
+		"selects the audio input method. valid setting is [none,portaudio]")
+		("audio-input-index", boost::program_options::value<int>()->default_value(0),
+		"(optional) selects which audio input device to open")
+		("audio-input-freq", boost::program_options::value<int>()->default_value(HOLO_AUDIO_DEFAULT_FMT_FREQ),
+		"(optional) sets the sampling rate for audio input")
+		("audio-input-num-chan", boost::program_options::value<int>()->default_value(HOLO_AUDIO_DEFAULT_FMT_CHAN),
+		"(optional) sets the number of channels [1,2]")
+		("audio-input-depth", boost::program_options::value<int>()->default_value(HOLO_AUDIO_DEFAULT_FMT_DEPTH),
+		"(optional) sets the bit resolution for audio input")
+		;
+
+	// audio encoder options
+	boost::program_options::options_description audio_codec_options("Audio encoder");
+	audio_codec_options.add_options()
+		("audio-encoder,e",
+		boost::program_options::value<std::string>()->default_value("none"),
+		"selects the audio input method. valid setting is [none,opus]")
+		("audio-encoder-bitrate", boost::program_options::value<int>()->default_value(HOLO_AUDIO_DEFAULT_ENCODE_BITRATE),
+		"(optional) sets the audio bitrate for encoding")
+		;
+
+	// audio output options
+	boost::program_options::options_description audio_output_options("Audio output destination");
+	audio_output_options.add_options()
+		("audio-output,p",
+		boost::program_options::value<std::string>()->default_value("none"),
+		"selects the audio output method. valid setting is [none,portaudio]")
+		("audio-output-index", boost::program_options::value<int>()->default_value(-1),
+		"(optional) selects which audio output device to open. -1 selects default audio output.")
+		;
+#endif
+
+	// Video encoder options
+	boost::program_options::options_description codec_options("Video encoder");
 	codec_options.add_options()
-		("codec,c",
+		("video-encoder,c",
 		boost::program_options::value<std::string>()->default_value("h264"),
 		"selects which encoder/decoder to use. valid settings are [h264, octree, passthrough-cloud]")
 		("h264-settings", boost::program_options::value<std::string>()->multitoken(),
@@ -126,6 +179,10 @@ int main(int argc, char *argv[])
 	boost::program_options::options_description cmdline_options;
 	cmdline_options.add(generic_options).add(network_options).add(capture_options).add(codec_options).add(render_options);
 
+#ifdef ENABLE_HOLO_AUDIO
+	cmdline_options.add(audio_input_options).add(audio_codec_options).add(audio_output_options);
+#endif
+
 	boost::program_options::variables_map vm;
 
 	try{
@@ -139,6 +196,13 @@ int main(int argc, char *argv[])
 		std::cout << capture_options << std::endl;
 		std::cout << codec_options << std::endl;
 		std::cout << render_options << std::endl;
+
+#ifdef ENABLE_HOLO_AUDIO
+		std::cout << audio_input_options << std::endl;
+		std::cout << audio_codec_options << std::endl;
+		std::cout << audio_output_options << std::endl;
+#endif
+
 		return -1;
 	}
 
@@ -150,6 +214,13 @@ int main(int argc, char *argv[])
 		std::cout << capture_options << std::endl;
 		std::cout << codec_options << std::endl;
 		std::cout << render_options << std::endl;
+
+#ifdef ENABLE_HOLO_AUDIO
+		std::cout << audio_input_options << std::endl;
+		std::cout << audio_codec_options << std::endl;
+		std::cout << audio_output_options << std::endl;
+#endif
+
 		return -1;
 	}
 
@@ -235,7 +306,7 @@ int main(int argc, char *argv[])
 	if (vm.count("capture-input"))
 	{
 		if (vm.count("capture-index"))
-			captureIndex = vm["capture-index"].as<int>();
+			videoCaptureDevIndex = vm["capture-index"].as<int>();
 
 		if (vm.count("capture-width"))
 			captureInfo.rgbaWidth = captureInfo.zWidth = vm["capture-width"].as<int>();
@@ -292,9 +363,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (vm.count("codec"))
+	if (vm.count("video-encoder"))
 	{
-		if (vm["codec"].as<std::string>().compare("octree") == 0)
+		if (vm["video-encoder"].as<std::string>().compare("octree") == 0)
 		{
 			octreeArgs.showStatistics = HOLO_CODEC_OCTREE_DEFAULT_SHOW_STATISTICS;
 			octreeArgs.pointResolution = HOLO_CODEC_OCTREE_DEFAULT_POINT_RESOLUTION;
@@ -316,12 +387,12 @@ int main(int argc, char *argv[])
 
 				if (octreeSettings.size() == 7)
 				{
-					octreeArgs.showStatistics = atoi(octreeSettings[0].c_str());
+					octreeArgs.showStatistics = static_cast<bool>(atoi(octreeSettings[0].c_str()));
 					octreeArgs.pointResolution = atof(octreeSettings[1].c_str());
 					octreeArgs.octreeResolution = atof(octreeSettings[2].c_str());
-					octreeArgs.doVoxelGridDownsampling = atoi(octreeSettings[3].c_str());
+					octreeArgs.doVoxelGridDownsampling = static_cast<bool>(atoi(octreeSettings[3].c_str()));
 					octreeArgs.frameRate = atoi(octreeSettings[4].c_str());
-					octreeArgs.doEncodeColorInfo = atoi(octreeSettings[5].c_str());
+					octreeArgs.doEncodeColorInfo = static_cast<bool>(atoi(octreeSettings[5].c_str()));
 					octreeArgs.colorBitResolution = atoi(octreeSettings[6].c_str());
 				}
 				else
@@ -332,30 +403,14 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			codecType = holo::codec::CODEC_TYPE_OCTREE;
+			videoCodecType = holo::codec::CODEC_TYPE_OCTREE;
 
-			//if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
-			//{
-			//	codecType
-			//}
-			//	//codecServer = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
-			//if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
-			//{
-
-			//}
-			    //codecClient = holo::codec::HoloCodecGenerator::fromPCLOctreeCompression(args);
 		}
-		else if (vm["codec"].as<std::string>().compare("passthrough-cloud") == 0)
+		else if (vm["video-encoder"].as<std::string>().compare("passthrough-cloud") == 0)
 		{
-			//if (sessionMode == HOLO_SESSION_MODE_SERVER || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-			//	codecServer = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
-			//if (sessionMode == HOLO_SESSION_MODE_CLIENT || sessionMode == HOLO_SESSION_MODE_FEEDBACK)
-			//	codecClient = holo::codec::HoloCodecGenerator::fromPCLPassthrough();
-
-			codecType = holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD;
-
+			videoCodecType = holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD;
 		}
-		else if (vm["codec"].as<std::string>().compare("h264") == 0)
+		else if (vm["video-encoder"].as<std::string>().compare("h264") == 0)
 		{
 			AVRational rat;
 			rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
@@ -399,11 +454,11 @@ int main(int argc, char *argv[])
 				h264Args.zCompressionLevel = vm["h264-z-level"].as<int>();
 			}
 
-			codecType = holo::codec::CODEC_TYPE_H264;
+			videoCodecType = holo::codec::CODEC_TYPE_H264;
 		}
-		else if (vm["codec"].as<std::string>().compare("none") == 0)
+		else if (vm["video-encoder"].as<std::string>().compare("none") == 0)
 		{
-			codecType = holo::codec::CODEC_TYPE_NONE;
+			videoCodecType = holo::codec::CODEC_TYPE_NONE;
 		}
 		else
 		{
@@ -419,7 +474,88 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	localInfo.codecType = codecType;
+	localInfo.videoCodecType = videoCodecType;
+
+#ifdef ENABLE_HOLO_AUDIO
+
+	if (vm.count("audio-input"))
+	{
+		if (vm["audio-input"].as<std::string>().compare("portaudio") == 0)
+		{
+			if (vm.count("audio-input-index"))
+				audioCaptureDevIndex = vm["capture-index"].as<int>();
+
+			if (vm.count("audio-input-num-chan"))
+				audioCaptureFormat.numChannels = vm["audio-input-num-chan"].as<int>();
+
+			if (vm.count("audio-input-freq"))
+				audioCaptureFormat.frequency = vm["audio-input-freq"].as<int>();
+
+			if (vm.count("audio-input-depth"))
+				audioCaptureFormat.depth = vm["audio-input-depth"].as<int>();
+
+			audioCaptureType = holo::capture::CAPTURE_AUDIO_TYPE_PORTAUDIO;
+		}
+		else if (vm["audio-input"].as<std::string>().compare("none") == 0)
+		{
+			audioCaptureType = holo::capture::CAPTURE_AUDIO_TYPE_NONE;
+		}
+		else
+		{
+			std::cout << "Invalid audio input selection. You must select a valid audio input type [none,portaudio]." << std::endl << std::endl;
+			std::cout << audio_input_options << std::endl;
+			return -1;
+		}
+	}
+
+	if (vm.count("audio-encoder"))
+	{
+		if (vm["audio-encoder"].as<std::string>().compare("none") == 0)
+		{
+			audioCodecType = holo::codec::CODEC_TYPE_NONE;
+		}
+		else if (vm["audio-encoder"].as<std::string>().compare("opus") == 0)
+		{
+			audioCodecType = holo::codec::CODEC_TYPE_OPUS;
+			if (vm.count("audio-encoder-bitrate"))
+			{
+				audioEncoderBitrate = vm["audio-encoder-bitrate"].as<int>();
+			}
+		}
+		else
+		{
+			std::cout << "Invalid audio encoder selection. You must select a valid audio encoder type [none,opus]." << std::endl << std::endl;
+			std::cout << audio_codec_options << std::endl;
+			return -1;
+		}
+
+		localInfo.audioCodecType = audioCodecType;
+	}
+
+
+	if (vm.count("audio-output"))
+	{
+		if (vm["audio-output"].as<std::string>().compare("none") == 0)
+		{
+			audioRenderType = holo::render::RENDER_AUDIO_TYPE_NONE;
+		}
+		else if (vm["audio-output"].as<std::string>().compare("portaudio") == 0)
+		{
+			audioRenderType = holo::render::RENDER_AUDIO_TYPE_PORTAUDIO;
+
+			if (vm.count("audio-output-index"))
+			{
+				audioRenderDevIndex = vm["audio-output-index"].as<int>();
+			}
+		}
+		else
+		{
+			std::cout << "Invalid audio output selection. You must select a valid audio output type [none,portaudio]." << std::endl << std::endl;
+			std::cout << audio_output_options << std::endl;
+			return -1;
+		}
+	}
+#endif
 
 	if (vm.count("render-output"))
 	{
@@ -449,7 +585,6 @@ int main(int argc, char *argv[])
 			}
 
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
-			//renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, captureInfo.zWidth, captureInfo.zHeight);
 		}
 		else if (vm["render-output"].as<std::string>().compare("none") == 0)
 		{
@@ -520,9 +655,6 @@ int main(int argc, char *argv[])
 		{
 			switch (captureType)
 			{
-			case holo::capture::CAPTURE_TYPE_NONE:
-				capture = nullptr;
-				break;
 			case holo::capture::CAPTURE_TYPE_FILE_PLY:
 				//TODO: get PLY file support
 				break;
@@ -533,24 +665,26 @@ int main(int argc, char *argv[])
 				//TODO: get OBJ file support
 				break;
 			case holo::capture::CAPTURE_TYPE_FILE_ONI:
-				capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(filePath.string());
+				videoCapture = holo::capture::HoloCaptureGenerator::fromOpenNI2(filePath.string());
 				break;
 			case holo::capture::CAPTURE_TYPE_OPENNI2:
-				capture = holo::capture::HoloCaptureGenerator::fromOpenNI2(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
+				videoCapture = holo::capture::HoloCaptureGenerator::fromOpenNI2(captureInfo.rgbaWidth, captureInfo.rgbaHeight, captureInfo.rgbFPS, captureInfo.zWidth, captureInfo.zHeight, captureInfo.zFPS);
 				break;
 			default:
+			case holo::capture::CAPTURE_TYPE_NONE:
+				videoCapture = nullptr;
 				break;
 			}
 
-			if (capture)
+			if (videoCapture)
 			{
-				if (!capture->init(captureIndex))
+				if (!videoCapture->init(videoCaptureDevIndex))
 				{
 					LOG4CXX_FATAL(logger_main, "Could not open the capture input.  Exiting holosuite...");
 					return -1;
 				}
 
-				captureInfo = capture->getCaptureInfo();
+				captureInfo = videoCapture->getCaptureInfo();
 
 				localInfo.rgbazWidth = captureInfo.zWidth;
 				localInfo.rgbazHeight = captureInfo.zHeight;
@@ -560,6 +694,34 @@ int main(int argc, char *argv[])
 
 				h264Args.width = captureInfo.zWidth;
 				h264Args.height = captureInfo.zHeight;
+			}
+
+			switch (audioCaptureType)
+			{
+			case holo::capture::CAPTURE_AUDIO_TYPE_NONE:
+				audioCapture = nullptr;
+				break;
+#ifdef ENABLE_HOLO_AUDIO
+			case holo::capture::CAPTURE_AUDIO_TYPE_PORTAUDIO:
+				audioCapture = holo::capture::HoloCaptureGenerator::fromPortaudio(audioCaptureFormat);
+				break;
+#endif
+			default:
+				break;
+			}
+
+
+			if (audioCapture)
+			{
+				if (!audioCapture->init(audioCaptureDevIndex))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not open the audio input.  Exiting holosuite...");
+					return -1;
+				}
+
+				localInfo.audioBitDepth = audioCaptureFormat.depth;
+				localInfo.audioFreq = audioCaptureFormat.frequency;
+				localInfo.audioNumChan = audioCaptureFormat.numChannels;
 			}
 
 			std::future<holo::net::HoloNetProtocolHandshake> serverHandle;
@@ -592,12 +754,8 @@ int main(int argc, char *argv[])
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
 				infoFromClient = serverHandle.get();
 
-			switch (codecType)
+			switch (videoCodecType)
 			{
-			case holo::codec::CODEC_TYPE_NONE:
-				encoderCloud = nullptr;
-				encoderRGBAZ = nullptr;
-				break;
 			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
 					encoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(localInfo.rgbazWidth, localInfo.rgbazHeight);
 				break;
@@ -610,7 +768,23 @@ int main(int argc, char *argv[])
 			case holo::codec::CODEC_TYPE_H264:
 				encoderRGBAZ = holo::codec::HoloCodecGenerator::fromH264(h264Args);
 				break;
+			case holo::codec::CODEC_TYPE_NONE:
 			default:
+				encoderCloud = nullptr;
+				encoderRGBAZ = nullptr;
+				break;
+			}
+
+			switch (audioCodecType)
+			{
+#ifdef ENABLE_HOLO_AUDIO
+			case holo::codec::CODEC_TYPE_OPUS:
+				encoderAudio = holo::codec::HoloCodecGenerator::fromOpus(audioCaptureFormat, audioEncoderBitrate);
+				break;
+#endif
+			case holo::codec::CODEC_TYPE_NONE:
+			default:
+				encoderAudio = nullptr;
 				break;
 			}
 
@@ -632,12 +806,17 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.codecType : infoFromClient.codecType)
+			if (encoderAudio)
 			{
-			case holo::codec::CODEC_TYPE_NONE:
-				decoderCloud = nullptr;
-				decoderRGBAZ = nullptr;
-				break;
+				if (!encoderAudio->init(holo::codec::CODEC_MODE_ENCODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the audio encoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
+			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.videoCodecType : infoFromClient.videoCodecType)
+			{
 			case holo::codec::CODEC_TYPE_PASSTHROUGH_CLOUD:
 				decoderCloud = holo::codec::HoloCodecGenerator::fromPCLPassthrough(sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
 				break;
@@ -655,7 +834,28 @@ int main(int argc, char *argv[])
 				decoderRGBAZ = holo::codec::HoloCodecGenerator::fromH264(args);
 			}
 				break;
+			case holo::codec::CODEC_TYPE_NONE:
 			default:
+				decoderCloud = nullptr;
+				decoderRGBAZ = nullptr;
+				break;
+			}
+
+			switch (sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioCodecType : infoFromClient.audioCodecType)
+			{
+#ifdef ENABLE_HOLO_AUDIO
+			case holo::codec::CODEC_TYPE_OPUS:
+			{
+				audioRenderFormat.numChannels = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioNumChan : infoFromClient.audioNumChan;
+				audioRenderFormat.frequency = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioFreq : infoFromClient.audioFreq;
+				audioRenderFormat.depth = sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.audioBitDepth : infoFromClient.audioBitDepth;
+				decoderAudio = holo::codec::HoloCodecGenerator::fromOpus(audioRenderFormat, 0);
+			}
+				break;
+#endif
+			case holo::codec::CODEC_TYPE_NONE:
+			default:
+				decoderAudio = nullptr;
 				break;
 			}
 
@@ -677,11 +877,17 @@ int main(int argc, char *argv[])
 				}
 			}
 
+			if (decoderAudio)
+			{
+				if (!decoderAudio->init(holo::codec::CODEC_MODE_DECODER))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the audio decoder.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
 			switch (renderType)
 			{
-			case holo::render::RENDER_TYPE_NONE:
-				renderer = nullptr;
-				break;
 			case holo::render::RENDER_TYPE_VIS2D:
 				//TODO: implement 2D VIS
 				break;
@@ -694,7 +900,9 @@ int main(int argc, char *argv[])
 			case holo::render::RENDER_TYPE_DSCP_MKIV:
 				//TODO: implement mk iv dscp algo
 				break;
+			case holo::render::RENDER_TYPE_NONE:
 			default:
+				renderer = nullptr;
 				break;
 			}
 
@@ -707,17 +915,44 @@ int main(int argc, char *argv[])
 				}
 			}
 
+			switch (audioRenderType)
+			{
+#ifdef ENABLE_HOLO_AUDIO
+			case holo::render::RENDER_AUDIO_TYPE_PORTAUDIO:
+				audioRenderer = holo::render::HoloRenderGenerator::fromPortaudio(audioRenderFormat);
+				break;
+#endif
+			case holo::render::RENDER_TYPE_NONE:
+			default:
+				audioRenderer = nullptr;
+				break;
+			}
+
+
+			if (audioRenderer)
+			{
+				if (!audioRenderer->init(audioRenderDevIndex))
+				{
+					LOG4CXX_FATAL(logger_main, "Could not intitalize the audio output.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
 			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
 			{
 				serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
-					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(capture) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(videoCapture) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(audioCapture) : nullptr,
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderRGBAZ) : nullptr,
 					std::move(decoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderCloud) : nullptr,
 					std::move(decoderCloud),
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderAudio) : nullptr,
+					std::move(decoderAudio),
+					std::move(renderer),
+					std::move(audioRenderer),
 					server,
-					infoFromClient,
-					std::move(renderer)
+					infoFromClient
 					));
 				serverSession->start();
 			}
@@ -725,14 +960,18 @@ int main(int argc, char *argv[])
 			if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
 			{
 				clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
-					std::move(capture),
+					std::move(videoCapture),
+					std::move(audioCapture),
 					std::move(encoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderRGBAZ) : nullptr,
 					std::move(encoderCloud),
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderCloud) : nullptr,
+					std::move(encoderAudio),
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderAudio) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(audioRenderer) : nullptr,
 					client,
-					infoFromServer,
-					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr
+					infoFromServer
 					));
 				clientSession->start();
 			}
@@ -762,9 +1001,6 @@ int main(int argc, char *argv[])
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 	}
-
-
-
 
 	return 0;
 }

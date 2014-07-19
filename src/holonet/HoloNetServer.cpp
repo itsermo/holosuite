@@ -54,6 +54,8 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 
 	isConnected_ = true;
 
+	start();
+
 	return hs;
 }
 

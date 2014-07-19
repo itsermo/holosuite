@@ -45,6 +45,7 @@ if(POLICY CMP0020)
 cmake_policy(SET CMP0020 NEW) # remove if CMake >= 2.8.11 required
 endif()
 
+OPTION(WITH_AUDIO "Enables audio compression and sampling for video conferencing" OFF)
 OPTION(BUILD_TESTS "Configures unit test project for compiling test code" OFF)
 OPTION(WITH_STATIC_LOG4CXX "Defines LOG4CXX_STATIC for use with static LOG4CXX libraries" OFF)
 OPTION(BOOST_DISABLE_AUTOLINK "Defines BOOST_ALL_NO_LIB macro to turn off boost auto linking" OFF)
@@ -120,6 +121,16 @@ LINK_DIRECTORIES(${VTK_LIBRARY_DIRS})
 
 FIND_PACKAGE(FFMPEG REQUIRED)
 INCLUDE_DIRECTORIES(${FFMPEG_INCLUDE_DIR})
+
+IF(WITH_AUDIO)
+	FIND_PACKAGE(Opus REQUIRED)
+	INCLUDE_DIRECTORIES(${OPUS_INCLUDE_DIRS})
+
+	FIND_PACKAGE(Portaudio 19 REQUIRED)
+	INCLUDE_DIRECTORIES(${PORTAUDIO_INCLUDE_DIRS})
+	
+	ADD_DEFINITIONS(-DENABLE_HOLO_AUDIO)
+ENDIF(WITH_AUDIO)
 
 # enable trace logs for profiling and timing
 IF(WITH_TRACE_LOG)

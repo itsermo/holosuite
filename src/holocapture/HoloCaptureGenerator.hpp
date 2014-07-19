@@ -1,6 +1,11 @@
 #pragma once
 #include "IHoloCapture.hpp"
 #include "HoloCaptureOpenNI2.hpp"
+
+#ifdef ENABLE_HOLO_AUDIO
+#include "HoloCaptureAudioPortaudio.hpp"
+#endif
+
 #include <memory>
 
 namespace holo
@@ -37,6 +42,18 @@ namespace holo
 			{
 				return std::unique_ptr<IHoloCapture>(new HoloCaptureOpenNI2(filePath));
 			}
+
+#ifdef ENABLE_HOLO_AUDIO
+			static std::unique_ptr<IHoloCaptureAudio> fromPortaudio()
+			{
+				return std::unique_ptr<IHoloCaptureAudio>(new HoloCaptureAudioPortaudio());
+			}
+
+			static std::unique_ptr<IHoloCaptureAudio> fromPortaudio(HoloAudioFormat audioFormat)
+			{
+				return std::unique_ptr<IHoloCaptureAudio>(new HoloCaptureAudioPortaudio(audioFormat));
+			}
+#endif
 
 		private:
 

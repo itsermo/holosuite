@@ -1,7 +1,10 @@
 #pragma once
 #include "IHoloRender.hpp"
-
 #include "HoloRenderVisualizer.hpp"
+
+#ifdef ENABLE_HOLO_AUDIO
+#include "HoloRenderAudioPortaudio.hpp"
+#endif
 
 #include <memory>
 
@@ -25,7 +28,17 @@ namespace holo
 				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer(voxelSize, zWidth, zHeight));
 			}
 
-		private:
+#ifdef ENABLE_HOLO_AUDIO
+			static std::unique_ptr<IHoloRenderAudio> fromPortaudio()
+			{
+				return std::unique_ptr<IHoloRenderAudio>(new HoloRenderAudioPortaudio());
+			}
+
+			static std::unique_ptr<IHoloRenderAudio> fromPortaudio(HoloAudioFormat audioFormat)
+			{
+				return std::unique_ptr<IHoloRenderAudio>(new HoloRenderAudioPortaudio(audioFormat));
+			}
+#endif
 
 		};
 

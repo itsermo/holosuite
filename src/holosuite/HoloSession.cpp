@@ -15,34 +15,17 @@ HoloSession::HoloSession()
 
 }
 
-
-//HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
-//	std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> && codec,
-//	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
-//	std::unique_ptr<holo::render::IHoloRender> && render
-//	) :
-//	shouldCapture_(false),
-//	shouldEncode_(false),
-//	shouldDecode_(false),
-//	shouldRender_(false),
-//	isRunning_(false),
-//	remoteInfo_(remoteInfo),
-//	worldConvertCache_()
-//{
-//	capture_ = std::move(capture);
-//	cloudCodec_ = std::move(codec);
-//	netSession_ = netSession;
-//	render_ = std::move(render);
-//	LOG4CXX_DEBUG(logger_, "HoloSession object instantiated with custom objects");
-//}
-
 HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
+	std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && encoderCloud,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && decoderCloud,
-	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
-	std::unique_ptr<holo::render::IHoloRender> && render
+	std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioEncoder,
+	std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
+	std::unique_ptr<holo::render::IHoloRender> && render,
+	std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
+	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
 	) :
 	shouldCapture_(false),
 	shouldEncode_(false),
@@ -55,12 +38,17 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.session");
 
 	capture_ = std::move(capture);
+	audioCapture_ = std::move(audioCapture);
 	rgbazDecoder_ = std::move(decoderRGBAZ);
 	rgbazEncoder_ = std::move(encoderRGBAZ);
 	cloudDecoder_ = std::move(decoderCloud);
 	cloudEncoder_ = std::move(encoderCloud);
+	audioEncoder_ = std::move(audioEncoder);
+	audioDecoder_ = std::move(audioDecoder);
 	netSession_ = netSession;
 	render_ = std::move(render);
+	audioRender_ = std::move(audioRender);
+
 	LOG4CXX_DEBUG(logger_, "HoloSession object instantiated with custom objects");
 }
 
@@ -83,6 +71,8 @@ bool HoloSession::start()
 	remoteCloud_->sensor_origin_.setZero();
 	remoteCloud_->sensor_orientation_.setIdentity();
 
+	remoteAudioCompressed_ = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
+
 	//create convert cache for remote cloud so we can reproject to real-world coordinates
 	worldConvertCache_.xzFactor = tan((remoteInfo_.captureHOV * M_PI / 180.0f) / 2) * 2;
 	worldConvertCache_.yzFactor = tan((remoteInfo_.captureVOV * M_PI / 180.0f) / 2) * 2;
@@ -101,6 +91,12 @@ bool HoloSession::start()
 
 	shouldRecv_ = netSession_ ? true : false;
 
+	shouldCaptureAudio_ = audioCapture_ ? true : false;
+	shouldEncodeAudio_ = shouldCaptureAudio_.load();
+
+	shouldRenderAudio_ = audioRender_ ? true : false;
+	shouldDecodeAudio_ = shouldRenderAudio_.load();
+
 	if (shouldCapture_)
 		captureThread_ = std::thread(&HoloSession::captureLoop, this);
 
@@ -115,6 +111,18 @@ bool HoloSession::start()
 
 	if (shouldRecv_)
 		netRecvThread_ = std::thread(&HoloSession::netRecvLoop, this);
+
+	if (shouldCaptureAudio_)
+		captureAudioThread_ = std::thread(&HoloSession::captureAudioLoop, this);
+
+	if (shouldEncodeAudio_)
+		encodeAudioThread_ = std::thread(&HoloSession::encodeAudioLoop, this);
+
+	if (shouldRenderAudio_)
+		renderAudioThread_ = std::thread(&HoloSession::renderAudioLoop, this);
+
+	if (shouldDecodeAudio_)
+		decodeAudioThread_ = std::thread(&HoloSession::decodeAudioLoop, this);
 
 	isRunning_ = true;
 
@@ -352,7 +360,7 @@ void HoloSession::encodeLoop()
 				packet->value = *encodedData;
 
 				try{
-					netSession_->sendPacket(std::move(packet));
+					netSession_->sendPacketAsync(std::move(packet));
 				}
 				catch (boost::system::system_error error)
 				{
@@ -383,7 +391,7 @@ void HoloSession::encodeLoop()
 			packet->length = encodedData->size();
 			packet->value = *encodedData;
 
-			netSession_->sendPacket(std::move(packet));
+			netSession_->sendPacketAsync(std::move(packet));
 		}
 	}
 }
@@ -430,5 +438,92 @@ void HoloSession::renderLoop()
 			render_->updateFromPointCloud(std::move(renderCloud));
 		}
 
+	}
+}
+
+void HoloSession::captureAudioLoop()
+{
+	localAudio_ = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>);
+
+	while (shouldCaptureAudio_)
+	{
+		std::unique_lock<std::mutex> ulLocalAudio(localAudioMutex_);
+		audioCapture_->waitAndGetNextChunk(*localAudio_);
+		ulLocalAudio.unlock();
+		haveLocalAudio_ = true;
+		haveLocalAudioCV_.notify_all();
+		//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
+void HoloSession::encodeAudioLoop()
+{
+	auto encData = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>);
+
+	while (shouldEncodeAudio_)
+	{
+		std::unique_lock<std::mutex> ulLocalAudio(localAudioMutex_);
+		if (!haveLocalAudio_)
+		{
+			if (std::cv_status::timeout == haveLocalAudioCV_.wait_for(ulLocalAudio, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+		}
+
+		auto rawData = boost::shared_ptr<std::vector<unsigned char>>(localAudio_);
+
+		audioEncoder_->encode(rawData, encData);
+		
+		haveLocalAudio_ = false;
+		ulLocalAudio.unlock();
+
+		auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket());
+		packet->type = HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED;
+		packet->length = encData->size();
+		packet->value = *encData;
+
+		netSession_->sendPacketAsync(std::move(packet));
+	}
+
+}
+
+void HoloSession::decodeAudioLoop()
+{
+	remoteAudio_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>());
+
+	while (shouldDecodeAudio_)
+	{
+		std::unique_lock<std::mutex> ulRemoteAudioCompressed(remoteAudioCompressedMutex_);
+		if (!haveRemoteAudioCompressed_)
+		{
+			if (std::cv_status::timeout == haveRemoteAudioCompressedCV_.wait_for(ulRemoteAudioCompressed, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+		}
+
+		std::unique_lock<std::mutex> ulRemoteAudio(remoteAudioMutex_);
+		audioDecoder_->decode(remoteAudioCompressed_, remoteAudio_);
+
+		ulRemoteAudioCompressed.unlock();
+
+		haveRemoteAudio_ = true;
+		ulRemoteAudio.unlock();
+		haveRemoteAudioCV_.notify_all();
+	}
+}
+
+void HoloSession::renderAudioLoop()
+{
+	while (shouldRenderAudio_)
+	{
+		std::unique_lock<std::mutex> ulRemoteAudioData(remoteAudioMutex_);
+		if (!haveRemoteAudio_)
+		{
+			if (std::cv_status::timeout == haveRemoteAudioCV_.wait_for(ulRemoteAudioData, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+		}
+
+		audioRender_->playSoundBuffer(std::move(remoteAudio_));
+
+		haveRemoteAudio_ = false;
+		ulRemoteAudioData.unlock();
 	}
 }

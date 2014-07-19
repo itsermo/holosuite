@@ -21,6 +21,19 @@
 
 #define HOLO_NET_PACKET_BUFFER_SIZE 100
 
+#ifdef ENABLE_HOLO_AUDIO
+#define HOLO_AUDIO_DEFAULT_FMT_FREQ 48000
+#define HOLO_AUDIO_DEFAULT_FMT_CHAN 2
+#define HOLO_AUDIO_DEFAULT_FMT_DEPTH 16
+#define HOLO_AUDIO_DEFAULT_VOLUME_MIN 0.0f
+#define HOLO_AUDIO_DEFAULT_VOLUME_MAX 1.0f
+#define HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE 960
+#define HOLO_AUDIO_DEFAULT_ENCODE_SIGNAL OPUS_AUTO
+#define HOLO_AUDIO_DEFAULT_ENCODE_BITRATE 48000
+#define HOLO_AUDIO_DEFAULT_ENCODE_BANDWIDTH OPUS_BANDWIDTH_FULLBAND
+#define HOLO_AUDIO_DEFAULT_NUM_FRAMES HOLO_AUDIO_DEFAULT_ENCODE_FRAME_SIZE
+#endif
+
 const float HOLO_CLOUD_BAD_POINT = std::numeric_limits<float>().quiet_NaN();
 
 namespace holo
@@ -33,6 +46,13 @@ namespace holo
 		cv::Mat z;
 	};
 
+	struct HoloAudioFormat
+	{
+		unsigned int frequency;
+		unsigned int numChannels;
+		unsigned int depth;
+	};
+
 	enum HOLO_SESSION_MODE
 	{
 		HOLO_SESSION_MODE_SERVER = 0,
@@ -43,7 +63,12 @@ namespace holo
 
 	namespace capture
 	{
-		
+		enum CAPTURE_AUDIO_TYPE
+		{
+			CAPTURE_AUDIO_TYPE_NONE = -1,
+			CAPTURE_AUDIO_TYPE_PORTAUDIO = 0
+		};
+
 		enum CAPTURE_TYPE
 		{
 			CAPTURE_TYPE_NONE = -1,
@@ -51,7 +76,7 @@ namespace holo
 			CAPTURE_TYPE_FILE_PCD = 1,
 			CAPTURE_TYPE_FILE_OBJ = 2,
 			CAPTURE_TYPE_FILE_ONI = 3,
-			CAPTURE_TYPE_OPENNI2 = 4
+			CAPTURE_TYPE_OPENNI2 = 4,
 		};
 
 		struct WorldConvertCache
@@ -69,13 +94,15 @@ namespace holo
 
 	namespace codec
 	{
+
 		enum CODEC_TYPE
 		{
 			CODEC_TYPE_NONE = -1,
 			CODEC_TYPE_PASSTHROUGH_CLOUD = 0,
 			CODEC_TYPE_PASSTHROUGH_RGBAZ = 1,
 			CODEC_TYPE_OCTREE = 2,
-			CODEC_TYPE_H264 = 3
+			CODEC_TYPE_H264 = 3,
+			CODEC_TYPE_OPUS = 4
 		};
 
 		enum CODEC_MODE
@@ -88,12 +115,19 @@ namespace holo
 		enum CODEC_METHOD
 		{
 			CODEC_METHOD_PIXMAP = 0,
-			CODEC_METHOD_CLOUD = 1
+			CODEC_METHOD_CLOUD = 1,
+			CODEC_METHOD_AUDIO = 2,
 		};
 	}
 
 	namespace render
 	{
+		enum RENDER_AUDIO_TYPE
+		{
+			RENDER_AUDIO_TYPE_NONE = -1,
+			RENDER_AUDIO_TYPE_PORTAUDIO = 0
+		};
+
 		enum RENDER_TYPE
 		{
 			RENDER_TYPE_NONE = -1,

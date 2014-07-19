@@ -3,7 +3,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/array.hpp>
 
-
 #define HOLO_NET_MAGIC_NUMBER 42685
 #define HOLO_NET_DEFAULT_PORT 42685
 
@@ -30,12 +29,16 @@ namespace holo
 			uint32_t magicNumber;
 			uint32_t protocolVersion;
 			uint8_t clientName[HOLO_NET_NAME_STR_SIZE];
-			int codecType;
+			int videoCodecType;
+			int audioCodecType;
 			uint32_t rgbazWidth;
 			uint32_t rgbazHeight;
 			float captureFPS;
 			float captureHOV;
 			float captureVOV;
+			int audioNumChan;
+			int audioFreq;
+			int audioBitDepth;
 		};
 
 		struct HoloNetPacket

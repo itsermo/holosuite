@@ -21,9 +21,16 @@ bool HoloNetSession::isConnected()
 	return isConnected_;
 }
 
+void HoloNetSession::sendPacketAsync(boost::shared_ptr<HoloNetPacket> && packet)
+{
+	std::lock_guard<std::mutex> lg(sendQueueMutex_);
+	pushLocalPacket(std::move(packet));
+	haveLocalPacketCV_.notify_all();
+}
+
 void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> && packet)
 {
-	//pushLocalPacket(std::move(packet));
+
 	boost::system::error_code error;
 
 	int dataLength = packet->length;
@@ -48,7 +55,6 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> && packet)
 
 void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet)
 {
-	//popRemotePacket(packet);
 	packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
 
 	boost::system::error_code error;
@@ -92,28 +98,29 @@ void HoloNetSession::disconnect()
 	isConnected_ = false;
 }
 
-//void HoloNetSession::pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet)
-//{
-//	if (sendQueue_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-//	{
-//		std::lock_guard<std::mutex> queueLockGuard(sendQueueMutex_);
-//		sendQueue_.push(packet);
-//	}
-//	else
-//		logger_->warn("Local packets are dropping before sending");
-//}
+void HoloNetSession::pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet)
+{
+	if (sendQueue_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+	{
+		//std::lock_guard<std::mutex> queuelockguard(sendQueueMutex_);
+		sendQueue_.push(packet);
+		//haveLocalPacketCV_.notify_all();
+	}
+	else
+		LOG4CXX_WARN(logger_, "local packets are dropping before sending");
+}
 
-//void HoloNetSession::popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet)
-//{
-//	if (!sendQueue_.empty())
-//	{
+void HoloNetSession::popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet)
+{
+	if (!sendQueue_.empty())
+	{
 //		std::lock_guard<std::mutex> queueLockGuard(sendQueueMutex_);
-//		packet = sendQueue_.front();
-//		sendQueue_.pop();
-//	}
-//	else
-//		packet = nullptr;
-//}
+		packet = sendQueue_.front();
+		sendQueue_.pop();
+	}
+	else
+		packet = nullptr;
+}
 
 //void HoloNetSession::pushRemotePacket(boost::shared_ptr<HoloNetPacket> && packet)
 //{
@@ -147,33 +154,40 @@ void HoloNetSession::disconnect()
 //
 //}
 //
-//void HoloNetSession::sendLoop()
-//{
-//	while (isConnected())
-//	{
-//		boost::system::error_code error;
-//
-//		//boost::shared_ptr<HoloNetPacket> packet;
-//		//popLocalPacket(packet);
-//
-//		if (packet)
-//		{
-//			int dataLength = packet->length;
-//
-//			packet->type = htonl(packet->type);
-//			packet->length = htonl(packet->length);
-//
-//			boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
-//			if (error)
-//				throw boost::system::system_error(boost::asio::error::interrupted);
-//
-//			boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
-//
-//			if (error)
-//				throw boost::system::system_error(boost::asio::error::interrupted);
-//		}
-//	}
-//}
+
+void HoloNetSession::sendLoop()
+{
+	boost::system::error_code error;
+	boost::shared_ptr<HoloNetPacket> packet;
+
+	while (isConnected())
+	{
+		auto sendPacketLock = std::unique_lock<std::mutex>(sendQueueMutex_);
+		haveLocalPacketCV_.wait(sendPacketLock);
+
+		popLocalPacket(packet);
+
+		sendPacketLock.unlock();
+
+		if (packet)
+		{
+			int dataLength = packet->length;
+
+			packet->type = htonl(packet->type);
+			packet->length = htonl(packet->length);
+
+			boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
+			if (error)
+				throw boost::system::system_error(boost::asio::error::interrupted);
+
+			boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
+
+			if (error)
+				throw boost::system::system_error(boost::asio::error::interrupted);
+		}
+
+	}
+}
 
 //void HoloNetSession::recvLoop()
 //{
@@ -221,7 +235,11 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo)
 	localInfo.captureFPS = htonl(static_cast<u_long>(localInfo.captureFPS));
 	localInfo.captureHOV = htonl(static_cast<u_long>(localInfo.captureHOV));
 	localInfo.captureVOV = htonl(static_cast<u_long>(localInfo.captureVOV));
-	localInfo.codecType = htonl(localInfo.codecType);
+	localInfo.videoCodecType = htonl(localInfo.videoCodecType);
+	localInfo.audioCodecType = ntohl(localInfo.audioCodecType);
+	localInfo.audioBitDepth = ntohl(localInfo.audioBitDepth);
+	localInfo.audioNumChan = ntohl(localInfo.audioNumChan);
+	localInfo.audioFreq = ntohl(localInfo.audioFreq);
 
 	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
 
@@ -241,12 +259,16 @@ HoloNetProtocolHandshake HoloNetSession::GetHandshakeFromPacket(boost::shared_pt
 	hs.captureFPS = static_cast<float>(ntohl(hs.captureFPS));
 	hs.captureHOV = static_cast<float>(ntohl(hs.captureHOV));
 	hs.captureVOV = static_cast<float>(ntohl(hs.captureVOV));
-	hs.codecType = ntohl(hs.codecType);
+	hs.videoCodecType = ntohl(hs.videoCodecType);
+	hs.audioCodecType = ntohl(hs.audioCodecType);
+	hs.audioBitDepth = ntohl(hs.audioBitDepth);
+	hs.audioNumChan = ntohl(hs.audioNumChan);
+	hs.audioFreq = ntohl(hs.audioFreq);
 	return hs;
 }
 
-//void HoloNetSession::start()
-//{
-//	this->sendQueueThread_ = std::thread(&HoloNetSession::sendLoop, this);
-//	this->recvQueueThread_ = std::thread(&HoloNetSession::recvLoop, this);
-//}
+void HoloNetSession::start()
+{
+	this->sendQueueThread_ = std::thread(&HoloNetSession::sendLoop, this);
+	//this->recvQueueThread_ = std::thread(&HoloNetSession::recvLoop, this);
+}
