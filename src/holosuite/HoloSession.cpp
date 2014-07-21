@@ -202,7 +202,7 @@ void HoloSession::netRecvLoop()
 			remoteInfo_ = holo::net::HoloNetSession::GetHandshakeFromPacket(recvPacket);
 			break;
 		case HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT:
-			shouldDecode_ = false;
+			std::async(std::launch::async, &HoloSession::stop, this);
 			break;
 		case HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED:
 		{
@@ -428,7 +428,6 @@ void HoloSession::renderLoop()
 				if (std::cv_status::timeout == haveRemoteRGBAZCV_.wait_for(ulRemoteRGBAZData, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
 					continue;
 			}
-
 
 			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
 			holo::utils::ReprojectToRealWorld(remoteCloud_, *remoteRGBAZ_, worldConvertCache_);

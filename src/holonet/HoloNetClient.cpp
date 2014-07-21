@@ -43,11 +43,16 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 		throw boost::system::system_error(error);
 	}
 
-	socket_->set_option(boost::asio::ip::tcp::no_delay(true));
+	isConnected_ = true;
+	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
+
+	socket_->set_option(boost::asio::ip::tcp::no_delay(true), error);
+	if (error)
+	{
+		LOG4CXX_WARN(logger_, "Could not set socket no delay option")
+	}
 	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
-	
-	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
 
 	performHandshake(localInfo);
 

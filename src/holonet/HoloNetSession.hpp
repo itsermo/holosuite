@@ -44,6 +44,7 @@ namespace holo
 
 		private:
 
+
 			void popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet);
 			void pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet);
 
@@ -59,6 +60,7 @@ namespace holo
 			std::atomic<bool> haveLocalPacket_;
 			//std::condition_variable haveNewRemotePacket_;
 
+			std::atomic<bool> shouldSend_;
 
 			log4cxx::LoggerPtr logger_;
 		};

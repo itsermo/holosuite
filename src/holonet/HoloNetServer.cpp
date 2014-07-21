@@ -31,6 +31,8 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 
 	LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client" << port);
 
+	isConnected_ = true;
+
 	socket_->set_option(boost::asio::ip::tcp::no_delay(true));
 	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
@@ -50,7 +52,6 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 	LOG4CXX_INFO(logger_, "RGBAZ Field-of-view: " << hs.captureHOV << " deg horiz, " << hs.captureVOV << " deg vert");
 	LOG4CXX_INFO(logger_, "Audio Mode: " << hs.audioNumChan << " chan, " << hs.audioBitDepth << " bits @ " << hs.audioFreq <<" kHz");
 
-	isConnected_ = true;
 
 	start();
 

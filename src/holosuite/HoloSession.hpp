@@ -17,7 +17,7 @@
 #include <atomic>
 #include <condition_variable>
 
-#define HOLO_SESSION_CV_WAIT_TIMEOUT_MS 500
+
 
 namespace holo
 {
