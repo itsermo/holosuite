@@ -23,14 +23,14 @@ bool HoloNetSession::isConnected()
 
 void HoloNetSession::sendPacketAsync(boost::shared_ptr<HoloNetPacket> && packet)
 {
-	std::lock_guard<std::mutex> lg(sendQueueMutex_);
+	std::unique_lock<std::mutex> ulSendQueue(sendQueueMutex_);
 	pushLocalPacket(std::move(packet));
+	ulSendQueue.unlock();
 	haveLocalPacketCV_.notify_all();
 }
 
 void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> && packet)
 {
-
 	boost::system::error_code error;
 
 	int dataLength = packet->length;
@@ -165,26 +165,30 @@ void HoloNetSession::sendLoop()
 		auto sendPacketLock = std::unique_lock<std::mutex>(sendQueueMutex_);
 		haveLocalPacketCV_.wait(sendPacketLock);
 
-		popLocalPacket(packet);
+		for (size_t i = 0; i < sendQueue_.size(); i++)
+		{
+			popLocalPacket(packet);
+			this->sendPacket(std::move(packet));
+		}
 
 		sendPacketLock.unlock();
 
-		if (packet)
-		{
-			int dataLength = packet->length;
+		//if (packet)
+		//{
+		//	int dataLength = packet->length;
 
-			packet->type = htonl(packet->type);
-			packet->length = htonl(packet->length);
+		//	packet->type = htonl(packet->type);
+		//	packet->length = htonl(packet->length);
 
-			boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
-			if (error)
-				throw boost::system::system_error(boost::asio::error::interrupted);
+		//	boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
+		//	if (error)
+		//		throw boost::system::system_error(boost::asio::error::interrupted);
 
-			boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
+		//	boost::asio::write(*socket_, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
 
-			if (error)
-				throw boost::system::system_error(boost::asio::error::interrupted);
-		}
+		//	if (error)
+		//		throw boost::system::system_error(boost::asio::error::interrupted);
+		//}
 
 	}
 }

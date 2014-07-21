@@ -4,8 +4,9 @@
 #include <vector>
 #include <chrono>
 #include <ctime>
-
 #include <future>
+
+#include <boost/smart_ptr.hpp>
 
 using namespace holo;
 using namespace holo::net;
@@ -71,7 +72,7 @@ bool HoloSession::start()
 	remoteCloud_->sensor_origin_.setZero();
 	remoteCloud_->sensor_orientation_.setIdentity();
 
-	remoteAudioCompressed_ = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
+	//remoteAudioCompressed_ = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
 
 	//create convert cache for remote cloud so we can reproject to real-world coordinates
 	worldConvertCache_.xzFactor = tan((remoteInfo_.captureHOV * M_PI / 180.0f) / 2) * 2;
@@ -206,7 +207,11 @@ void HoloSession::netRecvLoop()
 		case HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED:
 		{
 			std::unique_lock<std::mutex> rccLock(remoteCloudCompressedMutex_);
-			remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
+			if (remoteCloudCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+				remoteCloudCompressed_.push(boost::make_shared <std::vector<uchar>>(recvPacket->value));
+			else
+				LOG4CXX_WARN(logger_, "Dropping compressed point cloud packets from receive function")
+			//remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
 			rccLock.unlock();
 			haveRemoteCloudCompressed_ = true;
 			haveRemoteCloudCompressedCV_.notify_all();
@@ -215,7 +220,11 @@ void HoloSession::netRecvLoop()
 		case HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED:
 		{
 			std::unique_lock<std::mutex> racLock(remoteAudioCompressedMutex_);
-			*remoteAudioCompressed_ = recvPacket->value;
+			//*remoteAudioCompressed_ = recvPacket->value;
+			if (remoteAudioCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+				remoteAudioCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+			else
+				LOG4CXX_WARN(logger_, "Dropping compressed audio packets from receive function")
 			racLock.unlock();
 			haveRemoteAudioCompressed_ = true;
 			haveRemoteAudioCompressedCV_.notify_all();
@@ -224,7 +233,10 @@ void HoloSession::netRecvLoop()
 		case HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED:
 		{
 			std::unique_lock<std::mutex> rgbazLock(remoteRGBAZCompressedMutex_);
-			remoteRGBAZCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
+			if (remoteRGBAZCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+				remoteRGBAZCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+			else
+				LOG4CXX_WARN(logger_, "Dropping compressed RGBAZ packets from receive function")
 			rgbazLock.unlock();
 			haveRemoteRGBAZCompressed_ = true;
 			haveRemoteRGBAZCompressedCV_.notify_all();
@@ -290,16 +302,19 @@ void HoloSession::decodeLoop()
 			}
 
 			boost::shared_ptr<HoloRGBAZMat> decodedMats;
-			rgbazDecoder_->decode(remoteRGBAZCompressed_, decodedMats);
+
+			auto compressedData = remoteRGBAZCompressed_.front();
+			remoteRGBAZCompressed_.pop();
+			haveRemoteRGBAZCompressed_ = remoteRGBAZCompressed_.size() == 0 ? false : true;
+			ulRemoteRGBAZCompressed.unlock();
+
+			rgbazDecoder_->decode(compressedData, decodedMats);
 
 			if (decodedMats)
 			{
 				std::unique_lock<std::mutex> ulRemoteRGBAZ(remoteRGBAZMutex_);
 				remoteRGBAZ_ = decodedMats;
-
-				haveRemoteRGBAZCompressed_ = false;
 				haveRemoteRGBAZ_ = true;
-
 				ulRemoteRGBAZ.unlock();
 				haveRemoteRGBAZCV_.notify_all();
 			}
@@ -313,16 +328,21 @@ void HoloSession::decodeLoop()
 					continue;
 			}
 
+			auto compressedData = remoteCloudCompressed_.front();
+			remoteCloudCompressed_.pop();
+			haveRemoteCloudCompressed_ = remoteCloudCompressed_.size() == 0 ? false : true;
+			ulRemoteCloudCompressed.unlock();
+
 			auto remoteCloud = boost::shared_ptr<HoloCloud>(new HoloCloud);
-			cloudDecoder_->decode(remoteCloudCompressed_, remoteCloud);
+			cloudDecoder_->decode(compressedData, remoteCloud);
 
 			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
 			remoteCloud_ = remoteCloud;
 
 			ulRemoteCloud.unlock();
-			ulRemoteCloudCompressed.unlock();
 
-			haveRemoteCloudCompressed_ = false;
+
+			
 			haveRemoteCloud_ = true;
 
 			haveRemoteCloudCV_.notify_all();
@@ -500,9 +520,12 @@ void HoloSession::decodeAudioLoop()
 		}
 
 		std::unique_lock<std::mutex> ulRemoteAudio(remoteAudioMutex_);
-		audioDecoder_->decode(remoteAudioCompressed_, remoteAudio_);
-
+		auto rawData = remoteAudioCompressed_.front();
+		remoteAudioCompressed_.pop();
+		haveRemoteAudioCompressed_ = remoteAudioCompressed_.size() == 0 ? false : true;
 		ulRemoteAudioCompressed.unlock();
+
+		audioDecoder_->decode(rawData, remoteAudio_);
 
 		haveRemoteAudio_ = true;
 		ulRemoteAudio.unlock();

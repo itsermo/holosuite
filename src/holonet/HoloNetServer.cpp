@@ -32,8 +32,8 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 	LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client" << port);
 
 	socket_->set_option(boost::asio::ip::tcp::no_delay(true));
-	socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
-	socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
+	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
+	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
 	this->performHandshake(localInfo);
 	

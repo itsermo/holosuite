@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 		("name", boost::program_options::value<std::string>()->composing(), "(optional) friendly name of the server or client session")
 		("server", "start holosuite in server mode, listen for connections")
 		("client", boost::program_options::value<std::string>()->composing(), "start holosuite in client mode. (e.g. client=192.168.0.3)")
-		("feedback", "capture input is routed to local renderer")
+		("loopback", "capture input is routed to local renderer")
 		;
     
 	// Capture input options
@@ -288,15 +288,15 @@ int main(int argc, char *argv[])
 			sessionMode = holo::HOLO_SESSION_MODE_CLIENT;
 		}
 	}
-	else if (vm.count("feedback"))
+	else if (vm.count("loopback"))
 	{
 		//client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient());
 		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
-		sessionMode = holo::HOLO_SESSION_MODE_FEEDBACK;
+		sessionMode = holo::HOLO_SESSION_MODE_LOOPBACK;
 	}
 	else
 	{
-		std::cout << "You must select a session mode by using the \"--server\", \"--client=<HOSTNAME>\" or \"--feedback\" command line options." << std::endl << std::endl;
+		std::cout << "You must select a session mode by using the \"--server\", \"--client=<HOSTNAME>\" or \"--loopback\" command line options." << std::endl << std::endl;
 		std::cout << network_options << std::endl;
 		return -1;
 	}
@@ -356,9 +356,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	else if (vm.count("feedback"))
+	else if (vm.count("loopback"))
 	{
-		std::cout << "For feedback mode you must select an capture input device by using the --capture-input command line option." << std::endl << std::endl;
+		std::cout << "For loopback mode you must select an capture input device by using the --capture-input command line option." << std::endl << std::endl;
 		std::cout << capture_options << std::endl;
 		return -1;
 	}
@@ -597,9 +597,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	else if (vm.count("feedback"))
+	else if (vm.count("loopback"))
 	{
-		std::cout << "For feedback mode you must select a renderer by using the --render-output command line option." << std::endl << std::endl;
+		std::cout << "For loopback mode you must select a renderer by using the --render-output command line option." << std::endl << std::endl;
 		std::cout << render_options << std::endl;
 		return -1;
 	}
@@ -639,8 +639,8 @@ int main(int argc, char *argv[])
 	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT:
 		LOG4CXX_INFO(logger_main, "Holosuite starting in client mode...");
 		break;
-	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK:
-		LOG4CXX_INFO(logger_main, "Holosuite starting in feedback mode...");
+	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK:
+		LOG4CXX_INFO(logger_main, "Holosuite starting in loopback mode...");
 		break;
 	default:
 		break;
@@ -726,7 +726,7 @@ int main(int argc, char *argv[])
 
 			std::future<holo::net::HoloNetProtocolHandshake> serverHandle;
 
-			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
 			{
 				server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer);
 				auto serverFunc = std::bind<holo::net::HoloNetProtocolHandshake>(&holo::net::HoloNetServer::listenAndWait, server, HOLO_NET_DEFAULT_PORT, std::placeholders::_1);
@@ -734,7 +734,7 @@ int main(int argc, char *argv[])
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			}
 			
-			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
 			{
 				client = std::shared_ptr<holo::net::HoloNetClient>(new holo::net::HoloNetClient);
 
@@ -751,7 +751,7 @@ int main(int argc, char *argv[])
 				} while (!client->isConnected());
 			}
 			
-			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_FEEDBACK)
+			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
 				infoFromClient = serverHandle.get();
 
 			switch (videoCodecType)
@@ -938,7 +938,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
+			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_LOOPBACK)
 			{
 				serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(videoCapture) : nullptr,
@@ -957,7 +957,7 @@ int main(int argc, char *argv[])
 				serverSession->start();
 			}
 
-			if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE_FEEDBACK)
+			if (sessionMode == holo::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE_LOOPBACK)
 			{
 				clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					std::move(videoCapture),

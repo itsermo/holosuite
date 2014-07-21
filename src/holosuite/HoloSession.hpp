@@ -61,12 +61,12 @@ namespace holo
 		boost::shared_ptr<HoloCloud> localCloud_;
 		boost::shared_ptr<HoloCloud> remoteCloud_;
 
-		boost::shared_ptr<std::vector<uchar>> remoteCloudCompressed_;
-		boost::shared_ptr<std::vector<uchar>> remoteRGBAZCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteCloudCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteRGBAZCompressed_;
 
 		boost::shared_ptr<std::vector<uchar>> localAudio_;
 		boost::shared_ptr<std::vector<uchar>> remoteAudio_;
-		boost::shared_ptr<std::vector<uchar>> remoteAudioCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteAudioCompressed_;
 
 		std::thread captureThread_;
 		std::thread captureAudioThread_;
