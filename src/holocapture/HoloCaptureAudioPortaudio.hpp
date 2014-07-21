@@ -31,7 +31,7 @@ namespace holo
 			}
 
 		private:
-			PaHostApiTypeId getHostType();
+			//PaHostApiTypeId getHostType();
 
 			PaStreamParameters streamParameters_;
 			PaStream *audioStream_;

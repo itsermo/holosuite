@@ -71,14 +71,13 @@ HoloCaptureOpenNI2::~HoloCaptureOpenNI2()
 bool HoloCaptureOpenNI2::init(int which)
 {
 	LOG4CXX_INFO(logger_, "Initializing OpenNI2 capture device...")
-		LOG4CXX_DEBUG(logger_, "Using capture mode: \n"
-		<< "Camera index: " << which << std::endl
-		<< "RGB Width: " << rgbWidth_ << std::endl
-		<< "RGB Height: " << rgbHeight_ << std::endl
-		<< "RGB Framerate: " << rgbFPS_ << std::endl
-		<< "Z Width: " << zWidth_ << std::endl
-		<< "Z Height: " << zHeight_ << std::endl
-		<< "Z FPS: " << zFPS_);
+	LOG4CXX_INFO(logger_, "Camera index: " << which);
+	LOG4CXX_INFO(logger_, "RGB Width: " << rgbWidth_);
+	LOG4CXX_INFO(logger_, "RGB Height: " << rgbHeight_);
+	LOG4CXX_INFO(logger_, "RGB Framerate: " << rgbFPS_);
+	LOG4CXX_INFO(logger_, "Z Width: " << zWidth_);
+	LOG4CXX_INFO(logger_, "Z Height: " << zHeight_);
+	LOG4CXX_INFO(logger_, "Z FPS: " << zFPS_);
 
 	Status rc = Status::STATUS_OK;
 

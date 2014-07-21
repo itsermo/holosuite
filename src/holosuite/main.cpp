@@ -483,7 +483,7 @@ int main(int argc, char *argv[])
 		if (vm["audio-input"].as<std::string>().compare("portaudio") == 0)
 		{
 			if (vm.count("audio-input-index"))
-				audioCaptureDevIndex = vm["capture-index"].as<int>();
+				audioCaptureDevIndex = vm["audio-input-index"].as<int>();
 
 			if (vm.count("audio-input-num-chan"))
 				audioCaptureFormat.numChannels = vm["audio-input-num-chan"].as<int>();
@@ -507,7 +507,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-
+	
 	if (vm.count("audio-encoder"))
 	{
 		if (vm["audio-encoder"].as<std::string>().compare("none") == 0)
@@ -886,57 +886,64 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			switch (renderType)
+			if (decoderCloud || decoderRGBAZ)
 			{
-			case holo::render::RENDER_TYPE_VIS2D:
-				//TODO: implement 2D VIS
-				break;
-			case holo::render::RENDER_TYPE_VIS3D:
-				renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
-				break;
-			case holo::render::RENDER_TYPE_DSCP_MKII:
-				//TODO: implement mk ii dscp algo
-				break;
-			case holo::render::RENDER_TYPE_DSCP_MKIV:
-				//TODO: implement mk iv dscp algo
-				break;
-			case holo::render::RENDER_TYPE_NONE:
-			default:
-				renderer = nullptr;
-				break;
-			}
-
-			if (renderer)
-			{
-				if (!renderer->init())
+				switch (renderType)
 				{
-					LOG4CXX_FATAL(logger_main, "Could not intitalize the renderer.  Exiting holosuite...");
-					return -1;
+				case holo::render::RENDER_TYPE_VIS2D:
+					//TODO: implement 2D VIS
+					break;
+				case holo::render::RENDER_TYPE_VIS3D:
+					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
+					break;
+				case holo::render::RENDER_TYPE_DSCP_MKII:
+					//TODO: implement mk ii dscp algo
+					break;
+				case holo::render::RENDER_TYPE_DSCP_MKIV:
+					//TODO: implement mk iv dscp algo
+					break;
+				case holo::render::RENDER_TYPE_NONE:
+				default:
+					renderer = nullptr;
+					break;
+				}
+
+				if (renderer)
+				{
+					if (!renderer->init())
+					{
+						LOG4CXX_FATAL(logger_main, "Could not intitalize the renderer.  Exiting holosuite...");
+						return -1;
+					}
 				}
 			}
 
-			switch (audioRenderType)
+			if (decoderAudio)
 			{
+				switch (audioRenderType)
+				{
 #ifdef ENABLE_HOLO_AUDIO
-			case holo::render::RENDER_AUDIO_TYPE_PORTAUDIO:
-				audioRenderer = holo::render::HoloRenderGenerator::fromPortaudio(audioRenderFormat);
-				break;
+				case holo::render::RENDER_AUDIO_TYPE_PORTAUDIO:
+					audioRenderer = holo::render::HoloRenderGenerator::fromPortaudio(audioRenderFormat);
+					break;
 #endif
-			case holo::render::RENDER_TYPE_NONE:
-			default:
-				audioRenderer = nullptr;
-				break;
-			}
+				case holo::render::RENDER_TYPE_NONE:
+				default:
+					audioRenderer = nullptr;
+					break;
+				}
 
 
-			if (audioRenderer)
-			{
-				if (!audioRenderer->init(audioRenderDevIndex))
+				if (audioRenderer)
 				{
-					LOG4CXX_FATAL(logger_main, "Could not intitalize the audio output.  Exiting holosuite...");
-					return -1;
+					if (!audioRenderer->init(audioRenderDevIndex))
+					{
+						LOG4CXX_FATAL(logger_main, "Could not intitalize the audio output.  Exiting holosuite...");
+						return -1;
+					}
 				}
 			}
+
 
 			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_LOOPBACK)
 			{

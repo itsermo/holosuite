@@ -56,14 +56,13 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	auto hs = GetHandshakeFromPacket(handshakePacket);
 
-	LOG4CXX_INFO(logger_, "Connected to server " << hs.clientName << std::endl
-		<< "Magic number: " << hs.magicNumber << std::endl
-		<< "Protocol version: " << hs.protocolVersion << std::endl
-		<< "RGBAZ Width: " << hs.rgbazWidth << std::endl
-		<< "RGBAZ Height: " << hs.rgbazHeight << std::endl
-		<< "Capture FPS: " << hs.captureFPS << std::endl
-		<< "Horizontal Field-of-View: " << hs.captureHOV << std::endl
-		<< "Vertical Field-of-View: " << hs.captureVOV);
+	LOG4CXX_INFO(logger_, "Server name " << hs.clientName);
+	LOG4CXX_INFO(logger_, "Magic number: " << hs.magicNumber);
+	LOG4CXX_INFO(logger_, "Protocol version: " << hs.protocolVersion);
+	LOG4CXX_INFO(logger_, "RGBAZ Mode: " << hs.rgbazWidth << "x" << hs.rgbazHeight << "@" << hs.captureFPS);
+	LOG4CXX_INFO(logger_, "RGBAZ Field-of-view: " << hs.captureHOV << " deg horiz, " << hs.captureVOV << " deg vert");
+	LOG4CXX_INFO(logger_, "Audio Mode: " << hs.audioNumChan << " chan, " << hs.audioBitDepth << " bits @ " << hs.audioFreq << " kHz");
+
 
 	isConnected_ = true;
 

@@ -24,7 +24,7 @@ namespace holo
 			void* getContext() { return (void*)audioStream_; }
 
 		private:
-			PaHostApiTypeId getHostType();
+			//PaHostApiTypeId getHostType();
 
 			bool isInit_;
 
