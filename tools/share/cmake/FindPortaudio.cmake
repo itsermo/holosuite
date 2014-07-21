@@ -98,7 +98,7 @@ endif()
     )
    
     set(PORTAUDIO_VERSION
-      18
+      19
     )
    
     if (PORTAUDIO_INCLUDE_DIRS AND PORTAUDIO_LIBRARIES)
