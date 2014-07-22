@@ -31,9 +31,11 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 
 	LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client" << port);
 
+	isConnected_ = true;
+
 	socket_->set_option(boost::asio::ip::tcp::no_delay(true));
-	socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
-	socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
+	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
+	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
 	this->performHandshake(localInfo);
 	
@@ -43,16 +45,13 @@ HoloNetProtocolHandshake HoloNetServer::listenAndWait(unsigned short port, HoloN
 
 	auto hs = GetHandshakeFromPacket(handshakePacket);
 
-	LOG4CXX_INFO(logger_, "Client " << hs.clientName << " connected." << std::endl
-		<< "Magic number: " << hs.magicNumber << std::endl
-		<< "Protocol version: " << hs.protocolVersion << std::endl
-		<< "RGBAZ Width: " << hs.rgbazWidth << std::endl
-		<< "RGBAZ Height: " << hs.rgbazHeight << std::endl
-		<< "Capture FPS: " << hs.captureFPS << std::endl
-		<< "Horizontal Field-of-View: " << hs.captureHOV << std::endl
-		<< "Vertical Field-of-View: " << hs.captureVOV);
+	LOG4CXX_INFO(logger_, "Client " << hs.clientName << " connected.");
+	LOG4CXX_INFO(logger_, "Magic number: " << hs.magicNumber);
+	LOG4CXX_INFO(logger_, "Protocol version: " << hs.protocolVersion);
+	LOG4CXX_INFO(logger_, "RGBAZ Mode: " << hs.rgbazWidth << "x" << hs.rgbazHeight << "@" << hs.captureFPS);
+	LOG4CXX_INFO(logger_, "RGBAZ Field-of-view: " << hs.captureHOV << " deg horiz, " << hs.captureVOV << " deg vert");
+	LOG4CXX_INFO(logger_, "Audio Mode: " << hs.audioNumChan << " chan, " << hs.audioBitDepth << " bits @ " << hs.audioFreq <<" kHz");
 
-	isConnected_ = true;
 
 	start();
 

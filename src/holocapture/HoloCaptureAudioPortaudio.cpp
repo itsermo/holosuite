@@ -23,16 +23,16 @@ HoloCaptureAudioPortaudio::~HoloCaptureAudioPortaudio()
 	deinit();
 }
 
-PaHostApiTypeId HoloCaptureAudioPortaudio::getHostType()
-{
-#if defined WIN32
-	return paWASAPI;
-#elif defined __APPLE__
-	return paCoreAudio;
-#else
-	return paALSA;
-#endif
-}
+//PaHostApiTypeId HoloCaptureAudioPortaudio::getHostType()
+//{
+//#if defined WIN32
+//	return paWASAPI;
+//#elif defined __APPLE__
+//	return paCoreAudio;
+//#else
+//	return paALSA;
+//#endif
+//}
 
 bool HoloCaptureAudioPortaudio::init(int which)
 {
@@ -68,7 +68,7 @@ bool HoloCaptureAudioPortaudio::init(int which)
 		{
 			auto devInfo = Pa_GetDeviceInfo(i);
 
-			if (strcmp(devInfo->name, devList[which].c_str()) == 0 && devInfo->hostApi == Pa_HostApiTypeIdToHostApiIndex(getHostType()))
+			if (strcmp(devInfo->name, devList[which].c_str()) == 0 && devInfo->hostApi == Pa_GetDefaultHostApi())
 			{
 				trueDevIndex = i;
 				break;
@@ -166,7 +166,7 @@ std::vector<std::string> HoloCaptureAudioPortaudio::enumerateDevices()
 	{
 		auto devInfo = Pa_GetDeviceInfo(i);
 
-		if (devInfo->maxInputChannels > 0 && devInfo->hostApi == Pa_HostApiTypeIdToHostApiIndex(getHostType()))
+		if (devInfo->maxInputChannels > 0 && devInfo->hostApi == Pa_GetDefaultHostApi())
 		{
 			devList.push_back(std::string(devInfo->name));
 		}

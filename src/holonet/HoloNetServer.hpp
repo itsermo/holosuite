@@ -19,6 +19,7 @@ namespace holo
 			//void disconnect();
 
 		private:
+
 			boost::shared_ptr<boost::asio::io_service> io_service_;
 			boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
 

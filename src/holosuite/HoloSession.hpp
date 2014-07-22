@@ -17,7 +17,7 @@
 #include <atomic>
 #include <condition_variable>
 
-#define HOLO_SESSION_CV_WAIT_TIMEOUT_MS 500
+
 
 namespace holo
 {
@@ -50,6 +50,8 @@ namespace holo
 		bool isConnected();
 
 	private:
+		
+		void stop(std::thread::id callingThread);
 
 		std::string localName_;
 		
@@ -61,12 +63,12 @@ namespace holo
 		boost::shared_ptr<HoloCloud> localCloud_;
 		boost::shared_ptr<HoloCloud> remoteCloud_;
 
-		boost::shared_ptr<std::vector<uchar>> remoteCloudCompressed_;
-		boost::shared_ptr<std::vector<uchar>> remoteRGBAZCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteCloudCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteRGBAZCompressed_;
 
 		boost::shared_ptr<std::vector<uchar>> localAudio_;
 		boost::shared_ptr<std::vector<uchar>> remoteAudio_;
-		boost::shared_ptr<std::vector<uchar>> remoteAudioCompressed_;
+		std::queue<boost::shared_ptr<std::vector<uchar>>> remoteAudioCompressed_;
 
 		std::thread captureThread_;
 		std::thread captureAudioThread_;
@@ -94,6 +96,8 @@ namespace holo
 		std::mutex remoteAudioMutex_;
 		std::mutex remoteAudioCompressedMutex_;
 		
+		std::mutex stoppingMutex_;
+
 		std::condition_variable haveLocalCloudCV_;
 		std::condition_variable haveLocalRGBAZCV_;
 		std::condition_variable haveLocalAudioCV_;
