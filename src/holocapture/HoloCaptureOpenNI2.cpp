@@ -165,11 +165,11 @@ bool HoloCaptureOpenNI2::init(int which)
 		return false;
 	}
 
-	if (colorStream_.addNewFrameListener(&colorListener_) != Status::STATUS_OK)
-	{
-		LOG4CXX_ERROR(logger_, "Could not set color stream event listener");
-		return false;
-	}
+	//if (colorStream_.addNewFrameListener(&colorListener_) != Status::STATUS_OK)
+	//{
+	//	LOG4CXX_ERROR(logger_, "Could not set color stream event listener");
+	//	return false;
+	//}
 
 	if (depthStream_.start() != Status::STATUS_OK)
 	{
@@ -177,11 +177,11 @@ bool HoloCaptureOpenNI2::init(int which)
 		return false;
 	}
 
-	if (depthStream_.addNewFrameListener(&depthListener_) != Status::STATUS_OK)
-	{
-		LOG4CXX_ERROR(logger_, "Could not set depth stream event listener");
-		return false;
-	}
+	//if (depthStream_.addNewFrameListener(&depthListener_) != Status::STATUS_OK)
+	//{
+	//	LOG4CXX_ERROR(logger_, "Could not set depth stream event listener");
+	//	return false;
+	//}
 
 	rc = device_.setImageRegistrationMode(openni::ImageRegistrationMode::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
 	if (rc != Status::STATUS_OK)
@@ -239,41 +239,41 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 {
 	if (isOpen_)
 	{
-		//openni::VideoFrameRef color;
-		//openni::VideoFrameRef depth;
+		openni::VideoFrameRef color;
+		openni::VideoFrameRef depth;
 
-		//colorStream_.readFrame(&color);
-		//depthStream_.readFrame(&depth);
+		colorStream_.readFrame(&color);
+		depthStream_.readFrame(&depth);
 #ifdef TRACE_LOG_ENABLED
 		auto startTime = std::chrono::system_clock::now();
 #endif
-		auto depthFuture = std::async(std::launch::async, &holo::capture::HoloCaptureOpenNI2Listener::getDepthFrame, &depthListener_, std::ref(zImage));
+		//auto depthFuture = std::async(std::launch::async, &holo::capture::HoloCaptureOpenNI2Listener::getDepthFrame, &depthListener_, std::ref(zImage));
 		
-		colorListener_.getColorFrame(rgbaImage);
+		//colorListener_.getColorFrame(rgbaImage);
 		
 		//processColorFrame();
 		
-		depthFuture.get();
+		//depthFuture.get();
 
-		//rgbaImage = rgbaImage_;
-		//zImage = depthImage_;
+		rgbaImage = rgbaImage_;
+		zImage = depthImage_;
 
-		//rgbImage_ = cv::Mat(cv::Size(rgbWidth_, rgbHeight_), CV_8UC3, (void*)color.getData(), color.getStrideInBytes() );
-		//
-		//auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
-		////cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
+		rgbImage_ = cv::Mat(cv::Size(rgbWidth_, rgbHeight_), CV_8UC3, (void*)color.getData(), color.getStrideInBytes() );
+		
+		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
+		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
-		//memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
-		//
-		////short * dsrc = (short*)depth.getData();
-		////short * ddest = (short*)depthImage_.data;
-		////for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
-		////	*ddest = *dsrc < 1000 ? *dsrc : 0;
+		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+		
+		//short * dsrc = (short*)depth.getData();
+		//short * ddest = (short*)depthImage_.data;
+		//for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
+		//	*ddest = *dsrc < 1000 ? *dsrc : 0;
 
-		//zImage = depthImage_;
+		zImage = depthImage_;
 
-		//futureRGBA.get();
-		//rgbaImage = rgbaImage_;
+		futureRGBA.get();
+		rgbaImage = rgbaImage_;
 
 #ifdef TRACE_LOG_ENABLED
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
@@ -356,8 +356,8 @@ void HoloCaptureOpenNI2::deinit()
 {
 	if (isOpen_)
 	{
-		depthStream_.removeNewFrameListener(&depthListener_);
-		colorStream_.removeNewFrameListener(&colorListener_);
+		//depthStream_.removeNewFrameListener(&depthListener_);
+		//colorStream_.removeNewFrameListener(&colorListener_);
 
 		depthStream_.stop();
 		colorStream_.stop();

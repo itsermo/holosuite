@@ -2,7 +2,7 @@
 
 #include "IHoloCapture.hpp"
 #include "HoloCaptureInfo.hpp"
-#include "HoloCaptureOpenNI2Listener.hpp"
+//#include "HoloCaptureOpenNI2Listener.hpp"
 
 #include <OpenNI.h>
 #include <log4cxx/log4cxx.h>
@@ -60,8 +60,8 @@ namespace holo
 			openni::VideoStream depthStream_;
 			openni::VideoStream colorStream_;
 
-			HoloCaptureOpenNI2Listener depthListener_;
-			HoloCaptureOpenNI2Listener colorListener_;
+			//HoloCaptureOpenNI2Listener depthListener_;
+			//HoloCaptureOpenNI2Listener colorListener_;
 
 			cv::Mat rgbImage_;
 			cv::Mat rgbaImage_;

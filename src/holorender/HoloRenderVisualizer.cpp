@@ -112,7 +112,7 @@ void HoloRenderVisualizer::run()
 void HoloRenderVisualizer::updateFromPointCloud(HoloCloudPtr && pointCloud)
 {
 	cloudLock_.lock();
-	pointCloud_ = pointCloud;
+	pointCloud_ = std::move(pointCloud);
 	haveNewCloud_ = true;
 	cloudLock_.unlock();
 }

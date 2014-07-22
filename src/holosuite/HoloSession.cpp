@@ -332,10 +332,8 @@ void HoloSession::captureLoop()
 		else
 			shouldCapture_ = false;
 
-//#ifndef WIN32
-//		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-//#endif
 
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
