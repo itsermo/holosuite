@@ -50,6 +50,8 @@ namespace holo
 		bool isConnected();
 
 	private:
+		
+		void stop(std::thread::id callingThread);
 
 		std::string localName_;
 		
@@ -94,6 +96,8 @@ namespace holo
 		std::mutex remoteAudioMutex_;
 		std::mutex remoteAudioCompressedMutex_;
 		
+		std::mutex stoppingMutex_;
+
 		std::condition_variable haveLocalCloudCV_;
 		std::condition_variable haveLocalRGBAZCV_;
 		std::condition_variable haveLocalAudioCV_;

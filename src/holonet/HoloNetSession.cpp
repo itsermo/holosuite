@@ -211,7 +211,7 @@ void HoloNetSession::sendLoop()
 			}
 			catch (boost::system::system_error) {
 				shouldSend_ = false;
-				std::async(std::launch::async, &HoloNetSession::disconnect, this);
+				return;
 			}
 		}
 
