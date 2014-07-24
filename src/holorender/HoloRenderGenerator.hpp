@@ -6,6 +6,10 @@
 #include "HoloRenderAudioPortaudio.hpp"
 #endif
 
+#ifdef ENABLE_HOLO_DSCP2
+#include "HoloRenderDSCP2.hpp"
+#endif
+
 #include <memory>
 
 namespace holo
@@ -37,6 +41,13 @@ namespace holo
 			static std::unique_ptr<IHoloRenderAudio> fromPortaudio(HoloAudioFormat audioFormat)
 			{
 				return std::unique_ptr<IHoloRenderAudio>(new HoloRenderAudioPortaudio(audioFormat));
+			}
+#endif
+
+#ifdef ENABLE_HOLO_DSCP2
+			static std::unique_ptr<IHoloRender> fromDSCP2()
+			{
+				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2());
 			}
 #endif
 

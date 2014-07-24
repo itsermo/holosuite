@@ -586,6 +586,10 @@ int main(int argc, char *argv[])
 
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
 		}
+		else if (vm["render-output"].as<std::string>().compare("dscp2") == 0)
+		{
+			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKII;
+		}
 		else if (vm["render-output"].as<std::string>().compare("none") == 0)
 		{
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_NONE;
@@ -897,7 +901,7 @@ int main(int argc, char *argv[])
 					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
 					break;
 				case holo::render::RENDER_TYPE_DSCP_MKII:
-					//TODO: implement mk ii dscp algo
+					renderer = holo::render::HoloRenderGenerator::fromDSCP2();
 					break;
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
 					//TODO: implement mk iv dscp algo

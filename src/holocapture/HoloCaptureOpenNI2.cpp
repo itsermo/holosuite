@@ -231,6 +231,8 @@ bool HoloCaptureOpenNI2::init(int which)
 
 	LOG4CXX_INFO(logger_, "OpenNI2 capture device intitalized")
 
+	//chdir("../");
+
 	return isOpen_;
 }
 

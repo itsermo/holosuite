@@ -1,11 +1,11 @@
 #pragma once
-
+#ifdef ENABLE_HOLO_DSCP2
 #include "IHoloRender.hpp"
+
+#include <log4cxx/log4cxx.h>
 //need this for GL.h macro definitions
 #ifdef WIN32
 #include <Windows.h>
-#undef near
-#undef far
 #endif
 
 #include <gl/GL.h>
@@ -15,12 +15,49 @@
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
 
+#include <thread>
+#include <mutex>
+
 #define HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES 10
 #define HOLO_RENDER_DSCP2_NUM_MONITOR_HEADS 3
-#define HOLO_RENDER_DSCP2_PROGRAM_NAME = "edu.mit.media.obmg.dscp.mk2"
+#define HOLO_RENDER_DSCP2_MASTER_HOLOGRAM_GAIN 1.0f
+#define HOLO_RENDER_DSCP2_VIEW_ENABLE_BITMASK 0xffffffff
+#define HOLO_RENDER_DSCP2_ZERO_DEPTH 0
+#define HOLO_RENDER_DSCP2_ZERO_MODULATION 0
+#define HOLO_RENDER_DSCP2_FAKE_Z 0.5f
+#define HOLO_RENDER_DSCP2_FAKE_MODULATION 0.5f
+#define HOLO_RENDER_DSCP2_DISPLAY_MODE_WIDTH 2048
+#define HOLO_RENDER_DSCP2_DISPLAY_MODE_HEIGHT 3444
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_RES_HORIZ 512
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_RES_VERT 144
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_TILE_X 2
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_TILE_Y 2
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_NUM_VIEWS_PER_PIXEL 4
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_MAG 1.0f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_FOV 30.0f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_WIDTH_MM 150.0f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_HEIGHT_MM 75.0f
 #define HOLO_RENDER_DSCP2_PLANE_NEAR 400.0f
 #define HOLO_RENDER_DSCP2_PLANE_FAR 800.0f
-#define HOLO_RENDER_DSCP2_PLANE_FAR
+#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_X 0.0f
+#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Y -790.0f
+#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Z 110.0f
+
+// CG code defines
+#define HOLO_RENDER_DSCP2_CG_PROGRAM_PATH "../shaders"
+#define HOLO_RENDER_DSCP2_CG_PROGRAM_NAME "edu.mit.media.obmg.dscp.mk2"
+//#define HOLO_RENDER_DSCP2_CG_PROGRAM_FILENAME "Holo_myTextures.cg"
+#define HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_NAME "Holov_myTextures"
+#define HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_FILENAME "Holov_myTextures.cg"
+#define HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_NAME "Holof_myTextures"
+#define HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_FILENAME "Holof_myTextures.cg"
+
+//#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_PROGRAM_NAME "edu.mit.media.obmg.dscp.mk2.normalmaplight"
+//#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_PROGRAM_FILENAME "C5E1v_basicLightperFrag.cg"
+#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_NAME "C5E1v_basicLight"
+#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_FILENAME "cloud_vertex_shader.cg"
+#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_NAME "C5E1f_basicLight"
+#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_FILENAME "cloud_fragment_shader.cg"
 
 #include <atomic>
 #include <string>
@@ -29,7 +66,7 @@ namespace holo
 {
 	namespace render
 	{
-		class HoloRenderDSCP2 : IHoloRender
+		class HoloRenderDSCP2 : public IHoloRender
 		{
 		public:
 			HoloRenderDSCP2();
@@ -53,6 +90,7 @@ namespace holo
 			static void glutIdle();
 			static void glutKeyboard(unsigned char c, int x, int y);
 			static void glutCleanup();
+			void glutInitLoop();
 
 			void glCheckErrors();
 
@@ -64,18 +102,30 @@ namespace holo
 				float *objSpaceLightPosition_cone, float h, float v, int drawdepthOn,
 				float myobject, int viewnumber);
 
+			void drawPointCloud();
+
+			//cg functions
+			void checkForCgErrorLine(const char *situation, int line = 0);
+			void checkForCgError2(const char *situation);
+			void checkForCgError(const char *situation);
+
+
+			void cgSetBrassMaterial();
+			void cgSetRedPlasticMaterial();
+			void cgSetEmissiveLightColorOnly();
+
 			int headNumber_;
 
 			float masterHologramGain_;
 
 			int viewEnableBitmask_;  //set bits to zero to skip rendering views 
 			int zeroDepth_; //should we set depth-view to zero (for debuging)
-			bool zeroModulation_; // " " " color
+			int zeroModulation_; // " " " color
 			float fakeZ_; //pretend all points on object is at this z-depth
 			float fakeModulation_; //pretend all points on object is at this z-depth
 			int hologramOutputDebugSwitch_; //send different intermediate variables to color buffer when rendering
 
-			GLuint DLid_;
+			//GLuint DLid_;
 
 			std::atomic<int> enableDrawDepth_, rotateCounter_; //for enabling rotation
 			int frameNumber_, currentTime_, timeBase_; // for counting FPS
@@ -85,39 +135,41 @@ namespace holo
 
 			// Render view options
 			int numViews_;
-			float hologramPlaneWidthMM_, hologramPlaneHeightMM_, nearPlaneMM_m, farPlaneMM_;
+			float hologramPlaneWidthMM_, hologramPlaneHeightMM_;
 			float nearPlane_, farPlane_;
-			int numX_, numY_, tileY_, tileX_, numRGB_;
+			int numX_, numY_, tileY_, tileX_, numViewsPerPixel_;
 
 			GLubyte *localFramebufferStore_;
 
-			float mag_, fieldOfView_, hogelSwitch_;
+			float mag_, fieldOfView_;
 
-			GLuint *textureID_;
+			GLuint textureID_[3];
 			GLuint meshTexID_;
 			GLuint texNum_;
 
-			GLfloat *lightAmbient_;
-			GLfloat *lightDiffuse_;
-			GLfloat *lightPosition_;
+			GLfloat lightAmbient_[4];
+			GLfloat lightDiffuse_[4];
+			GLfloat lightPosition_[4];
+			GLfloat lightColor_[3];
+			GLfloat globalAmbient_[3];
 
-			void checkForCgErrorLine(const char *situation, int line = 0);
-			void checkForCgError2(const char *situation);
+			GLfloat projectionMatrix1_[16];
+			GLfloat projectionMatrix2_[16];
 
-			void cgSetBrassMaterial();
-			void cgSetRedPlasticMaterial();
-			void cgSetEmissiveLightColorOnly();
+			std::atomic<float> lightLocationX_, lightLocationY_, lightLocationZ_;
+			std::atomic<float> translateX_, translateY_, translateZ_;
+			std::atomic<float> rot_, rotX_;
 
-			const char *normalMapLightingProgramName_;
-			const char *normalMapLightingProgramFileName_;
-			const char *normalMapLightingVertexProgramFileName_;
+			const char *vertexProgramFileName_, *vertexProgramName_;
+			const char *fragmentProgramFileName_, *fragmentProgramName_;
+			const char *normalMapLightingVertexProgramName_, *normalMapLightingVertexProgramFileName_;
+			const char *normalMapLightingFragmentProgramName_, *normalMapLightingFragmentProgramFileName_;
 
 			CGcontext normalMapLightingCgContext_;
-			CGprofile normalMapLightingCgVertexProfile_;
-			CGprofile normalMapLightingCgFragmentProfile_;
-			CGprogram normalMapLightingCgVertexProgram_, normalMapLightingCgFragmentProgram_;
+			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
+			CGprogram cgVertexProgram_, cgFragmentProgram_, normalMapLightingCgVertexProgram_, normalMapLightingCgFragmentProgram_;
 
-			CGparameter cgVertexParamModelUIScale_;
+			//CGparameter cgVertexParamModelUIScale_;
 
 			CGparameter cgVertexParamModelViewProj_;
 			CGparameter cgFragmentParamGlobalAmbient_,
@@ -131,27 +183,18 @@ namespace holo
 				cgVertexParamDepthMatrix_, cgVertexParamDrawdepth_;
 
 			CGprofile cgVertexProfile_, cgFragmentProfile_;
-			CGprogram cgVertexProgram_, cgFragmentProgram_;
-			CGparameter cgFragmentParamDecal0_,
-				cgFragmentParamDecal1_, cgFragmentParamDecal2_, cgFragmentParamDecal3_;
+			CGparameter cgFragmentParamDecal0_, cgFragmentParamDecal1_;
 
-			const char *programName_, *vertexProgramFileName_, *vertexProgramName_;
-			const char *fragmentProgramFileName_, *fragmentProgramName_;
+			std::mutex cloudMutex_;
+			HoloCloudPtr cloud_;
+			std::atomic<bool> haveNewCloud_;
+			std::thread glutInitThread_;
 
-			GLuint allViewsFBO_;
-			GLuint depthBuffer_;
-
-			GLfloat *projectionMatrix1_;
-			GLfloat *projectionMatrix2_;
-
-			float *globalAmbient_, *lightColor_;
-
-			std::atomic<float> lightLocationX_, lightLocationY_, lightLocationZ_;
-			std::atomic<float> translateX_, translateY_, translateZ_;
-			std::atomic<float> rot_, rotX_;
-
+			log4cxx::LoggerPtr logger_;
 		};
 
 		static HoloRenderDSCP2 *gCurrentInstance;
 	}
 }
+
+#endif
