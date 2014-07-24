@@ -8,6 +8,7 @@ using namespace holo::render;
 
 HoloRenderDSCP2::HoloRenderDSCP2() : localFramebufferStore_(nullptr)
 {
+	gCurrentInstance = this;
 	localFramebufferStore_ = new GLubyte[viewTexWidth_ * viewTexHeight_ * 4];
 }
 

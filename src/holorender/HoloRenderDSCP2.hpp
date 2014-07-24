@@ -18,6 +18,9 @@
 #define HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES 10
 #define HOLO_RENDER_DSCP2_NUM_MONITOR_HEADS 3
 #define HOLO_RENDER_DSCP2_PROGRAM_NAME = "edu.mit.media.obmg.dscp.mk2"
+#define HOLO_RENDER_DSCP2_PLANE_NEAR 400.0f
+#define HOLO_RENDER_DSCP2_PLANE_FAR 800.0f
+#define HOLO_RENDER_DSCP2_PLANE_FAR
 
 #include <atomic>
 #include <string>
@@ -45,15 +48,13 @@ namespace holo
 
 		private:
 
-			static HoloRenderDSCP2 *gCurrentInstance;
-
 			// GL and GLUT related functions
-			static void glutDisplay(void);
-			static void glutIdle(void);
+			static void glutDisplay();
+			static void glutIdle();
 			static void glutKeyboard(unsigned char c, int x, int y);
-			static void glutCleanup(void);
+			static void glutCleanup();
 
-			void glCheckErrors(void);
+			void glCheckErrors();
 
 			// Drawing functions
 			void drawString(float posX, float posY, std::string theString);
@@ -63,7 +64,7 @@ namespace holo
 				float *objSpaceLightPosition_cone, float h, float v, int drawdepthOn,
 				float myobject, int viewnumber);
 
-			int headNumber_ = 0;
+			int headNumber_;
 
 			float masterHologramGain_;
 
@@ -103,9 +104,9 @@ namespace holo
 			void checkForCgErrorLine(const char *situation, int line = 0);
 			void checkForCgError2(const char *situation);
 
-			void cgSetBrassMaterial(void);
-			void cgSetRedPlasticMaterial(void);
-			void cgSetEmissiveLightColorOnly(void);
+			void cgSetBrassMaterial();
+			void cgSetRedPlasticMaterial();
+			void cgSetEmissiveLightColorOnly();
 
 			const char *normalMapLightingProgramName_;
 			const char *normalMapLightingProgramFileName_;
@@ -150,5 +151,7 @@ namespace holo
 			std::atomic<float> rot_, rotX_;
 
 		};
+
+		static HoloRenderDSCP2 *gCurrentInstance;
 	}
 }
