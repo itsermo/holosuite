@@ -49,6 +49,7 @@ OPTION(WITH_AUDIO "Enables audio compression and sampling for video conferencing
 OPTION(BUILD_TESTS "Configures unit test project for compiling test code" OFF)
 OPTION(WITH_STATIC_LOG4CXX "Defines LOG4CXX_STATIC for use with static LOG4CXX libraries" OFF)
 OPTION(BOOST_DISABLE_AUTOLINK "Defines BOOST_ALL_NO_LIB macro to turn off boost auto linking" OFF)
+OPTION(WITH_DSCP2 "Enables compiling DSCP holographic render algorithm for MK II" OFF)
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)
@@ -136,6 +137,25 @@ ENDIF(WITH_AUDIO)
 IF(WITH_TRACE_LOG)
 	ADD_DEFINITIONS(-DTRACE_LOG_ENABLED)
 ENDIF(WITH_TRACE_LOG)
+
+IF(WITH_DSCP2)
+	find_package(OpenGL REQUIRED)
+	#find_package(GLUT REQUIRED)
+	#find_package(GLU REQUIRED)
+	#find_package(GLee REQUIRED)
+	#find_package(GLUT REQUIRED)
+	find_package(Cg REQUIRED)
+	
+	#INCLUDE_DIRECTORIES(${GLUT_INCLUDE_DIR})
+	INCLUDE_DIRECTORIES(${CG_INCLUDE_DIR})
+	ADD_DEFINITIONS(-DENABLE_HOLO_DSCP2)
+	
+	if(WIN32)
+		get_filename_component(CG_LIBRARY_DIR ${CG_GL_LIBRARY} DIRECTORY)
+		LINK_DIRECTORIES(${CG_LIBRARY_DIR})
+	endif()
+	
+ENDIF()
 
 #
 # Configure Files
