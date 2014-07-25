@@ -35,13 +35,13 @@
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_NUM_VIEWS_PER_PIXEL 4
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_MAG 1.0f
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_FOV 30.0f
-#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_WIDTH_MM 150.0f
-#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_HEIGHT_MM 75.0f
-#define HOLO_RENDER_DSCP2_PLANE_NEAR 400.0f
-#define HOLO_RENDER_DSCP2_PLANE_FAR 800.0f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_WIDTH_MM 1.50f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_HEIGHT_MM 7.50f
+#define HOLO_RENDER_DSCP2_PLANE_NEAR 0.0f
+#define HOLO_RENDER_DSCP2_PLANE_FAR 8.0f
 #define HOLO_RENDER_DSCP2_LIGHT_LOCATION_X 0.0f
-#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Y -790.0f
-#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Z 110.0f
+#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Y -7.900f
+#define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Z 1.100f
 
 // CG code defines
 #define HOLO_RENDER_DSCP2_CG_PROGRAM_PATH "../shaders"
@@ -61,6 +61,7 @@
 
 #include <atomic>
 #include <string>
+#include <condition_variable>
 
 namespace holo
 {
@@ -143,8 +144,7 @@ namespace holo
 
 			float mag_, fieldOfView_;
 
-			GLuint textureID_[3];
-			GLuint meshTexID_;
+			GLuint textureID_;
 			GLuint texNum_;
 
 			GLfloat lightAmbient_[4];
@@ -156,9 +156,9 @@ namespace holo
 			GLfloat projectionMatrix1_[16];
 			GLfloat projectionMatrix2_[16];
 
-			std::atomic<float> lightLocationX_, lightLocationY_, lightLocationZ_;
-			std::atomic<float> translateX_, translateY_, translateZ_;
-			std::atomic<float> rot_, rotX_;
+			float lightLocationX_, lightLocationY_, lightLocationZ_;
+			float translateX_, translateY_, translateZ_;
+			float rot_, rotX_;
 
 			const char *vertexProgramFileName_, *vertexProgramName_;
 			const char *fragmentProgramFileName_, *fragmentProgramName_;
@@ -189,6 +189,14 @@ namespace holo
 			HoloCloudPtr cloud_;
 			std::atomic<bool> haveNewCloud_;
 			std::thread glutInitThread_;
+
+			bool isInit_;
+			bool firstInit_;
+
+			std::mutex hasInitMutex_;
+			std::condition_variable hasInitCV_;
+
+			//cv::Mat localFrameImg_;
 
 			log4cxx::LoggerPtr logger_;
 		};

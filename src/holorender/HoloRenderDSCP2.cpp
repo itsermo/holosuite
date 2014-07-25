@@ -45,7 +45,6 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	translateZ_(0.0f),
 	rot_(0.0f),
 	rotX_(0.0f),
-	meshTexID_(0),
 	texNum_(0),
 	vertexProgramName_(HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_NAME),
 	vertexProgramFileName_(HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_FILENAME),
@@ -80,11 +79,17 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	cgVertexParamDrawdepth_(nullptr),
 	cgVertexProfile_(CG_PROFILE_UNKNOWN),
 	cgFragmentProfile_(CG_PROFILE_UNKNOWN),
-	localFramebufferStore_(nullptr)
+	localFramebufferStore_(nullptr),
+	firstInit_(true),
+	isInit_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.dscp2");
 
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderDSCP2 object with default values...");
+
+	viewTexWidth_ = numX_ * tileX_;
+	viewTexHeight_ = numY_ * tileY_ * 2; //tiley views of numy pixels, X 2 (depth, luminance) was 256;
+	numViews_ = tileX_ * tileY_ * numViewsPerPixel_;
 
 	gCurrentInstance = this;
 
@@ -101,7 +106,7 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	// set light position
 	lightPosition_[0] = 0.0f;
 	lightPosition_[1] = 0.0f;
-	lightPosition_[2] = 2.0f;
+	lightPosition_[2] = -2.0f;
 	lightPosition_[3] = 1.0f;
 
 	// set light color to white { 0.95f, 0.95f, 0.95f }
@@ -118,6 +123,7 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	memset(projectionMatrix2_, 0, sizeof(GLfloat)* 16);
 
 	localFramebufferStore_ = new GLubyte[viewTexWidth_ * viewTexHeight_ * 4];
+
 
 #ifdef WIN32
 	RECT desktop;
@@ -146,9 +152,6 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 
 	LOG4CXX_INFO(logger_, "Window environment display mode resolution found: " << displayModeWidth_ << "x" << displayModeHeight_);
 
-	viewTexWidth_ = numX_ * tileX_;
-	viewTexHeight_ = numY_ * tileY_ * 2; //tiley views of numy pixels, X 2 (depth, luminance) was 256;
-	numViews_ = tileX_ * tileY_ * numViewsPerPixel_;
 
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderDSCP2 object");
 }
@@ -171,8 +174,11 @@ bool HoloRenderDSCP2::init()
 	LOG4CXX_INFO(logger_, "Initializing DSCP2 render algorithm...");
 
 	glutInitThread_ = std::thread(&HoloRenderDSCP2::glutInitLoop, this);
+	
+	std::unique_lock<std::mutex> lg(hasInitMutex_);
+	hasInitCV_.wait(lg);
 
-	return true;
+	return isInit_;
 }
 
 void HoloRenderDSCP2::glutInitLoop()
@@ -196,80 +202,30 @@ void HoloRenderDSCP2::glutInitLoop()
 	glutIdleFunc(this->glutIdle);
 	atexit(this->glutCleanup);
 
-	// Initialize OpenGL context
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
+
+	// Initialilze GLUT
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// glShadeModel (GL_SMOOTH);
 
-	//glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
-
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black Background								// Depth Buffer Setup
-	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient_); // Setup The Ambient Light
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse_); // Setup The Diffuse Light
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition_); // Position The Light
-	glEnable(GL_LIGHT0); // Enable Light One
 	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
 	glEnable(GL_COLOR_MATERIAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-	// Initialize OpenGL context
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	// glShadeModel (GL_SMOOTH);
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition_);
-
-	//for loading object files
-#if	0
-
-	printf("load textures\n");
-
-	//Load BMP texture from file
-
-	mesh = loadBMPTexture(filename_tex);
-
-	printf("done \n");
-
-	if (!meshTexID)
-		exit(EXIT_FAILURE);
-
-	// Load OBJ model file 
-	if (!ReadOBJModel(filename_obj, &objfile))
-		exit(EXIT_FAILURE);
-
-	// Make display list 
-
-	DLid = glGenLists(1);
-
-	glNewList(DLid, GL_COMPILE);
-	RenderOBJModel(&objfile);
-	glEndList();
-	FreeModel(&objfile);
-#endif
-
-	glDisable(GL_LIGHTING);
-
 	// don't know what this does
-	glGenTextures(2, textureID_);
-
-	// Set the background to gray
-	glClearColor(0.0, 0.0, 0.0, 0);
-
-	// Supposedly removes hidden surfaces
-	glEnable(GL_DEPTH_TEST);
+	// ermal: it creates 2 textures
+	glGenTextures(1, &textureID_);
 
 	double q = tan(0.1);
-	holo::utils::BuildShearOrthographicMatrix2(-75. * mag_, 75. * mag_, -37.5 * mag_, 37.5
-		* mag_, 450. * mag_, 750. * mag_, q / mag_, projectionMatrix1_);
+	holo::utils::BuildShearOrthographicMatrix2(-75. * mag_, 75. * mag_, -37.5 * mag_, 37.5 * mag_, 450. * mag_, 750. * mag_, q / mag_, projectionMatrix1_);
 
 	// CG program intialization
-
 	cgGLSetDebugMode(CG_FALSE);
 
 	normalMapLightingCgContext_ = cgCreateContext();
@@ -279,8 +235,6 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgGLSetOptimalOptions(normalMapLightingCgVertexProfile_);
 	checkForCgError("Selecting vertex profile...");
 	
-	//boost::filesystem::path full_path(boost::filesystem::current_path());
-
 	normalMapLightingCgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, // Cg runtime context 
 		CG_SOURCE, //Program in human-readable form 
 		normalMapLightingVertexProgramFileName_, // Name of file containing program 
@@ -308,8 +262,6 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgGLLoadProgram(normalMapLightingCgFragmentProgram_);
 	checkForCgError("loading fragment program");
 
-	//glDrawBuffers(2,buffers);
-
 	cgVertexParamModelViewProj_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
 	cgFragmentParamGlobalAmbient_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
 	cgFragmentParamLightColor_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightColor");
@@ -326,10 +278,9 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgFragmentParamDecal0_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "decal");
 	checkForCgError("Getting decal parameter");
 
-	cgGLSetTextureParameter(cgFragmentParamDecal0_, meshTexID_);
+	//cgGLSetTextureParameter(cgFragmentParamDecal0_, meshTexID_);
+	cgGLSetTextureParameter(cgFragmentParamDecal0_, textureID_);
 	checkForCgError("setting decal texture");
-
-	
 
 	// Set light source color parameters once. 
 	cgSetParameter3fv(cgFragmentParamGlobalAmbient_, globalAmbient_);
@@ -342,7 +293,7 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("Setting head number parameter");
 
 	//set up view texture (holds all view images. TODO: convert to 2 3d textures
-	glBindTexture(GL_TEXTURE_2D, textureID_[0]);
+	glBindTexture(GL_TEXTURE_2D, textureID_);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -397,19 +348,11 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgFragmentParamHeadnum_ = cgGetNamedParameter(cgFragmentProgram_, "headnum");
 	cgSetParameter1f(cgFragmentParamHeadnum_, headNumber_);
 
-	cgFragmentParamDecal1_ = cgGetNamedParameter(cgFragmentProgram_,
-		"decal0");
+	cgFragmentParamDecal1_ = cgGetNamedParameter(cgFragmentProgram_,"decal0");
 	checkForCgError2("getting decal parameter");
 
-	cgGLSetTextureParameter(cgFragmentParamDecal1_, textureID_[0]);
-
+	cgGLSetTextureParameter(cgFragmentParamDecal1_, textureID_);
 	checkForCgError2("setting decal 3D texture0");
-
-	// myCgFragmentParam_decal1 =cgGetNamedParameter(myCgFragmentProgram2, "decal1");
-	// checkForCgError2("getting decal parameter1");
-	// cgGLSetTextureParameter(myCgFragmentParam_decal1, texture_id[1]);
-	//// cgGLSetTextureParameter(myCgFragmentParam_decal1, 1);
-	//checkForCgError2("setting decal 1D texture1");
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -431,6 +374,9 @@ void HoloRenderDSCP2::glCheckErrors()
 
 void HoloRenderDSCP2::idle()
 {
+	// refresh point cloud data
+	this->drawPointCloud();
+
 #ifdef TRACE_LOG_ENABLED
 
 	float fps;
@@ -539,35 +485,38 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 		//makeViewtexFromFile();
 		break;
 	case ']':
-		lightLocationZ_ = lightLocationZ_ - 10;
+		lightLocationZ_ = lightLocationZ_ - 1.0f;
 		printf("%f \n", lightLocationZ_);
 		break;
 	case '[':
-		lightLocationZ_ = lightLocationZ_ + 10;
+		lightLocationZ_ = lightLocationZ_ + 1.0f;
 		printf("%f \n", lightLocationZ_);
 		break;
 	case '=':
-		lightLocationY_ = lightLocationY_ - 10;
+		lightLocationY_ = lightLocationY_ - 1.0f;
 		printf("%f \n", lightLocationY_);
 		break;
 	case '-':
-		lightLocationY_ = lightLocationY_ + 10;
+		lightLocationY_ = lightLocationY_ + 1.0f;
 		printf("%f \n", lightLocationY_);
 		break;
 	case ';':
-		lightLocationX_ = lightLocationX_ - 10;
+		lightLocationX_ = lightLocationX_ - 1.0f;
 		printf("%f \n", lightLocationX_);
 		break;
 	case '/':
-		lightLocationX_ = lightLocationX_ + 10;
+		lightLocationX_ = lightLocationX_ + 1.0f;
 		printf("%f \n", lightLocationX_);
 		break;
 	case '1':
+
+		glEnable(GL_LIGHTING);
 		//cgSetParameter1f(myCgFragmentParam_hogelYes, 0.);
 		//cgUpdateProgramParameters(myCgFragmentProgram2);
 		//printf("Wafel");
 		break;
 	case '2':
+		glDisable(GL_LIGHTING);
 		//cgSetParameter1f(myCgFragmentParam_hogelYes, 1.);
 		//cgUpdateProgramParameters(myCgFragmentProgram2);
 		//printf("Hogel");
@@ -598,24 +547,19 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 
 void HoloRenderDSCP2::display()
 {
+	if (firstInit_)
+	{
+		cv::namedWindow("TextureView");
+		firstInit_ = false;
+		isInit_ = true;
+		hasInitCV_.notify_all();
+	}
 
-	//get state from UI & update model
-	//refreshState();
-
-	// 04/09/2011 SKJ: Needs to change for KINECT_MODE == 3
-#if KINECT_MODE > 1 && KINECT_MODE < 3
-	updateKinectCloud(); //get fresh kinect data
-#endif
-#if KINECT_MODE == 4
-	//KinectPCL->uploadToGPU(); //actually do this as we render each view to have absolute latest data (with possible tearing)
-#endif
-
+#if 1
 	/* World-space positions for light and eye. */
-	float eyePosition[4] =
-	{ 0, 0, 0, 1 };
-	//  const float lightPosition[4] = { 0, 500*mag,-500*mag, 1 };
-	const float lightPosition[4] =
-	{ 10 * mag_ + lightLocationX_, 20 * mag_ + lightLocationY_, -605 * mag_ + lightLocationZ_, 1 };
+	float eyePosition[4] = { 0, 0, 0, 1 };
+
+	const float lightPosition[4] = { 10 * mag_ + lightLocationX_, 20 * mag_ + lightLocationY_, -605 * mag_ + lightLocationZ_, 1 };
 	float xpos, h, v, rgba, scale;
 	int i, j;
 	float myobject;
@@ -623,349 +567,192 @@ void HoloRenderDSCP2::display()
 	float translateMatrix[16], rotateMatrix[16], rotateMatrix1[16],
 		translateNegMatrix[16], rotateTransposeMatrix[16],
 		rotateTransposeMatrix1[16], scaleMatrix[16], scaleNegMatrix[16],
-		translateMatrixB[16], rotateMatrixB[16], rotateMatrix1B[16],
-		translateNegMatrixB[16], rotateTransposeMatrixB[16],
-		rotateTransposeMatrix1B[16], scaleMatrixB[16], scaleNegMatrixB[16],
 		modelMatrix_sphere[16], invModelMatrix_sphere[16],
 		modelMatrix_cone[16], invModelMatrix_cone[16],
 		objSpaceLightPosition_sphere[16], objSpaceLightPosition_cone[16],
-		objSpaceEyePosition_sphere[16], objSpaceEyePosition_sphereB[16],
-		modelMatrix_sphereB[16], invModelMatrix_sphereB[16],
-		modelMatrix_coneB[16], invModelMatrix_coneB[16],
-		objSpaceLightPosition_sphereB[16], objSpaceLightPosition_coneB[16];
+		objSpaceEyePosition_sphere[16];
 
-#if 1 //can skip view rendering for debug of hologram layout
-	glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT);
-	glEnable(GL_TEXTURE_2D);
+		glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT);
+		glEnable(GL_TEXTURE_2D);
 
-	//glBindTexture(GL_TEXTURE_2D, meshTexID_);
+		//glBindTexture(GL_TEXTURE_2D, meshTexID_);
 
+		cgGLBindProgram(normalMapLightingCgVertexProgram_);
+		checkForCgError("ln943 binding vertex program lighting");
+		cgGLEnableProfile(normalMapLightingCgVertexProfile_);
+		checkForCgError("ln945 enabling vertex profile lighting");
 
-	cgGLBindProgram(normalMapLightingCgVertexProgram_);
-	//checkForCgError("ln943 binding vertex program lighting");
-	cgGLEnableProfile(normalMapLightingCgVertexProfile_);
-	//checkForCgError("ln945 enabling vertex profile lighting");
+		cgGLBindProgram(normalMapLightingCgFragmentProgram_);
+		checkForCgError("ln949 binding vertex program lighting");
+		cgGLEnableProfile(normalMapLightingCgFragmentProfile_);
+		checkForCgError("ln951 enabling vertex profile lighting");
+		/*for sphere find model and invModelMatrix */
 
+		//TODO: recompute these only on change:
+		holo::utils::MakeRotateMatrix(rot_, 0, 1, 0, rotateMatrix);
+		holo::utils::MakeRotateMatrix(-rot_, 0, 1, 0, rotateTransposeMatrix);
 
-	cgGLBindProgram(normalMapLightingCgFragmentProgram_);
-	//checkForCgError("ln949 binding vertex program lighting");
-	cgGLEnableProfile(normalMapLightingCgFragmentProfile_);
-	//checkForCgError("ln951 enabling vertex profile lighting");
-	/*for sphere find model and invModelMatrix */
+		holo::utils::MakeRotateMatrix(180 + rotX_, 1, 0, 0, rotateMatrix1);
+		holo::utils::MakeRotateMatrix(-180 - rotX_, 1, 0, 0, rotateTransposeMatrix1);
 
+		holo::utils::MultMatrix(rotateMatrix, rotateMatrix1, rotateMatrix);
+		holo::utils::MultMatrix(rotateTransposeMatrix, rotateTransposeMatrix1, rotateTransposeMatrix);
 
-	//TODO: recompute these only on change:
-	holo::utils::MakeRotateMatrix(rot_, 0, 1, 0, rotateMatrix);
-	holo::utils::MakeRotateMatrix(-rot_, 0, 1, 0, rotateTransposeMatrix);
-
-	holo::utils::MakeRotateMatrix(180 + rotX_, 1, 0, 0, rotateMatrix1);
-	holo::utils::MakeRotateMatrix(-180 - rotX_, 1, 0, 0, rotateTransposeMatrix1);
-
-	holo::utils::MultMatrix(rotateMatrix, rotateMatrix1, rotateMatrix);
-	holo::utils::MultMatrix(rotateTransposeMatrix, rotateTransposeMatrix1,
-		rotateTransposeMatrix);
-
-	//z is -600 + tz (z shift tz is centered halfway between near & far planes)
-	holo::utils::MakeTranslateMatrix(translateX_, translateY_, -(farPlane_ + nearPlane_) * 0.5 * mag_ + translateZ_ * mag_,
-		translateMatrix);
-	holo::utils::MakeTranslateMatrix(-translateX_, -translateY_, (farPlane_ + nearPlane_) * 0.5 * mag_ - translateZ_ * mag_,
-		translateNegMatrix);
-
-	scale = 2;
-	holo::utils::MakeScaleMatrix(scale, scale, scale, scaleMatrix);
-	holo::utils::MakeScaleMatrix(1 / scale, 1 / scale, 1 / scale, scaleNegMatrix);
-
-	holo::utils::MultMatrix(modelMatrix_sphere, translateMatrix, rotateMatrix);
-	holo::utils::MultMatrix(invModelMatrix_sphere, rotateTransposeMatrix, translateNegMatrix);
-
-	holo::utils::MultMatrix(modelMatrix_sphere, modelMatrix_sphere, scaleMatrix);
-	holo::utils::MultMatrix(invModelMatrix_sphere, scaleNegMatrix, invModelMatrix_sphere);
-
-	/* Transform world-space eye and light positions to sphere's object-space. */
-	holo::utils::Transform(objSpaceLightPosition_sphere, invModelMatrix_sphere,
-		lightPosition);
-	holo::utils::Transform(objSpaceEyePosition_sphere, invModelMatrix_sphere, eyePosition);
-
-	//manipulations for "second object" (mostly disabled)
-#ifdef DISABLE_SECOND_OBJECT
-	{ // ?
-		holo::utils::MakeRotateMatrix(90 - 30 - rot_ * 2 * 0, 0, 1, 0, rotateMatrixB);
-		holo::utils::MakeRotateMatrix(-90 + 30 + rot_ * 2 * 0, 0, 1, 0, rotateTransposeMatrixB);
-
-		holo::utils::MakeRotateMatrix(180, 1, 0, 0, rotateMatrix1B);
-		holo::utils::MakeRotateMatrix(-180, 1, 0, 0, rotateTransposeMatrix1B);
-
-		holo::utils::MultMatrix(rotateMatrixB, rotateMatrix1B, rotateMatrixB);
-		holo::utils::MultMatrix(rotateTransposeMatrixB, rotateTransposeMatrix1B,
-			rotateTransposeMatrixB);
-
-		holo::utils::MakeTranslateMatrix(translateX_ * 0 + 25, translateY_ * 0 - 5 + 10, -600.0 * mag_ - 70 * mag_,
-			translateMatrixB);
-		holo::utils::MakeTranslateMatrix(-translateX_ * 0 - 25, -translateY_ * 0 + 5 - 10, 600.0 * mag_ + 70 * mag_,
-			translateNegMatrixB);
+		//z is -600 + tz (z shift tz is centered halfway between near & far planes)
+		holo::utils::MakeTranslateMatrix(translateX_, translateY_, -(farPlane_ + nearPlane_) * 0.5 * mag_ + translateZ_ * mag_,	translateMatrix);
+		holo::utils::MakeTranslateMatrix(-translateX_, -translateY_, (farPlane_ + nearPlane_) * 0.5 * mag_ - translateZ_ * mag_, translateNegMatrix);
 
 		scale = 2;
-		holo::utils::MakeScaleMatrix(scale, scale, scale, scaleMatrixB);
-		holo::utils::MakeScaleMatrix(1 / scale, 1 / scale, 1 / scale, scaleNegMatrixB);
+		holo::utils::MakeScaleMatrix(scale, scale, scale, scaleMatrix);
+		holo::utils::MakeScaleMatrix(1 / scale, 1 / scale, 1 / scale, scaleNegMatrix);
 
-		holo::utils::MultMatrix(modelMatrix_sphereB, translateMatrixB, rotateMatrixB);
-		holo::utils::MultMatrix(invModelMatrix_sphereB, rotateTransposeMatrixB,
-			translateNegMatrixB);
+		holo::utils::MultMatrix(modelMatrix_sphere, translateMatrix, rotateMatrix);
+		holo::utils::MultMatrix(invModelMatrix_sphere, rotateTransposeMatrix, translateNegMatrix);
 
-		holo::utils::MultMatrix(modelMatrix_sphereB, modelMatrix_sphereB, scaleMatrixB);
-		holo::utils::MultMatrix(invModelMatrix_sphereB, scaleNegMatrixB, invModelMatrix_sphereB);
+		holo::utils::MultMatrix(modelMatrix_sphere, modelMatrix_sphere, scaleMatrix);
+		holo::utils::MultMatrix(invModelMatrix_sphere, scaleNegMatrix, invModelMatrix_sphere);
 
 		/* Transform world-space eye and light positions to sphere's object-space. */
-		holo::utils::Transform(objSpaceLightPosition_sphereB, invModelMatrix_sphereB,
-			lightPosition);
-		holo::utils::Transform(objSpaceEyePosition_sphereB, invModelMatrix_sphereB, eyePosition);
-	}
-#endif
+		holo::utils::Transform(objSpaceLightPosition_sphere, invModelMatrix_sphere,	lightPosition);
+		holo::utils::Transform(objSpaceEyePosition_sphere, invModelMatrix_sphere, eyePosition);
 
+		// glEnable(GL_CULL_FACE);
+		i = 0;
+		j = 0;
 
-	// glEnable(GL_CULL_FACE);
-	i = 0;
-	j = 0;
+		xpos = 0;
+		h = 0;
+		v = 0;
 
-	xpos = 0;
-	h = 0;
-	v = 0;
+		//glClearColor(0.5,0.5,0.5,0.5);//JB Hack: clear view buffer to gray for debugging
 
-	//glClearColor(0.5,0.5,0.5,0.5);//JB Hack: clear view buffer to gray for debugging
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
+#if 0
 
-
-	for (i = 0; i < numViews_; i++)
-	{
-#ifdef SOLO_VIEW
-		if (i != SOLO_VIEW) continue;
-#endif
-		if ((viewEnableBitmask_ & (1 << i)) == 0)
+		for (i = 0; i < numViews_; i++)
 		{
-			continue;
+			if ((viewEnableBitmask_ & (1 << i)) == 0)
+			{
+				continue;
+			}
+
+			glClear(GL_DEPTH_BUFFER_BIT);
+			rgba = ((i / 4.0f) - int(i / 4.0f)) * 4.0f;
+			h = int(i / (tileY_ * 4)) * numX_;
+			v = (int(i / 4.0f) / ((float)tileY_) - int(int(i / 4.0f)
+				/ ((float)tileY_))) * numY_ * tileY_;
+
+			double q = tan((i - numViews_ / 2.0f) / numViews_ * fieldOfView_ / mag_ * M_PI/180.0f); //angle +/-fov/2
+
+			//hologram is 150 mm wide, 75 mm high
+			holo::utils::BuildShearOrthographicMatrix2(
+				-hologramPlaneWidthMM_ / 2.0,
+				hologramPlaneWidthMM_ / 2.0,
+				-hologramPlaneHeightMM_ / 2.0,
+				hologramPlaneHeightMM_ / 2.0,
+				nearPlane_ * mag_,
+				farPlane_* mag_,
+				q,
+				projectionMatrix1_);
+
+			glViewport(h, v, numX_, numY_);
+			enableDrawDepth_ = 1;
+
+			drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
+				objSpaceLightPosition_sphere, modelMatrix_cone,
+				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
+				enableDrawDepth_, 0, i);
+
+
+			//glViewport(h,v+120*tiley+16,160,120); //1024-6*160=64, (512-120*2*2)/2=16
+			glViewport(h, v + numY_ * tileY_, numX_, numY_); //setup viewport for depthbuffer render
+			enableDrawDepth_ = 1;
+
+			auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
+
+			glReadPixels(0, 0, numX_, numY_, GL_RED, GL_UNSIGNED_BYTE, localFrameImg.data);
+
+			cv::imshow("TextureView", localFrameImg);
+
 		}
 
-		glClear(GL_DEPTH_BUFFER_BIT);
-		rgba = ((i / 4.) - int(i / 4.)) * 4.;
-		h = int(i / (tileY_ * 4)) * numX_;
-		v = (int(i / 4.) / ((float)tileY_) - int(int(i / 4.)
-			/ ((float)tileY_))) * numY_ * tileY_;
-#if WRITE_LUMA_VIEW_FILES != 1
-		glColorMask((rgba == 0), (rgba == 1), (rgba == 2), (rgba == 3));
-#else
-		h = 0; v = 0; //for writing luma files (Arizona hack) draw all views on top of e/o in corner of viewport
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif
-		double q = tan((i - numViews_ / 2.0f) / numViews_ * fieldOfView_ / mag_ * M_PI
-			/ 180.0f); //angle +/-fov/2
-#if REVERSE_VIEW_ORDER != 0
-		q = -q;
-#endif
-		//hologram is 150 mm wide, 75 mm high
-		holo::utils::BuildShearOrthographicMatrix2(
-			-hologramPlaneWidthMM_ / 2.0,
-			hologramPlaneWidthMM_ / 2.0,
-			-hologramPlaneHeightMM_ / 2.0,
-			hologramPlaneHeightMM_ / 2.0,
-			nearPlane_ * mag_,
-			farPlane_* mag_,
-			q,
-			projectionMatrix1_);
 
-		glViewport(h, v, numX_, numY_);
-		enableDrawDepth_ = 0;
-
-		//JB Disabling second object
-#ifdef DISABLE_SECOND_OBJECT
-		myobject = 0;
-		drawme(eyePosition, modelMatrix_sphereB, invModelMatrix_sphereB,
-			objSpaceLightPosition_sphereB, modelMatrix_coneB,
-			invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
-			drawdepthOn, myobject, i);
-#endif
-		myobject = 1;
-		drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
-			objSpaceLightPosition_sphere, modelMatrix_cone,
-			invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
-			enableDrawDepth_, myobject, i);
-
-
-		//glViewport(h,v+120*tiley+16,160,120); //1024-6*160=64, (512-120*2*2)/2=16
-		glViewport(h, v + numY_ * tileY_, numX_, numY_); //setup viewport for depthbuffer render
-		enableDrawDepth_ = 1;
-		myobject = 0;
-
-
-#if WRITE_LUMA_VIEW_FILES != 0
-		saveSingleView(i, 0);
-#endif
-	}
-
-
-	cgGLDisableProfile(normalMapLightingCgVertexProfile_);
-	//checkForCgError("disabling vertex profile");
-	cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
-	//checkForCgError("disabling fragment profile");
-
-	glPopAttrib();
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-
-	if (zeroDepth_)
-	{
-		glViewport(0, numY_*tileY_, numX_*tileX_, numY_*tileY_); //setup viewport for covering depth views
-		glColor4f(fakeZ_, fakeZ_, fakeZ_, fakeZ_);
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_LIGHTING);
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		glLoadIdentity();
-		glMatrixMode(GL_PROJECTION);
-		glPushMatrix();
-		glLoadIdentity();
-
-		glBegin(GL_QUADS);
-		glVertex2f(-1, -1); glVertex2f(-1, 1); glVertex2f(1, 1); glVertex2f(1, -1);
-		glEnd();
-
-		glPopMatrix();
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_TEXTURE_2D);
-	}
-
-	if (zeroModulation_)
-	{
-		glViewport(0, 0, numX_*tileX_, numY_*tileY_); //setup viewport for covering color views
-		glColor4f(fakeModulation_, fakeModulation_, fakeModulation_, fakeModulation_);
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_LIGHTING);
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		glLoadIdentity();
-		glMatrixMode(GL_PROJECTION);
-		glPushMatrix();
-		glLoadIdentity();
-
-		glBegin(GL_QUADS);
-		glVertex2f(-1, -1); glVertex2f(-1, 1); glVertex2f(1, 1); glVertex2f(1, -1);
-		glEnd();
-
-		glPopMatrix();
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
-
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_TEXTURE_2D);
-	}
-
-
-
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, textureID_[0]);
-	//glFlush();
-	//   glCopyTexSubImage			2D(GL_TEXTURE_2D, 0,0,0,0,0,imwidth,imheight);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, viewTexWidth_, viewTexHeight_);
-	//	printf("I'm here\n");
-	glCheckErrors();
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glDisable(GL_TEXTURE_2D);
-#endif //end of disable view render
-
-#if 1
-	if (hologramOutputDebugSwitch_ != -10)
-	{
-		float quadRadius = 0.5;
-
-		// glViewport(0,0,imwidth,512);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//glClear (GL_DEPTH_BUFFER_BIT);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(-quadRadius, quadRadius, -quadRadius, quadRadius, 0, 125);
-		// glOrtho(-512,512-1,-256,256,1,125);
-		// gluLookAt(0,0,0,0,0,-100,0,1,0);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		// glTranslatef(0.0,0.0,-100);
-		//glViewport(0,0,1280,880);
-
-		glViewport(0, 0, displayModeWidth_, displayModeHeight_);
-
-#if HOLOGRAM_DOWNSCALE_DEBUG != 0
-		glViewport(0, 0, imwidth / HOLOGRAM_DOWNSCALE_DEBUG, imheight / HOLOGRAM_DOWNSCALE_DEBUG);
-#endif
-		glTranslatef(0.0, -0.25, 0.0); // JB: what does this do?
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, textureID_[0]);
-
-		glDisable(GL_LIGHTING);
-
-		cgGLBindProgram(cgVertexProgram_);
-		// checkForCgError2("binding vertex program -fringes");
-		cgGLEnableProfile(cgVertexProfile_);
-		// checkForCgError2("enabling vertex profile -fringes");
-
-		cgGLBindProgram(cgFragmentProgram_);
-		// checkForCgError("binding fragment program");
-		cgGLEnableProfile(cgFragmentProfile_);
-		// checkForCgError("enabling fragment profile");
-
-		cgGLEnableTextureParameter(cgFragmentParamDecal0_);
-		//  checkForCgError2("enable decal texture0");
-		//  cgGLEnableTextureParameter(myCgFragmentParam_decal1);
-		//  checkForCgError2("enable decal texture1");
-
-		//cgUpdateProgramParameters(myCgFragmentProgram2);
-
-		glColor3f(1., 1., 1.);
-		//   glutSolidTeapot(75);
-		//	glTranslatef(0.0,0.0,-100.);
-
-		glBegin(GL_QUADS);
-		glNormal3f(0.0, 0.0, 1.0);
-
-		glTexCoord4f(0, 1, 0, 1);
-		glVertex3f(-quadRadius, quadRadius, 0);
-
-		glTexCoord4f(1, 1, 0, 1);
-		glVertex3f(quadRadius, quadRadius, 0);
-
-		glTexCoord4f(1, 0, 0, 1);
-		glVertex3f(quadRadius, -quadRadius, 0);
-
-		glTexCoord4f(0, 0, 0, 1);
-		glVertex3f(-quadRadius, -quadRadius, 0);
-
-		glEnd();
-		glDisable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
 
 		cgGLDisableProfile(normalMapLightingCgVertexProfile_);
 		//checkForCgError("disabling vertex profile");
 		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
 		//checkForCgError("disabling fragment profile");
 
-		if (hologramOutputDebugSwitch_)
-		{
-			char st[255];
-			glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-			sprintf(st, "Shader debug mode %d", hologramOutputDebugSwitch_);
-			drawString(-0.5, -0.22, st);
-		}
-	}
-#endif //DISABLE_HOLOGRAM_CREATION
+		glDisable(GL_TEXTURE_2D);
+
+		glPopAttrib();
+
+		//glEnable(GL_TEXTURE_2D);
+		//glBindTexture(GL_TEXTURE_2D, textureID_[0]);
+
+		//glFlush();
+		//   glCopyTexSubImage			2D(GL_TEXTURE_2D, 0,0,0,0,0,imwidth,imheight);
+		//glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, viewTexWidth_, viewTexHeight_);
+		//	printf("I'm here\n");
+		//glCheckErrors();
+		//glBindTexture(GL_TEXTURE_2D, 0);
+		//glDisable(GL_TEXTURE_2D);
+#endif //end of disable view render
+
+
+//Fringe computation
+#if 0
+		cgGLBindProgram(cgVertexProgram_);
+		//checkForCgError2("binding vertex program -fringes");
+		cgGLEnableProfile(cgVertexProfile_);
+		//checkForCgError2("enabling vertex profile -fringes");
+
+		cgGLBindProgram(cgFragmentProgram_);
+		//checkForCgError("binding fragment program");
+		cgGLEnableProfile(cgFragmentProfile_);
+		//checkForCgError("enabling fragment profile");
+
+		cgGLEnableTextureParameter(cgFragmentParamDecal1_);
+		//  checkForCgError2("enable decal texture0");
+		//  cgGLEnableTextureParameter(myCgFragmentParam_decal1);
+		//  checkForCgError2("enable decal texture1");
+
+		//cgUpdateProgramParameters(myCgFragmentProgram2);
+
+		glColor3f(1.0f, 1.0f, 1.0f);
+		//   glutSolidTeapot(75);
+		//	glTranslatef(0.0,0.0,-100.);
+		glBegin(GL_QUADS);
+		glNormal3f(0.0f, 0.0f, 1.0f);
+
+		glTexCoord4f(0.0f, 1.0f, 0.0f, 1.0f);
+		glVertex3f(-0.5f, 0.5f, 0.0f);
+
+		glTexCoord4f(1.0f, 1.0f, 0.0f, 1.0f);
+		glVertex3f(0.5f, 0.5f, 0.0f);
+
+		glTexCoord4f(1.0f, 0.0f, 0.0f, 1);
+		glVertex3f(0.5f, -0.5f, 0.0f);
+
+		glTexCoord4f(0.0f, 0.0f, 0.0f, 1.0f);
+		glVertex3f(-0.5f, -0.5f, 0.0f);
+
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		cgGLDisableProfile(normalMapLightingCgVertexProfile_);
+		checkForCgError("disabling vertex profile");
+		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
+		checkForCgError("disabling fragment profile");
+
+		//glutPostRedisplay();
+
+#endif
 
 	glutSwapBuffers();
-
-	glutPostRedisplay();
 }
 
 void HoloRenderDSCP2::cleanup()
@@ -1000,16 +787,14 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	float myobject, int viewnumber)
 {
 	// const float lightPosition[4] = { 10*mag+lx,20*mag+ly,-605*mag+lz, 1 };
-	const float lightPosition[4] =	{ 100, 100, -605, 1 };
+	const float lightPosition[4] =	{ 1.00, 1.00, -6.05, 1 };
 	//const float eyePosition[4] = { 0,0,0, 1 };
 
 	float translateMatrix[16], rotateMatrix[16], viewMatrix[16],
-		modelViewMatrix[16], modelViewProjMatrix[16],
-		modelViewProjMatrix2[16];
+		modelViewMatrix[16], modelViewProjMatrix[16];
 	float objSpaceEyePosition[4], objSpaceLightPosition[4];
-	int j;
-	holo::utils::BuildLookAtMatrix(eyePosition[0], eyePosition[1], eyePosition[2], 0, 0,
-		-425, 0, 1, 0, viewMatrix);
+
+	holo::utils::BuildLookAtMatrix(eyePosition[0], eyePosition[1], eyePosition[2], 0, 0,-425, 0, 1, 0, viewMatrix);
 
 	/*** Render brass solid sphere ***/
 
@@ -1023,49 +808,15 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 
 	cgSetParameter1f(cgFragmentParamDrawdepth_, drawdepthOn);
 	/* Transform world-space eye and light positions to sphere's object-space. */
-	//transform
+	//transform(objSpaceEyePosition, invModelMatrix_sphere, eyePosition);
 
-	(objSpaceEyePosition, invModelMatrix_sphere, eyePosition);
 	cgSetParameter3fv(cgFragmentParamEyePosition_, objSpaceEyePosition);
 
 	//transform(objSpaceLightPosition, invModelMatrix_sphere, lightPosition);
-	cgSetParameter3fv(cgFragmentParamLightPosition_,
-		objSpaceLightPosition_sphere);
+	cgSetParameter3fv(cgFragmentParamLightPosition_, objSpaceLightPosition_sphere);
 
-	// 04/10/2011 SKJ: Change to KINECT_MODE > 1
-	// #if KINECT_MODE == 2
-#if KINECT_MODE > 1 && KINECT_MODE < 4
-	cgSetParameter1f(myCgVertexParam_drawdepth, drawdepthOn);
-	//checkForCgError("ln715");
-#if KINECT_MODE == 3
-	cgSetParameter1f(myCgVertexParam_drawdepthSecond, drawdepthOn);
-	checkForCgError("ln718");
-#endif
-	float pmatrix[16];
-	float m[16];
-
-	//JB Testing: was
-	/*
-	kprojector->getDepthProjTransform(pmatrix);
-	//cgSetMatrixParameterfr(myCgVertexParam_modelViewProj, pmatrix);
-	//cgUpdateProgramParameters(normalMapLightingCgVertexProgram);
-	multMatrix(modelViewMatrix, modelMatrix_sphere, pmatrix);
-
-	//multMatrix(m, pmatrix, modelViewMatrix);
-
-	makeScaleMatrix(1,1,1,m);
-	//multMatrix(m, pmatrix, modelViewMatrix);
-	//multMatrix(modelViewProjMatrix, myProjectionMatrix1,m);
-
-	//multMatrix(modelViewMatrix, viewMatrix, modelMatrix_sphere);
-	multMatrix(modelViewProjMatrix, myProjectionMatrix1, modelViewMatrix);
-
-	*/
-	multMatrix(modelViewProjMatrix, myProjectionMatrix1, modelMatrix_sphere);
-#else
 	holo::utils::MultMatrix(modelViewMatrix, viewMatrix, modelMatrix_sphere);
 	holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelViewMatrix);
-#endif
 
 	// glEnable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
@@ -1075,95 +826,20 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	/* Set matrix parameter with row-major matrix. */
 	cgSetMatrixParameterfr(cgVertexParamModelViewProj_, modelViewProjMatrix);
 	cgUpdateProgramParameters(normalMapLightingCgVertexProgram_);
-	/*	 glBegin(GL_LINES);
-	{
-	//glVertex3f(0,20,40);
-	//glVertex3f(0,-20,40);
-	glVertex3f(-10,20,1);
-	glVertex3f(-10,-20,10);
-	}
-	glEnd();
-	glBegin(GL_LINES);
-	{
-	glVertex3f(0,20,10);
-	glVertex3f(0,-20,10);
-	// glVertex3f(-10,20,1);
-	// glVertex3f(-10,-20,1);
-	}
-	glEnd();
 
-	glBegin(GL_LINES);
-	{
-	glVertex3f(10,20,20);
-	glVertex3f(10,-20,20);
-	}
-	glEnd();*/
-
-	/*
-	if (myobject == 0)
-	{
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glColor4f(0.5, 0.5, 0.5, 0.5f);
-	glutSolidCube(8);
-	}
-
-	if (myobject == 1)
-	{
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	glutSolidCone(5, 5, 5, 5);
-	}
-	*/
-#if KINECT_MODE > 0
-#if KINECT_MODE == 1
-	drawPointCloudFromKinect();
-#endif
-	//glMatrixMode(GL_MODELVIEW);
-	//glLoadIdentity();
-	//glMultMatrixf(modelViewMatrix);
-	//glMatrixMode(GL_PROJECTION);
-	//glLoadIdentity();
-	//glMultMatrixf(myProjectionMatrix1);
-	// 04/09/2011 SKJ: Needs to change for KINECT_MODE == 3
-#if KINECT_MODE > 1 && KINECT_MODE < 4
-	drawPointCloudFromKinect_Calibrated();
-#endif
-#if KINECT_MODE == 4
 	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
-	if (viewnumber == 0) { KinectPCL->uploadToGPU(); } //TODO: check if frame is fresh, upload as soon as new one available
-	glPointSize(2.0f);
-	KinectPCL->draw();
-#endif
-	//glutPostRedisplay();
-#else //not kinect mode:
-#if DRAW_WIRE_CUBE_ONLY == 1
-	//glutWireCube(16); //draw cube
-	drawDebugShape(16);
-#else //not "wire cube"
-#ifndef VIEWS_FROM_CLOUD
-	//glCallList(DLid_); //draw rabbit from display list
-#else
-	float ang = (viewnumber / float(numview) - 0.5) * (fov * M_PI / 180.);
-	drawPointCloudFromZImage(allClouds, ang, ANGLE_THRESH);
-#endif
-#endif
-#endif
-	//glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	//glutSolidCube(10);
 
-	/* modelViewProj = projectionMatrix * modelViewMatrix */
-	//  multMatrix(modelViewProjMatrix2, myProjectionMatrix1, modelViewMatrix);
+	//this->drawPointCloud();
 
-	drawPointCloud();
 }
 
 void HoloRenderDSCP2::drawPointCloud()
 {
-	if (haveNewCloud_)
+	if (haveNewCloud_.load())
 	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		std::lock_guard<std::mutex> lg(cloudMutex_);
-		int ystride = 8; //only render every ystride lines
+		const int ystride = 1; //only render every ystride lines
 		const float gain = 1 / 256.0; // converting from char units to float
 		glDisable(GL_LIGHTING);
 		glDisable(GL_TEXTURE_2D);
@@ -1183,10 +859,10 @@ void HoloRenderDSCP2::drawPointCloud()
 			glColor3f(luma, luma, luma);
 			pointIdx+=ystride;
 		}
-
 		glEnd();
-
 		haveNewCloud_ = false;
+		
+		glutPostRedisplay();
 	}
 }
 
@@ -1237,7 +913,7 @@ void HoloRenderDSCP2::checkForCgError2(const char *situation)
 	}
 }
 
-void HoloRenderDSCP2::cgSetBrassMaterial(void){
+void HoloRenderDSCP2::cgSetBrassMaterial(){
 	const float brassEmissive[3] =
 	{ 0.0, 0.0, 0.0 }, brassAmbient[3] =
 	{ 0.33 * 2, 0.33 * 2, 0.33 * 2 }, brassDiffuse[3] =
@@ -1251,7 +927,7 @@ void HoloRenderDSCP2::cgSetBrassMaterial(void){
 	cgSetParameter1f(cgFragmentParamShininess_, brassShininess);
 }
 
-void HoloRenderDSCP2::cgSetRedPlasticMaterial(void)
+void HoloRenderDSCP2::cgSetRedPlasticMaterial()
 {
 	const float redPlasticEmissive[3] =
 	{ 0.0, 0.0, 0.0 }, redPlasticAmbient[3] =
@@ -1271,7 +947,7 @@ void HoloRenderDSCP2::cgSetRedPlasticMaterial(void)
 	checkForCgError("setting shininess parameter");
 }
 
-void HoloRenderDSCP2::cgSetEmissiveLightColorOnly(void)
+void HoloRenderDSCP2::cgSetEmissiveLightColorOnly()
 {
 	const float zero[3] = { 0.0, 0.0, 0.0 };
 
