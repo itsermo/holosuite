@@ -900,9 +900,11 @@ int main(int argc, char *argv[])
 				case holo::render::RENDER_TYPE_VIS3D:
 					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
 					break;
+#ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:
 					renderer = holo::render::HoloRenderGenerator::fromDSCP2();
 					break;
+#endif
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
 					//TODO: implement mk iv dscp algo
 					break;

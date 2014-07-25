@@ -8,8 +8,8 @@
 #include <Windows.h>
 #endif
 
-#include <gl/GL.h>
-#include <gl/GLU.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
 #include <GL/glut.h>
 
 #include <Cg/cg.h>
@@ -128,7 +128,7 @@ namespace holo
 
 			//GLuint DLid_;
 
-			std::atomic<int> enableDrawDepth_, rotateCounter_; //for enabling rotation
+			int enableDrawDepth_, rotateCounter_; //for enabling rotation
 			int frameNumber_, currentTime_, timeBase_; // for counting FPS
 
 			int displayModeWidth_, displayModeHeight_;
