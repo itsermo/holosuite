@@ -162,7 +162,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 
 	if (codecMode_ == CODEC_MODE_BOTH || codecMode_ == CODEC_MODE_DECODER)
 	{
-		LOG4CXX_INFO(logger_, "Initializing FFMPEG H264 decoder...");
+		LOG4CXX_DEBUG(logger_, "Initializing FFMPEG H264 decoder...");
 
 		decoder_ = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!decoder_)

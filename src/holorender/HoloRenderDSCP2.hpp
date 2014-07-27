@@ -26,8 +26,8 @@
 #define HOLO_RENDER_DSCP2_ZERO_MODULATION 0
 #define HOLO_RENDER_DSCP2_FAKE_Z 0.5f
 #define HOLO_RENDER_DSCP2_FAKE_MODULATION 0.5f
-#define HOLO_RENDER_DSCP2_DISPLAY_MODE_WIDTH 2048
-#define HOLO_RENDER_DSCP2_DISPLAY_MODE_HEIGHT 3444
+#define HOLO_RENDER_DSCP2_DISPLAY_MODE_WIDTH 2045
+#define HOLO_RENDER_DSCP2_DISPLAY_MODE_HEIGHT 3514
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_RES_HORIZ 512
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_RES_VERT 144
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_TILE_X 2
@@ -105,10 +105,10 @@ namespace holo
 
 			void drawPointCloud();
 
-			//cg functions
-			void checkForCgErrorLine(const char *situation, int line = 0);
-			void checkForCgError2(const char *situation);
-			void checkForCgError(const char *situation);
+			//cg error checking, return true if Cg error
+			bool checkForCgErrorLine(const char *situation, int line = 0);
+			bool checkForCgError2(const char *situation);
+			bool checkForCgError(const char *situation);
 
 
 			void cgSetBrassMaterial();

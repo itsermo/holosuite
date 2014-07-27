@@ -124,7 +124,7 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 
 	localFramebufferStore_ = new GLubyte[viewTexWidth_ * viewTexHeight_ * 4];
 
-
+	// Get the screen resolution from the desktop (Windows or X11)
 #ifdef WIN32
 	RECT desktop;
 	// Get a handle to the desktop window
@@ -136,9 +136,7 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	// (horizontal, vertical)
 	displayModeWidth_ = desktop.right;
 	displayModeHeight_ = desktop.bottom;
-#endif
-
-#if defined(__linux) || defined(__unix) || defined(__posix)
+#elif defined(__linux) || defined(__unix) || defined(__posix)
 	Display *displayName;
 	int depth, screen, connection;
 
@@ -150,7 +148,7 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	displayModeHeight_ = DisplayHeight(displayName, screen);
 #endif
 
-	LOG4CXX_INFO(logger_, "Window environment display mode resolution found: " << displayModeWidth_ << "x" << displayModeHeight_);
+	LOG4CXX_INFO(logger_, "Window environment display mode resolution: " << displayModeWidth_ << "x" << displayModeHeight_);
 
 
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderDSCP2 object");
@@ -188,22 +186,23 @@ void HoloRenderDSCP2::glutInitLoop()
 	char fakeParam[] = "fake";
 	char *fakeargv[] = { fakeParam, NULL };
 	int fakeargc = 1;
+
+	//glCheckErrors();
+
 	// Initialize GLUT window and callbacks
-
-
 	glutInit(&fakeargc, fakeargv);
 	glutInitWindowSize(displayModeWidth_, displayModeHeight_);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
 	glutCreateWindow(HOLO_RENDER_DSCP2_CG_PROGRAM_NAME);
-	glError = glGetError();
+	
+	glCheckErrors();
 
 	glutDisplayFunc(this->glutDisplay);
 	glutKeyboardFunc(this->glutKeyboard);
 	glutIdleFunc(this->glutIdle);
 	atexit(this->glutCleanup);
 
-
-	// Initialilze GLUT
+	// GLUT settings
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
@@ -218,12 +217,11 @@ void HoloRenderDSCP2::glutInitLoop()
 	glEnable(GL_COLOR_MATERIAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-	// don't know what this does
-	// ermal: it creates 2 textures
+	// Creates a texture ID for our panoramagram generation
 	glGenTextures(1, &textureID_);
 
 	double q = tan(0.1);
-	holo::utils::BuildShearOrthographicMatrix2(-75. * mag_, 75. * mag_, -37.5 * mag_, 37.5 * mag_, 450. * mag_, 750. * mag_, q / mag_, projectionMatrix1_);
+	holo::utils::BuildShearOrthographicMatrix2(-0.75f * mag_, -0.75f * mag_, -0.375f * mag_, 0.375f * mag_, 0.450f * mag_, 0.750f * mag_, q / mag_, projectionMatrix1_);
 
 	// CG program intialization
 	cgGLSetDebugMode(CG_FALSE);
@@ -231,36 +229,25 @@ void HoloRenderDSCP2::glutInitLoop()
 	normalMapLightingCgContext_ = cgCreateContext();
 	checkForCgError("Creating normal map lighting context...");
 
+	// Panoramagram generation vertex program
 	normalMapLightingCgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
 	cgGLSetOptimalOptions(normalMapLightingCgVertexProfile_);
 	checkForCgError("Selecting vertex profile...");
-	
-	normalMapLightingCgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, // Cg runtime context 
-		CG_SOURCE, //Program in human-readable form 
-		normalMapLightingVertexProgramFileName_, // Name of file containing program 
-		normalMapLightingCgVertexProfile_, // Profile: OpenGL ARB vertex program 
-		normalMapLightingVertexProgramName_, // Entry function name 
-		NULL); // No extra commyPiler options 
-	checkForCgError("Creating vertex program from file...");
-
-	printf("Created vertex program from file...\n");
-
+	normalMapLightingCgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, normalMapLightingVertexProgramFileName_, normalMapLightingCgVertexProfile_,normalMapLightingVertexProgramName_,NULL);
+	checkForCgError("Creating vertex program from file");
 	cgGLLoadProgram(normalMapLightingCgVertexProgram_);
-	checkForCgError("Loading vertex program...");
-	printf("loaded vertex program\n");
+	checkForCgError("Loading vertex program");
+	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << normalMapLightingFragmentProgramFileName_);
 
+	// Panoramagram generation fragment program
 	normalMapLightingCgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
 	cgGLSetOptimalOptions(normalMapLightingCgFragmentProfile_);
 	checkForCgError("Selecting fragment profile...");
-
-	normalMapLightingCgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, // Cg runtime context 
-		CG_SOURCE, // Program in human-readable form 
-		normalMapLightingFragmentProgramFileName_, normalMapLightingCgFragmentProfile_, // Profile: latest fragment profile 
-		normalMapLightingFragmentProgramName_, // Entry function name 
-		NULL); // No extra commyPiler options 
-	checkForCgError("creating fragment program from string2");
+	normalMapLightingCgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, normalMapLightingFragmentProgramFileName_, normalMapLightingCgFragmentProfile_, normalMapLightingFragmentProgramName_, NULL); 
+	checkForCgError("Creating fragment program");
 	cgGLLoadProgram(normalMapLightingCgFragmentProgram_);
 	checkForCgError("loading fragment program");
+	LOG4CXX_INFO(logger_, "Loaded panoramagram fragment program file: " << normalMapLightingFragmentProgramFileName_);
 
 	cgVertexParamModelViewProj_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
 	cgFragmentParamGlobalAmbient_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
@@ -276,78 +263,61 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgFragmentParamHeadnum_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "headnum");
 
 	cgFragmentParamDecal0_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "decal");
-	checkForCgError("Getting decal parameter");
+	checkForCgError("Getting fragment program decal parameter");
 
-	//cgGLSetTextureParameter(cgFragmentParamDecal0_, meshTexID_);
 	cgGLSetTextureParameter(cgFragmentParamDecal0_, textureID_);
-	checkForCgError("setting decal texture");
+	checkForCgError("Setting decal texture");
 
 	// Set light source color parameters once. 
 	cgSetParameter3fv(cgFragmentParamGlobalAmbient_, globalAmbient_);
-	checkForCgError("ln1750");
+	checkForCgError("Setting fragment global ambient lighting");
 	cgSetParameter3fv(cgFragmentParamLightColor_, lightColor_);
-	checkForCgError("ln1753");
+	checkForCgError("Setting fragment program light color");
 
-	//set up head number for rendering/loading with skipped lines
+	// Set up head number for rendering/loading with skipped lines
 	cgSetParameter1i(cgFragmentParamHeadnum_, headNumber_);
 	checkForCgError("Setting head number parameter");
 
-	//set up view texture (holds all view images. TODO: convert to 2 3d textures
+	// Set up view texture (holds all view images. TODO: convert to 2 3d textures
 	glBindTexture(GL_TEXTURE_2D, textureID_);
 
+	// Set texture parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, viewTexWidth_, viewTexHeight_, 0, GL_RGBA,
-		GL_UNSIGNED_BYTE, NULL);
+	// Specify a 2-dimensional texture image and uploads it to video memory, make it ready to use in shaders
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, viewTexWidth_, viewTexHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
+	// Fringe computation vertex program
 	cgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
 	cgGLSetOptimalOptions(cgVertexProfile_);
 	checkForCgError("Selecting vertex profile");
-
-	cgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, // Cg runtime context 
-		CG_SOURCE, // Program in human-readable form 
-		vertexProgramFileName_, // Name of file containing program 
-		//         "/home/holo/Quinn/holodepth/holodepth/src/Holov_myTextures.cg",
-		cgVertexProfile_, // Profile: OpenGL ARB vertex program 
-		vertexProgramName_, // Entry function name 
-		//   "Holov_myTextures",
-		NULL); // No extra compiler options 
-
-	checkForCgError2("creating vertex program from file");
+	cgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_,	CG_SOURCE,	vertexProgramFileName_, cgVertexProfile_, vertexProgramName_, NULL);
+	checkForCgError2("Creating fringe vertex program from file");
 	cgGLLoadProgram(cgVertexProgram_);
-	checkForCgError2("loading vertex program");
+	checkForCgError2("Loading vertex program");
+	LOG4CXX_INFO(logger_, "Loaded fringe computation vertex program file: " << vertexProgramFileName_);
 
+	// Fringe computation fragment program
 	cgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
 	cgGLSetOptimalOptions(cgFragmentProfile_);
-	checkForCgError2("selecting fragment profile");
-
-	cgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, // Cg runtime context 
-		CG_SOURCE, // Program in human-readable form 
-		fragmentProgramFileName_, // Name of file containing program 
-		cgFragmentProfile_, // Profile: OpenGL ARB vertex program 
-		fragmentProgramName_, // Entry function name 
-		NULL); // No extra compiler options 
+	checkForCgError2("Selecting fragment profile");
+	cgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, fragmentProgramFileName_, cgFragmentProfile_, fragmentProgramName_, NULL);
 	checkForCgError2("creating fragment program from file");
 	cgGLLoadProgram(cgFragmentProgram_);
 	checkForCgError2("loading fragment program");
-
+	LOG4CXX_INFO(logger_, "Loaded fringe computation fragment program file: " << vertexProgramFileName_);
 
 	cgFragmentParamHogelYes_ = cgGetNamedParameter(cgFragmentProgram_, "hogelYes"); 
 	cgSetParameter1f(cgFragmentParamHogelYes_, 0.0f);
-
 	cgFragmentParamHologramGain_ = cgGetNamedParameter(cgFragmentProgram_, "hologramGain");
 	cgSetParameter1f(cgFragmentParamHologramGain_, masterHologramGain_);
-
 	cgFragmentParamHologramDebugSwitch_ = cgGetNamedParameter(cgFragmentProgram_, "hologramDebugSwitch");
 	cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
-
 	cgFragmentParamHeadnum_ = cgGetNamedParameter(cgFragmentProgram_, "headnum");
 	cgSetParameter1f(cgFragmentParamHeadnum_, headNumber_);
-
 	cgFragmentParamDecal1_ = cgGetNamedParameter(cgFragmentProgram_,"decal0");
 	checkForCgError2("getting decal parameter");
 
@@ -358,6 +328,8 @@ void HoloRenderDSCP2::glutInitLoop()
 
 	glDisable(GL_LIGHTING);
 
+	glCheckErrors();
+
 	glutMainLoop();
 }
 
@@ -367,8 +339,7 @@ void HoloRenderDSCP2::glCheckErrors()
 
 	while ((error = glGetError()) != GL_NO_ERROR)
 	{
-		LOG4CXX_ERROR(logger_, gluErrorString(error));
-		//fprintf(stderr, "Error: %s\n", (char *) gluErrorString(error));
+		LOG4CXX_WARN(logger_, "OpenGL error: " << gluErrorString(error));
 	}
 }
 
@@ -575,7 +546,7 @@ void HoloRenderDSCP2::display()
 		glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT);
 		glEnable(GL_TEXTURE_2D);
 
-		//glBindTexture(GL_TEXTURE_2D, meshTexID_);
+		glBindTexture(GL_TEXTURE_2D, textureID_);
 
 		cgGLBindProgram(normalMapLightingCgVertexProgram_);
 		checkForCgError("ln943 binding vertex program lighting");
@@ -628,7 +599,7 @@ void HoloRenderDSCP2::display()
 
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-#if 0
+#if 1
 
 		for (i = 0; i < numViews_; i++)
 		{
@@ -685,7 +656,7 @@ void HoloRenderDSCP2::display()
 		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
 		//checkForCgError("disabling fragment profile");
 
-		glDisable(GL_TEXTURE_2D);
+		//glDisable(GL_TEXTURE_2D);
 
 		glPopAttrib();
 
@@ -794,7 +765,7 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 		modelViewMatrix[16], modelViewProjMatrix[16];
 	float objSpaceEyePosition[4], objSpaceLightPosition[4];
 
-	holo::utils::BuildLookAtMatrix(eyePosition[0], eyePosition[1], eyePosition[2], 0, 0,-425, 0, 1, 0, viewMatrix);
+	holo::utils::BuildLookAtMatrix(eyePosition[0], eyePosition[1], eyePosition[2], 0, 0,-0.425f, 0, 1, 0, viewMatrix);
 
 	/*** Render brass solid sphere ***/
 
@@ -841,9 +812,9 @@ void HoloRenderDSCP2::drawPointCloud()
 		std::lock_guard<std::mutex> lg(cloudMutex_);
 		const int ystride = 1; //only render every ystride lines
 		const float gain = 1 / 256.0; // converting from char units to float
-		glDisable(GL_LIGHTING);
-		glDisable(GL_TEXTURE_2D);
-		//glPointParameter
+
+		//glEnable(GL_TEXTURE_2D);
+
 		glEnable(GL_POINT_SMOOTH);
 		glPointSize(1.0f);
 		//float attenparams[3] = {0,0,0}; //a b c	//size × 1 a + b × d + c × d 2
@@ -860,8 +831,12 @@ void HoloRenderDSCP2::drawPointCloud()
 			pointIdx+=ystride;
 		}
 		glEnd();
-		haveNewCloud_ = false;
+
+		glDisable(GL_POINT_SMOOTH);
+		//glDisable(GL_TEXTURE_2D);
 		
+		haveNewCloud_.store(false);
+
 		glutPostRedisplay();
 	}
 }
@@ -876,41 +851,47 @@ void HoloRenderDSCP2::drawString(float posX, float posY, std::string theString)
 	}
 }
 
-void HoloRenderDSCP2::checkForCgErrorLine(const char *situation, int line)
+bool HoloRenderDSCP2::checkForCgErrorLine(const char *situation, int line)
 {
 	CGerror error;
 	const char *string = cgGetLastErrorString(&error);
 
 	if (error != CG_NO_ERROR)
 	{
-		printf("line %d: %s: %s: %s\n", line, HOLO_RENDER_DSCP2_CG_PROGRAM_NAME, situation, string);
+		LOG4CXX_ERROR(logger_, situation << ": " << string);
 		if (error == CG_COMPILER_ERROR)
 		{
-			printf("%s\n", cgGetLastListing(normalMapLightingCgContext_));
+			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(normalMapLightingCgContext_));
 		}
-		exit(1);
+		
+		return true;
 	}
+
+	return false;
 }
 
-void HoloRenderDSCP2::checkForCgError(const char *situation)
+bool HoloRenderDSCP2::checkForCgError(const char *situation)
 {
-	checkForCgErrorLine(situation, __LINE__);
+	return checkForCgErrorLine(situation, __LINE__);
 }
 
-void HoloRenderDSCP2::checkForCgError2(const char *situation)
+bool HoloRenderDSCP2::checkForCgError2(const char *situation)
 {
 	CGerror error;
 	const char *string = cgGetLastErrorString(&error);
 
 	if (error != CG_NO_ERROR)
 	{
-		printf("%s: %s: %s\n", HOLO_RENDER_DSCP2_CG_PROGRAM_NAME, situation, string);
+		LOG4CXX_ERROR(logger_, situation << ": " << string);
 		if (error == CG_COMPILER_ERROR)
 		{
-			printf("%s\n", cgGetLastListing(normalMapLightingCgContext_));
+			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(normalMapLightingCgContext_));
 		}
-		exit(1);
+
+		return true;
 	}
+
+	return false;
 }
 
 void HoloRenderDSCP2::cgSetBrassMaterial(){
@@ -972,7 +953,7 @@ void HoloRenderDSCP2::updateFromPointCloud(HoloCloudPtr && pointCloud)
 {
 	std::lock_guard<std::mutex> lg(cloudMutex_);
 	cloud_ = std::move(pointCloud);
-	haveNewCloud_ = true;
+	haveNewCloud_.store(true);
 }
 
 #endif

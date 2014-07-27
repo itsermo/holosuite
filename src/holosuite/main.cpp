@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	// allowed only on command line
 	boost::program_options::options_description generic_options("Generic options");
 	generic_options.add_options()
-		("verbosity,v", boost::program_options::value<int>()->default_value(1), "level of detail for console output. valid values are [0-4] from least to most verbose")
+		("verbosity,v", boost::program_options::value<int>()->default_value(1), "level of detail for console output. valid values are [0-3] from least to most verbose")
 		("help,h", "produce help message")
 		;
 

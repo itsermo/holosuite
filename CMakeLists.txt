@@ -30,13 +30,13 @@ endmacro()
 
 #Need to define windows version macro for boost sockets
 if(WIN32)
-get_WIN32_WINNT(ver)
-add_definitions(-D_WIN32_WINNT=${ver})
+	get_WIN32_WINNT(ver)
+	add_definitions(-D_WIN32_WINNT=${ver})
 endif()
 
 #using c++ 11 standard for GCC, requires GCC 4.7 or greater to compile
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-list(APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
+	list(APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
 endif()
 
 # Get rid of CMP0020 warning
@@ -123,6 +123,7 @@ LINK_DIRECTORIES(${VTK_LIBRARY_DIRS})
 FIND_PACKAGE(FFMPEG REQUIRED)
 INCLUDE_DIRECTORIES(${FFMPEG_INCLUDE_DIR})
 
+# Optional packages
 FIND_PACKAGE(Opus)
 FIND_PACKAGE(Portaudio 19)
 FIND_PACKAGE(OpenGL)
