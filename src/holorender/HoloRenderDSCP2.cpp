@@ -3,7 +3,7 @@
 #include "HoloRenderDSCP2.hpp"
 #include "../holoutils/HoloUtils.hpp"
 
-//#include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 #include <future>
 
 #if defined(__linux) || defined(__unix) || defined(__posix)
@@ -171,6 +171,8 @@ bool HoloRenderDSCP2::init()
 {
 	LOG4CXX_INFO(logger_, "Initializing DSCP2 render algorithm...");
 
+	cloud_ = HoloCloudPtr(new HoloCloud);
+
 	glutInitThread_ = std::thread(&HoloRenderDSCP2::glutInitLoop, this);
 	
 	std::unique_lock<std::mutex> lg(hasInitMutex_);
@@ -237,7 +239,16 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("Creating vertex program from file");
 	cgGLLoadProgram(normalMapLightingCgVertexProgram_);
 	checkForCgError("Loading vertex program");
-	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << normalMapLightingFragmentProgramFileName_);
+	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << normalMapLightingVertexProgramFileName_);
+
+	cgVertexParamModelViewProj_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
+	checkForCgError("could not get modelViewProj vertex parameter ln 1707");
+	//cgVertexParamTextureMatrix_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "textureMatrix");
+	//checkForCgError("could not get textureMatrix vertex parameter ln 1707");
+	//cgVertexParamDepthMatrix_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "depthMatrix");
+	//checkForCgError("could not get depthMatrix vertex parameter ln 1707");
+	//cgVertexParamDrawdepth_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "drawDepth");
+	//checkForCgError("could not get drawDepth vertex parameter ln 1707");
 
 	// Panoramagram generation fragment program
 	normalMapLightingCgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
@@ -249,7 +260,6 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("loading fragment program");
 	LOG4CXX_INFO(logger_, "Loaded panoramagram fragment program file: " << normalMapLightingFragmentProgramFileName_);
 
-	cgVertexParamModelViewProj_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
 	cgFragmentParamGlobalAmbient_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
 	cgFragmentParamLightColor_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightColor");
 	cgFragmentParamLightPosition_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightPosition");
@@ -289,6 +299,9 @@ void HoloRenderDSCP2::glutInitLoop()
 
 	// Specify a 2-dimensional texture image and uploads it to video memory, make it ready to use in shaders
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, viewTexWidth_, viewTexHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	boost::filesystem::path workingDir(boost::filesystem::current_path());
+	LOG4CXX_INFO(logger_, "Accessing Cg files from working directory: " << workingDir.c_str());
 
 	// Fringe computation vertex program
 	cgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
@@ -346,7 +359,8 @@ void HoloRenderDSCP2::glCheckErrors()
 void HoloRenderDSCP2::idle()
 {
 	// refresh point cloud data
-	this->drawPointCloud();
+	if (haveNewCloud_.load())
+		glutPostRedisplay();
 
 #ifdef TRACE_LOG_ENABLED
 
@@ -546,7 +560,7 @@ void HoloRenderDSCP2::display()
 		glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT);
 		glEnable(GL_TEXTURE_2D);
 
-		glBindTexture(GL_TEXTURE_2D, textureID_);
+		//glBindTexture(GL_TEXTURE_2D, textureID_);
 
 		cgGLBindProgram(normalMapLightingCgVertexProgram_);
 		checkForCgError("ln943 binding vertex program lighting");
@@ -598,6 +612,7 @@ void HoloRenderDSCP2::display()
 		//glClearColor(0.5,0.5,0.5,0.5);//JB Hack: clear view buffer to gray for debugging
 
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 1
 
@@ -628,7 +643,7 @@ void HoloRenderDSCP2::display()
 				projectionMatrix1_);
 
 			glViewport(h, v, numX_, numY_);
-			enableDrawDepth_ = 1;
+			enableDrawDepth_ = 0;
 
 			drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
 				objSpaceLightPosition_sphere, modelMatrix_cone,
@@ -639,6 +654,11 @@ void HoloRenderDSCP2::display()
 			//glViewport(h,v+120*tiley+16,160,120); //1024-6*160=64, (512-120*2*2)/2=16
 			glViewport(h, v + numY_ * tileY_, numX_, numY_); //setup viewport for depthbuffer render
 			enableDrawDepth_ = 1;
+
+			drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
+				objSpaceLightPosition_sphere, modelMatrix_cone,
+				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
+				enableDrawDepth_, 0, i);
 
 			auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
 
@@ -722,8 +742,8 @@ void HoloRenderDSCP2::display()
 		//glutPostRedisplay();
 
 #endif
-
-	glutSwapBuffers();
+		glutPostRedisplay();
+		glutSwapBuffers();
 }
 
 void HoloRenderDSCP2::cleanup()
@@ -798,17 +818,19 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	cgSetMatrixParameterfr(cgVertexParamModelViewProj_, modelViewProjMatrix);
 	cgUpdateProgramParameters(normalMapLightingCgVertexProgram_);
 
-	glDisable(GL_TEXTURE_2D);
-
 	//this->drawPointCloud();
+
+	//glDisable(GL_TEXTURE_2D);
+
+	this->drawPointCloud();
 
 }
 
 void HoloRenderDSCP2::drawPointCloud()
 {
-	if (haveNewCloud_.load())
-	{
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//if (haveNewCloud_.load())
+	//{
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		std::lock_guard<std::mutex> lg(cloudMutex_);
 		const int ystride = 1; //only render every ystride lines
 		const float gain = 1 / 256.0; // converting from char units to float
@@ -825,6 +847,9 @@ void HoloRenderDSCP2::drawPointCloud()
 		float luma = 0.0f;
 		for (int i = 0; i < cloud_->size(); i+=ystride)
 		{
+			if (pointIdx->z == HOLO_CLOUD_BAD_POINT)
+				continue;
+
 			luma = (pointIdx->r + pointIdx->g + pointIdx->b)/3 * gain;
 			glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
 			glColor3f(luma, luma, luma);
@@ -837,8 +862,8 @@ void HoloRenderDSCP2::drawPointCloud()
 		
 		haveNewCloud_.store(false);
 
-		glutPostRedisplay();
-	}
+		//glutPostRedisplay();
+	//}
 }
 
 void HoloRenderDSCP2::drawString(float posX, float posY, std::string theString)
@@ -862,6 +887,7 @@ bool HoloRenderDSCP2::checkForCgErrorLine(const char *situation, int line)
 		if (error == CG_COMPILER_ERROR)
 		{
 			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(normalMapLightingCgContext_));
+			exit(-1);
 		}
 		
 		return true;
