@@ -301,7 +301,7 @@ void HoloRenderDSCP2::glutInitLoop()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, viewTexWidth_, viewTexHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	boost::filesystem::path workingDir(boost::filesystem::current_path());
-	LOG4CXX_INFO(logger_, "Accessing Cg files from working directory: " << workingDir.c_str());
+	LOG4CXX_INFO(logger_, "Accessing Cg files from working directory: " << workingDir.string());
 
 	// Fringe computation vertex program
 	cgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
@@ -462,6 +462,7 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 		printf("%f \n", translateZ_ - 675);
 		break;
 	case 'r':
+		rot_ = rot_ - 5;
 		rotateCounter_ = (rotateCounter_ * -1) + 1;
 
 		printf("rotate %i \n", rotateCounter_);
@@ -534,17 +535,21 @@ void HoloRenderDSCP2::display()
 {
 	if (firstInit_)
 	{
-		cv::namedWindow("TextureView");
+		cv::namedWindow("TextureView", CV_WINDOW_FREERATIO);
 		firstInit_ = false;
 		isInit_ = true;
 		hasInitCV_.notify_all();
 	}
+	
+	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//this->drawPointCloud();
 
 #if 1
 	/* World-space positions for light and eye. */
 	float eyePosition[4] = { 0, 0, 0, 1 };
 
-	const float lightPosition[4] = { 10 * mag_ + lightLocationX_, 20 * mag_ + lightLocationY_, -605 * mag_ + lightLocationZ_, 1 };
+	const float lightPosition[4] = { .010f * mag_ + lightLocationX_, .020f * mag_ + lightLocationY_, -0.605f * mag_ + lightLocationZ_, 1.0f };
 	float xpos, h, v, rgba, scale;
 	int i, j;
 	float myobject;
@@ -650,7 +655,6 @@ void HoloRenderDSCP2::display()
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
 				enableDrawDepth_, 0, i);
 
-
 			//glViewport(h,v+120*tiley+16,160,120); //1024-6*160=64, (512-120*2*2)/2=16
 			glViewport(h, v + numY_ * tileY_, numX_, numY_); //setup viewport for depthbuffer render
 			enableDrawDepth_ = 1;
@@ -666,6 +670,11 @@ void HoloRenderDSCP2::display()
 
 			cv::imshow("TextureView", localFrameImg);
 
+			//std::stringstream ss;
+
+			//ss << "c:\\temp\\img" << i << ".png";
+
+			//cv::imwrite(ss.str(), localFrameImg);
 		}
 
 #endif
@@ -679,6 +688,16 @@ void HoloRenderDSCP2::display()
 		//glDisable(GL_TEXTURE_2D);
 
 		glPopAttrib();
+
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, textureID_);
+		//glFlush();
+		//   glCopyTexSubImage			2D(GL_TEXTURE_2D, 0,0,0,0,0,imwidth,imheight);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, viewTexWidth_, viewTexHeight_);
+		//	printf("I'm here\n");
+		//checkErrors();
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDisable(GL_TEXTURE_2D);
 
 		//glEnable(GL_TEXTURE_2D);
 		//glBindTexture(GL_TEXTURE_2D, textureID_[0]);
@@ -694,7 +713,31 @@ void HoloRenderDSCP2::display()
 
 
 //Fringe computation
-#if 0
+#if 1
+		float quadRadius = 0.5;
+
+		// glViewport(0,0,imwidth,512);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//glClear (GL_DEPTH_BUFFER_BIT);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(-quadRadius, quadRadius, -quadRadius, quadRadius, 0, 0.125);
+		// glOrtho(-512,512-1,-256,256,1,125);
+		// gluLookAt(0,0,0,0,0,-100,0,1,0);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		// glTranslatef(0.0,0.0,-100);
+		//glViewport(0,0,1280,880);
+
+		glViewport(0, 0, displayModeWidth_, displayModeHeight_);
+
+		//glTranslatef(0.0, -0.25, 0.0); // JB: what does this do?
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, textureID_);
+
+		glDisable(GL_LIGHTING);
+
 		cgGLBindProgram(cgVertexProgram_);
 		//checkForCgError2("binding vertex program -fringes");
 		cgGLEnableProfile(cgVertexProfile_);
@@ -731,6 +774,7 @@ void HoloRenderDSCP2::display()
 		glVertex3f(-0.5f, -0.5f, 0.0f);
 
 		glEnd();
+
 		glDisable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -742,7 +786,7 @@ void HoloRenderDSCP2::display()
 		//glutPostRedisplay();
 
 #endif
-		glutPostRedisplay();
+		//glutPostRedisplay();
 		glutSwapBuffers();
 }
 
@@ -818,11 +862,11 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	cgSetMatrixParameterfr(cgVertexParamModelViewProj_, modelViewProjMatrix);
 	cgUpdateProgramParameters(normalMapLightingCgVertexProgram_);
 
-	//this->drawPointCloud();
+	this->drawPointCloud();
 
 	//glDisable(GL_TEXTURE_2D);
 
-	this->drawPointCloud();
+	//this->drawPointCloud();
 
 }
 
@@ -980,6 +1024,7 @@ void HoloRenderDSCP2::updateFromPointCloud(HoloCloudPtr && pointCloud)
 	std::lock_guard<std::mutex> lg(cloudMutex_);
 	cloud_ = std::move(pointCloud);
 	haveNewCloud_.store(true);
+	//glutPostRedisplay();
 }
 
 #endif
