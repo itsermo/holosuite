@@ -10,6 +10,8 @@ file(GLOB_RECURSE SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/*.C
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/*.cg
+	${CMAKE_CURRENT_SOURCE_DIR}/*.cl
 )
 
 foreach(f ${SRC_FILES})
@@ -47,5 +49,25 @@ ENDIF()
 
 SET_TARGET_PROPERTIES(${holosuite_BIN} PROPERTIES VERSION "${APPLICATION_VERSION_MAJOR}.${APPLICATION_VERSION_MINOR}" OUTPUT_NAME ${holosuite_BIN} CLEAN_DIRECT_OUTPUT 1)
 
+file(GLOB SHADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/holorender/shaders/*.cg
+					   ${CMAKE_CURRENT_SOURCE_DIR}/holorender/shaders/*.cl
+)
+
+# Copy shader files
+add_custom_target(copy-shader-files)
+get_target_property(MyTargetLocation ${PROJECT_NAME} LOCATION)
+get_filename_component(MyTargetDir ${MyTargetLocation} PATH)
+
+foreach(SHADER_FILE ${SHADER_FILES})
+  add_custom_command(TARGET copy-shader-files PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E
+                         copy_if_different ${SHADER_FILE} ${MyTargetDir})
+  IF(WIN32)
+    add_custom_command(TARGET copy-shader-files PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E
+                         copy_if_different ${SHADER_FILE} ${CMAKE_BINARY_DIR}/src)
+  ENDIF()
+endforeach()
+add_dependencies(${PROJECT_NAME} copy-shader-files)
 
 INSTALL(TARGETS ${holosuite_BIN} DESTINATION bin)

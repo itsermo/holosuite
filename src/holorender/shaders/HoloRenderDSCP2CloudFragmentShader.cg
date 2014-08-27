@@ -1,0 +1,40 @@
+// HoloRenderDSCP2CloudFragmentShader.cg
+//
+// This is the basic fragment shader for displaying a point cloud on MK II
+// This CG function is run after HoloRenderDSCP2CloudVertexShader
+// followed by the vertex and fragment shaders for fringe computation, respectively
+//
+// Description: This function will draw the depth data to the texture buffer for viewing.
+
+void HoloRenderDSCP2CloudFragmentShader(float4 position  : TEXCOORD0,                        
+                      float3 normal    : TEXCOORD1,
+					  float4 color		: COLOR,
+					  float4 pixPosition : WPOS,
+                  out float4 ocolor     : COLOR0,	
+
+              uniform sampler2D decal :TEXUNIT0,
+
+              uniform float3 globalAmbient, 
+              uniform float3 lightColor,
+              uniform float3 lightPosition,
+              uniform float3 eyePosition,
+              uniform float3 Ke,
+              uniform float3 Ka,
+              uniform float3 Kd,
+              uniform float3 Ks,
+              uniform float  shininess,
+	      uniform int drawdepth,
+		  uniform int headnum)
+{
+	int numlinesperhead = 6;
+	int numlinesperscan = 18;
+
+	if (drawdepth==0){
+	  //ocolor.rgba = tex2Dproj(decal, position.xyw).x;
+	  ocolor.rgba = color.rgbr;//(emissive + ambient + diffuse + specular);
+	  }
+	if (drawdepth==1){
+	  ocolor.rgba=0.5*(-position.zzzz+1);
+	}
+}
+ 
