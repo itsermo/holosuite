@@ -1,0 +1,31 @@
+// HoloRenderDSCP2CloudVertexShader.cg
+//
+// This is the basic vertex shader for displaying a point cloud on MK II
+// This CG function is run first, then the fragment shader,
+// followed by the vertex and fragment shaders for fringe computation, respectively
+//
+// Description: This function takes a point from the point cloud,
+//				transforms the vertex, manipulates the color, and outputs
+//				the Z values to the texture buffer.
+
+void HoloRenderDSCP2CloudVertexShader(float4 position  : POSITION,
+				float3 normal    : NORMAL,
+				float4 texCoord  :TEXCOORD0,
+				float4 normCoord :TEXCOORD1,
+				float4 color: COLOR,
+
+				out float4 oPosition : POSITION,
+				out float4 oTexCoord  :TEXCOORD0,
+				out float3 oNormal: TEXCOORD1,
+				out float4 oColor:COLOR,
+				out float4 oColor1:COLOR1,
+				uniform float4x4 modelViewProj,
+				uniform float modelUIScale)
+{
+	float scale = 3.0;
+	oColor = color;
+	oPosition = float4(position.x * scale, position.y * scale, (position.z - 1.0)  * scale, 1.0);
+	oNormal=normal;
+	oTexCoord=texCoord;
+	oTexCoord.z=oPosition.z;
+}
