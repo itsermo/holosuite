@@ -14,6 +14,7 @@ using namespace holo;
 using namespace holo::render;
 
 HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
+	haveNewCloud_(false),
 	headNumber_(0),
 	masterHologramGain_(HOLO_RENDER_DSCP2_MASTER_HOLOGRAM_GAIN),
 	viewEnableBitmask_(HOLO_RENDER_DSCP2_VIEW_ENABLE_BITMASK),
@@ -535,15 +536,14 @@ void HoloRenderDSCP2::display()
 {
 	if (firstInit_)
 	{
-		cv::namedWindow("TextureView", CV_WINDOW_FREERATIO);
+		//cv::namedWindow("TextureView", CV_WINDOW_FREERATIO);
 		firstInit_ = false;
 		isInit_ = true;
 		hasInitCV_.notify_all();
 	}
 	
-	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//this->drawPointCloud();
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 1
 	/* World-space positions for light and eye. */
@@ -650,6 +650,8 @@ void HoloRenderDSCP2::display()
 			glViewport(h, v, numX_, numY_);
 			enableDrawDepth_ = 0;
 
+			std::unique_lock<std::mutex> cloudLock(cloudMutex_);
+
 			drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
 				objSpaceLightPosition_sphere, modelMatrix_cone,
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
@@ -664,11 +666,15 @@ void HoloRenderDSCP2::display()
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
 				enableDrawDepth_, 0, i);
 
-			auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
+			haveNewCloud_.store(false);
 
-			glReadPixels(0, 0, numX_, numY_, GL_RED, GL_UNSIGNED_BYTE, localFrameImg.data);
+			cloudLock.unlock();
 
-			cv::imshow("TextureView", localFrameImg);
+			//auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
+
+			//glReadPixels(0, 0, numX_, numY_, GL_RED, GL_UNSIGNED_BYTE, localFrameImg.data);
+
+			//cv::imshow("TextureView", localFrameImg);
 
 			//std::stringstream ss;
 
@@ -713,7 +719,7 @@ void HoloRenderDSCP2::display()
 
 
 //Fringe computation
-#if 1
+#if 0
 		float quadRadius = 0.5;
 
 		// glViewport(0,0,imwidth,512);
@@ -786,7 +792,6 @@ void HoloRenderDSCP2::display()
 		//glutPostRedisplay();
 
 #endif
-		//glutPostRedisplay();
 		glutSwapBuffers();
 }
 
@@ -822,7 +827,7 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	float myobject, int viewnumber)
 {
 	// const float lightPosition[4] = { 10*mag+lx,20*mag+ly,-605*mag+lz, 1 };
-	const float lightPosition[4] =	{ 1.00, 1.00, -6.05, 1 };
+	const float lightPosition[4] =	{ 1.00, 1.00, 6.05, 1 };
 	//const float eyePosition[4] = { 0,0,0, 1 };
 
 	float translateMatrix[16], rotateMatrix[16], viewMatrix[16],
@@ -850,8 +855,10 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	//transform(objSpaceLightPosition, invModelMatrix_sphere, lightPosition);
 	cgSetParameter3fv(cgFragmentParamLightPosition_, objSpaceLightPosition_sphere);
 
-	holo::utils::MultMatrix(modelViewMatrix, viewMatrix, modelMatrix_sphere);
-	holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelViewMatrix);
+	holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelMatrix_sphere);
+
+	//holo::utils::MultMatrix(modelViewMatrix, viewMatrix, modelMatrix_sphere);
+	//holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelViewMatrix);
 
 	// glEnable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
@@ -875,7 +882,7 @@ void HoloRenderDSCP2::drawPointCloud()
 	//if (haveNewCloud_.load())
 	//{
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		std::lock_guard<std::mutex> lg(cloudMutex_);
+		//std::lock_guard<std::mutex> lg(cloudMutex_);
 		const int ystride = 1; //only render every ystride lines
 		const float gain = 1 / 256.0; // converting from char units to float
 
@@ -899,12 +906,13 @@ void HoloRenderDSCP2::drawPointCloud()
 			glColor3f(luma, luma, luma);
 			pointIdx+=ystride;
 		}
+
 		glEnd();
 
 		glDisable(GL_POINT_SMOOTH);
 		//glDisable(GL_TEXTURE_2D);
 		
-		haveNewCloud_.store(false);
+		//haveNewCloud_.store(false);
 
 		//glutPostRedisplay();
 	//}
@@ -1024,7 +1032,6 @@ void HoloRenderDSCP2::updateFromPointCloud(HoloCloudPtr && pointCloud)
 	std::lock_guard<std::mutex> lg(cloudMutex_);
 	cloud_ = std::move(pointCloud);
 	haveNewCloud_.store(true);
-	//glutPostRedisplay();
 }
 
 #endif
