@@ -25,7 +25,7 @@ void HoloRenderDSCP2CloudVertexShader(float4 position  : POSITION,
 	float scale = 1.0;
 	oColor = color;
 	//oPosition = float4(position.x * scale * 10, position.y * scale, (position.z - 1.0)  * scale, 1.0);
-	float4 truePosition = float4(position.x * scale, position.y * scale * 10.0, (position.z - 1.0)  * scale, 1.0);
+	float4 truePosition = float4(position.x * scale, position.y * scale, (position.z - 1.0)  * scale, 1.0);
 	oPosition = mul(modelViewProj, truePosition);
 	oNormal=normal;
 	oTexCoord=texCoord;

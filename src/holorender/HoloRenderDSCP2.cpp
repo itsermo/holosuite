@@ -13,9 +13,9 @@
 using namespace holo;
 using namespace holo::render;
 
-HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
+HoloRenderDSCP2::HoloRenderDSCP2(int numHeads) : IHoloRender(),
 	haveNewCloud_(false),
-	headNumber_(0),
+	numHeads_(numHeads),
 	masterHologramGain_(HOLO_RENDER_DSCP2_MASTER_HOLOGRAM_GAIN),
 	viewEnableBitmask_(HOLO_RENDER_DSCP2_VIEW_ENABLE_BITMASK),
 	zeroDepth_(HOLO_RENDER_DSCP2_ZERO_DEPTH),
@@ -155,6 +155,11 @@ HoloRenderDSCP2::HoloRenderDSCP2() : IHoloRender(),
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderDSCP2 object");
 }
 
+HoloRenderDSCP2::HoloRenderDSCP2() : HoloRenderDSCP2(1)
+{
+
+}
+
 HoloRenderDSCP2::~HoloRenderDSCP2()
 {
 	LOG4CXX_DEBUG(logger_, "Destroying HoloRenderDSCP2 object...");
@@ -196,14 +201,19 @@ void HoloRenderDSCP2::glutInitLoop()
 	glutInit(&fakeargc, fakeargv);
 	glutInitWindowSize(displayModeWidth_, displayModeHeight_);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
-	glutCreateWindow(HOLO_RENDER_DSCP2_CG_PROGRAM_NAME);
 	
-	glCheckErrors();
+	for (int i = 0; i < numHeads_; i++)
+	{
+		glutCreateWindow(HOLO_RENDER_DSCP2_CG_PROGRAM_NAME);
 
-	glutDisplayFunc(this->glutDisplay);
-	glutKeyboardFunc(this->glutKeyboard);
-	glutIdleFunc(this->glutIdle);
-	atexit(this->glutCleanup);
+
+		glCheckErrors();
+
+		glutDisplayFunc(this->glutDisplay);
+		glutKeyboardFunc(this->glutKeyboard);
+		glutIdleFunc(this->glutIdle);
+		atexit(this->glutCleanup);
+	}
 
 	// GLUT settings
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -286,7 +296,7 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("Setting fragment program light color");
 
 	// Set up head number for rendering/loading with skipped lines
-	cgSetParameter1i(cgFragmentParamHeadnum_, headNumber_);
+	cgSetParameter1i(cgFragmentParamHeadnum_, numHeads_);
 	checkForCgError("Setting head number parameter");
 
 	// Set up view texture (holds all view images. TODO: convert to 2 3d textures
@@ -331,12 +341,20 @@ void HoloRenderDSCP2::glutInitLoop()
 	cgFragmentParamHologramDebugSwitch_ = cgGetNamedParameter(cgFragmentProgram_, "hologramDebugSwitch");
 	cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
 	cgFragmentParamHeadnum_ = cgGetNamedParameter(cgFragmentProgram_, "headnum");
-	cgSetParameter1f(cgFragmentParamHeadnum_, headNumber_);
+	cgSetParameter1f(cgFragmentParamHeadnum_, numHeads_);
 	cgFragmentParamDecal1_ = cgGetNamedParameter(cgFragmentProgram_,"decal0");
 	checkForCgError2("getting decal parameter");
 
 	cgGLSetTextureParameter(cgFragmentParamDecal1_, textureID_);
 	checkForCgError2("setting decal 3D texture0");
+
+	glClearColor(0, 0, 0, 0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(45.0f, static_cast<float>(displayModeWidth_) / static_cast<float>(displayModeHeight_), 0.01f, 3.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(0, 0, 0, 0, 0, 1, 0, 1, 1);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

@@ -36,7 +36,7 @@
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_MAG 1.0f
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_FOV 30.0f
 #define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_WIDTH_MM 1.50f
-#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_HEIGHT_MM 7.50f
+#define HOLO_RENDER_DSCP2_VIEW_RENDER_HOLOGRAM_PLANE_HEIGHT_MM 0.750f
 #define HOLO_RENDER_DSCP2_PLANE_NEAR 0.0f
 #define HOLO_RENDER_DSCP2_PLANE_FAR 3.0f
 #define HOLO_RENDER_DSCP2_LIGHT_LOCATION_X 0.0f
@@ -69,6 +69,7 @@ namespace holo
 		{
 		public:
 			HoloRenderDSCP2();
+			HoloRenderDSCP2(int numHeads);
 			~HoloRenderDSCP2();
 
 			bool init();
@@ -113,7 +114,7 @@ namespace holo
 			void cgSetRedPlasticMaterial();
 			void cgSetEmissiveLightColorOnly();
 
-			int headNumber_;
+			int numHeads_;
 
 			float masterHologramGain_;
 
