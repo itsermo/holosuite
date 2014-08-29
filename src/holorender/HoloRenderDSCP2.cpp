@@ -223,8 +223,8 @@ void HoloRenderDSCP2::glutInitLoop()
 	// Creates a texture ID for our panoramagram generation
 	glGenTextures(1, &textureID_);
 
-	double q = tan(0.1);
-	holo::utils::BuildShearOrthographicMatrix2(-0.75f * mag_, -0.75f * mag_, -0.375f * mag_, 0.375f * mag_, 0.450f * mag_, 0.750f * mag_, q / mag_, projectionMatrix1_);
+	//double q = tan(0.1);
+	//holo::utils::BuildShearOrthographicMatrix2(-0.75f * mag_, -0.75f * mag_, -0.375f * mag_, 0.375f * mag_, 0.450f * mag_, 0.750f * mag_, q / mag_, projectionMatrix1_);
 
 	// CG program intialization
 	cgGLSetDebugMode(CG_FALSE);
@@ -620,6 +620,7 @@ void HoloRenderDSCP2::display()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 1
+		std::unique_lock<std::mutex> cloudLock(cloudMutex_);
 
 		for (i = 0; i < numViews_; i++)
 		{
@@ -650,8 +651,6 @@ void HoloRenderDSCP2::display()
 			glViewport(h, v, numX_, numY_);
 			enableDrawDepth_ = 0;
 
-			std::unique_lock<std::mutex> cloudLock(cloudMutex_);
-
 			drawScene(eyePosition, modelMatrix_sphere, invModelMatrix_sphere,
 				objSpaceLightPosition_sphere, modelMatrix_cone,
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
@@ -666,9 +665,7 @@ void HoloRenderDSCP2::display()
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
 				enableDrawDepth_, 0, i);
 
-			haveNewCloud_.store(false);
 
-			cloudLock.unlock();
 
 			//auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
 
@@ -682,6 +679,10 @@ void HoloRenderDSCP2::display()
 
 			//cv::imwrite(ss.str(), localFrameImg);
 		}
+
+		haveNewCloud_.store(false);
+
+		cloudLock.unlock();
 
 #endif
 
@@ -715,8 +716,16 @@ void HoloRenderDSCP2::display()
 		//glCheckErrors();
 		//glBindTexture(GL_TEXTURE_2D, 0);
 		//glDisable(GL_TEXTURE_2D);
-#endif //end of disable view render
+#else //end of disable view render
 
+	std::unique_lock<std::mutex> cloudLock(cloudMutex_);
+
+	this->drawPointCloud();
+
+	haveNewCloud_.store(false);
+	cloudLock.unlock();
+
+#endif
 
 //Fringe computation
 #if 0
