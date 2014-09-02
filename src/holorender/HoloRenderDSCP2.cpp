@@ -436,29 +436,29 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 		cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
 		break;
 	case 'j':
-		translateX_ = translateX_ + 5;
+		translateX_ = translateX_ + 0.01;
 		printf("tx %f \n", translateX_);
 		break;
 	case 'l':
-		translateX_ = translateX_ - 5;
+		translateX_ = translateX_ - 0.01;
 		printf("tx %f \n", translateX_);
 		break;
 	case 'i':
-		translateY_ = translateY_ - 1;
+		translateY_ = translateY_ - 0.01;
 		printf("ty %f \n", translateY_);
 		break;
 	case 'k':
-		translateY_ = translateY_ + 1;
+		translateY_ = translateY_ + 0.01;
 		printf("ty %f \n", translateY_);
 		break;
 
 	case 'w':
-		translateZ_ = translateZ_ - 1;
-		printf("%f \n", translateZ_ - 675);
+		translateZ_ = translateZ_ - 0.01;
+		printf("%f \n", translateZ_ - 0.675);
 		break;
 	case 's':
-		translateZ_ = translateZ_ + 1;
-		printf("%f \n", translateZ_ - 675);
+		translateZ_ = translateZ_ + 0.01;
+		printf("%f \n", translateZ_ - 0.675);
 		break;
 
 	case 'f':
@@ -469,11 +469,11 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 		//writeViewsToFile();
 		break;
 	case 'e':
-		translateZ_ = translateZ_ - 10;
+		translateZ_ = translateZ_ - 0.01;
 		printf("%f \n", translateZ_ - 675);
 		break;
 	case 'd':
-		translateZ_ = translateZ_ + 10;
+		translateZ_ = translateZ_ + 0.01;
 		printf("%f \n", translateZ_ - 675);
 		break;
 	case 'c':
@@ -570,7 +570,6 @@ void HoloRenderDSCP2::display()
 	const float lightPosition[4] = { .010f * mag_ + lightLocationX_, .020f * mag_ + lightLocationY_, -0.605f * mag_ + lightLocationZ_, 1.0f };
 	float xpos, h, v, rgba, scale;
 	int i, j;
-	float myobject;
 
 	float translateMatrix[16], rotateMatrix[16], rotateMatrix1[16],
 		translateNegMatrix[16], rotateTransposeMatrix[16],
@@ -684,8 +683,6 @@ void HoloRenderDSCP2::display()
 				objSpaceLightPosition_sphere, modelMatrix_cone,
 				invModelMatrix_cone, objSpaceLightPosition_cone, h, v,
 				enableDrawDepth_, 0, i);
-
-
 
 			//auto localFrameImg = cv::Mat(numY_, numX_, CV_8UC1);
 
