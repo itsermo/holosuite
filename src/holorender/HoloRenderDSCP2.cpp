@@ -586,14 +586,14 @@ void HoloRenderDSCP2::display()
 		//glBindTexture(GL_TEXTURE_2D, textureID_);
 
 		cgGLBindProgram(normalMapLightingCgVertexProgram_);
-		checkForCgError("ln943 binding vertex program lighting");
+		checkForCgError("Binding vertex lighting program");
 		cgGLEnableProfile(normalMapLightingCgVertexProfile_);
-		checkForCgError("ln945 enabling vertex profile lighting");
+		checkForCgError("Enabling vertex profile lighting");
 
 		cgGLBindProgram(normalMapLightingCgFragmentProgram_);
-		checkForCgError("ln949 binding vertex program lighting");
+		checkForCgError("Binding fragment program lighting");
 		cgGLEnableProfile(normalMapLightingCgFragmentProfile_);
-		checkForCgError("ln951 enabling vertex profile lighting");
+		checkForCgError("enabling fragment profile lighting");
 		/*for sphere find model and invModelMatrix */
 
 		//TODO: recompute these only on change:
@@ -653,14 +653,16 @@ void HoloRenderDSCP2::display()
 			v = (int(i / 4.0f) / ((float)tileY_) - int(int(i / 4.0f)
 				/ ((float)tileY_))) * numY_ * tileY_;
 
+			glColorMask((rgba == 0), (rgba == 1), (rgba == 2), (rgba == 3));
+
 			double q = tan((i - numViews_ / 2.0f) / numViews_ * fieldOfView_ / mag_ * M_PI/180.0f); //angle +/-fov/2
 
 			//hologram is 150 mm wide, 75 mm high
 			holo::utils::BuildShearOrthographicMatrix2(
-				-hologramPlaneWidthMM_ / 2.0,
-				hologramPlaneWidthMM_ / 2.0,
-				-hologramPlaneHeightMM_ / 2.0,
-				hologramPlaneHeightMM_ / 2.0,
+				-hologramPlaneWidthMM_ / 2.0f,
+				hologramPlaneWidthMM_ / 2.0f,
+				-hologramPlaneHeightMM_ / 2.0f,
+				hologramPlaneHeightMM_ / 2.0f,
 				nearPlane_ * mag_,
 				farPlane_* mag_,
 				q,
@@ -710,7 +712,7 @@ void HoloRenderDSCP2::display()
 		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
 		//checkForCgError("disabling fragment profile");
 
-		//glDisable(GL_TEXTURE_2D);
+		glDisable(GL_TEXTURE_2D);
 
 		glPopAttrib();
 
@@ -721,19 +723,9 @@ void HoloRenderDSCP2::display()
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, viewTexWidth_, viewTexHeight_);
 		//	printf("I'm here\n");
 		//checkErrors();
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, textureID_);
 		glDisable(GL_TEXTURE_2D);
 
-		//glEnable(GL_TEXTURE_2D);
-		//glBindTexture(GL_TEXTURE_2D, textureID_[0]);
-
-		//glFlush();
-		//   glCopyTexSubImage			2D(GL_TEXTURE_2D, 0,0,0,0,0,imwidth,imheight);
-		//glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, viewTexWidth_, viewTexHeight_);
-		//	printf("I'm here\n");
-		//glCheckErrors();
-		//glBindTexture(GL_TEXTURE_2D, 0);
-		//glDisable(GL_TEXTURE_2D);
 #else //end of disable view render
 
 	std::unique_lock<std::mutex> cloudLock(cloudMutex_);
@@ -888,7 +880,7 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	//holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelViewMatrix);
 
 	// glEnable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
+	//glEnable(GL_TEXTURE_2D);
 	//glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo); // bind the frame buffer object
 	//glViewport(h,v,64,440);
 
