@@ -44,8 +44,9 @@
 #define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Z 1.100f
 
 // CG code defines
+#define HOLO_RENDER_DSCP2_WINDOW_NAME "edu.mit.media.obmg.dscp.mk2"
+
 #define HOLO_RENDER_DSCP2_CG_PROGRAM_PATH "../shaders"
-#define HOLO_RENDER_DSCP2_CG_PROGRAM_NAME "edu.mit.media.obmg.dscp.mk2"
 
 #define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_NAME "HoloRenderDSCP2CloudVertexShader"
 #define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2CloudVertexShader.cg"
@@ -78,7 +79,7 @@ namespace holo
 			void updateFromPointCloud(HoloCloudPtr && pointCloud);
 			void* getContext() { return nullptr; }
 
-			void display(void);
+			void display(int head);
 			void idle(void);
 			void keyboard(unsigned char c, int x, int y);
 			void cleanup(void);
@@ -114,7 +115,7 @@ namespace holo
 			void cgSetRedPlasticMaterial();
 			void cgSetEmissiveLightColorOnly();
 
-			int numHeads_;
+			int numHeads_, *windowIndecies_;
 
 			float masterHologramGain_;
 
@@ -143,8 +144,7 @@ namespace holo
 
 			float mag_, fieldOfView_;
 
-			GLuint textureID_;
-			GLuint texNum_;
+			GLuint *textureIDs_;
 
 			GLfloat lightAmbient_[4];
 			GLfloat lightDiffuse_[4];
@@ -200,7 +200,8 @@ namespace holo
 			log4cxx::LoggerPtr logger_;
 		};
 
-		static HoloRenderDSCP2 *gCurrentInstance;
+		static int gNumDSCP2Heads = 0;
+		static HoloRenderDSCP2 *gCurrentDSCP2Instance = nullptr;
 	}
 }
 
