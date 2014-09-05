@@ -84,6 +84,45 @@ namespace holo
 			void keyboard(unsigned char c, int x, int y);
 			void cleanup(void);
 
+
+			struct ParallaxViewVertexArgs
+			{
+				CGparameter modelViewProj;
+				CGparameter modelUIScale;
+			};
+
+			struct ParallaxViewFragmentArgs
+			{
+				CGparameter globalAmbient;
+				CGparameter lightColor;
+				CGparameter lightPosition;
+				CGparameter eyePosition;
+				CGparameter ke;
+				CGparameter ka;
+				CGparameter kd;
+				CGparameter ks;
+				CGparameter	shininess;
+				CGparameter drawDepth;
+				CGparameter headNum;
+				CGparameter decal;
+			};
+
+			struct CgFringeVertexArgs
+			{
+				CGparameter placeHolder;
+			};
+
+			struct FringeFragmentArgs
+			{
+				CGparameter hogelYes;
+				CGparameter hologramGain;
+				CGparameter debugSwitch;
+				CGparameter textureMatrix;
+				CGparameter depthMatrix;
+				CGparameter decal;
+				CGparameter headNum;
+			};
+
 		private:
 
 			// GL and GLUT related functions
@@ -109,7 +148,6 @@ namespace holo
 			bool checkForCgErrorLine(const char *situation, int line = 0);
 			bool checkForCgError2(const char *situation);
 			bool checkForCgError(const char *situation);
-
 
 			void cgSetBrassMaterial();
 			void cgSetRedPlasticMaterial();
@@ -159,30 +197,22 @@ namespace holo
 			float translateX_, translateY_, translateZ_;
 			float rot_, rotX_;
 
-			const char *vertexProgramFileName_, *vertexProgramName_;
-			const char *fragmentProgramFileName_, *fragmentProgramName_;
 			const char *normalMapLightingVertexProgramName_, *normalMapLightingVertexProgramFileName_;
 			const char *normalMapLightingFragmentProgramName_, *normalMapLightingFragmentProgramFileName_;
 
+			const char *vertexProgramFileName_, *vertexProgramName_;
+			const char *fragmentProgramFileName_, *fragmentProgramName_;
+
 			CGcontext normalMapLightingCgContext_;
-			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
+
 			CGprogram cgVertexProgram_, cgFragmentProgram_, normalMapLightingCgVertexProgram_, normalMapLightingCgFragmentProgram_;
-
-			//CGparameter cgVertexParamModelUIScale_;
-
-			CGparameter cgVertexParamModelViewProj_;
-			CGparameter cgFragmentParamGlobalAmbient_,
-				cgFragmentParamLightColor_, cgFragmentParamLightPosition_,
-				cgFragmentParamEyePosition_, cgFragmentParamKe_,
-				cgFragmentParamKa_, cgFragmentParamKd_, cgFragmentParamKs_,
-				cgFragmentParamShininess_, cgFragmentParamDrawdepth_, cgFragmentParamHeadnum_;
-
-			CGparameter cgFragmentParamHogelYes_, cgFragmentParamHologramGain_,
-				cgFragmentParamHologramDebugSwitch_, cgVertexParamTextureMatrix_,
-				cgVertexParamDepthMatrix_, cgVertexParamDrawdepth_;
-
+			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
 			CGprofile cgVertexProfile_, cgFragmentProfile_;
-			CGparameter cgFragmentParamDecal0_, cgFragmentParamDecal1_;
+
+			ParallaxViewVertexArgs parallaxViewVertexArgs_;
+			ParallaxViewFragmentArgs parallaxViewFragmentArgs_;
+
+			FringeFragmentArgs fringeFragmentArgs_;
 
 			std::mutex cloudMutex_;
 			HoloCloudPtr cloud_;

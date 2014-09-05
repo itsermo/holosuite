@@ -61,29 +61,14 @@ HoloRenderDSCP2::HoloRenderDSCP2(int numHeads) : IHoloRender(),
 	normalMapLightingCgFragmentProgram_(nullptr),
 	normalMapLightingCgVertexProfile_(CG_PROFILE_UNKNOWN),
 	normalMapLightingCgFragmentProfile_(CG_PROFILE_UNKNOWN),
-	cgVertexParamModelViewProj_(nullptr),
-	cgFragmentParamGlobalAmbient_(nullptr),
-	cgFragmentParamLightColor_(nullptr),
-	cgFragmentParamLightPosition_(nullptr),
-	cgFragmentParamEyePosition_(nullptr),
-	cgFragmentParamKe_(nullptr),
-	cgFragmentParamKa_(nullptr),
-	cgFragmentParamKd_(nullptr),
-	cgFragmentParamKs_(nullptr),
-	cgFragmentParamShininess_(nullptr),
-	cgFragmentParamDrawdepth_(nullptr),
-	cgFragmentParamHeadnum_(nullptr),
-	cgFragmentParamHogelYes_(nullptr),
-	cgFragmentParamHologramGain_(nullptr),
-	cgFragmentParamHologramDebugSwitch_(nullptr),
-	cgVertexParamTextureMatrix_(nullptr),
-	cgVertexParamDepthMatrix_(nullptr),
-	cgVertexParamDrawdepth_(nullptr),
 	cgVertexProfile_(CG_PROFILE_UNKNOWN),
 	cgFragmentProfile_(CG_PROFILE_UNKNOWN),
 	localFramebufferStore_(nullptr),
 	firstInit_(true),
-	isInit_(false)
+	isInit_(false),
+	parallaxViewVertexArgs_(),
+	parallaxViewFragmentArgs_(),
+	fringeFragmentArgs_()
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.dscp2");
 
@@ -300,7 +285,7 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("Loading vertex program");
 	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << normalMapLightingVertexProgramFileName_);
 
-	cgVertexParamModelViewProj_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
+	parallaxViewVertexArgs_.modelViewProj = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
 	checkForCgError("could not get modelViewProj vertex parameter ln 1707");
 	//cgVertexParamTextureMatrix_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "textureMatrix");
 	//checkForCgError("could not get textureMatrix vertex parameter ln 1707");
@@ -319,29 +304,29 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError("loading fragment program");
 	LOG4CXX_INFO(logger_, "Loaded panoramagram fragment program file: " << normalMapLightingFragmentProgramFileName_);
 
-	cgFragmentParamGlobalAmbient_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
-	cgFragmentParamLightColor_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightColor");
-	cgFragmentParamLightPosition_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightPosition");
-	cgFragmentParamEyePosition_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "eyePosition");
-	cgFragmentParamKe_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ke");
-	cgFragmentParamKa_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ka");
-	cgFragmentParamKd_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Kd");
-	cgFragmentParamKs_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ks");
-	cgFragmentParamShininess_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "shininess");
-	cgFragmentParamDrawdepth_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "drawdepth");
-	cgFragmentParamHeadnum_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "headnum");
+	parallaxViewFragmentArgs_.globalAmbient = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
+	parallaxViewFragmentArgs_.lightColor = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightColor");
+	parallaxViewFragmentArgs_.lightPosition = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightPosition");
+	parallaxViewFragmentArgs_.eyePosition = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "eyePosition");
+	parallaxViewFragmentArgs_.ke = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ke");
+	parallaxViewFragmentArgs_.ka = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ka");
+	parallaxViewFragmentArgs_.kd = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Kd");
+	parallaxViewFragmentArgs_.ks = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ks");
+	parallaxViewFragmentArgs_.shininess = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "shininess");
+	parallaxViewFragmentArgs_.drawDepth = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "drawdepth");
+	parallaxViewFragmentArgs_.headNum = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "headnum");
 
-	cgFragmentParamDecal0_ = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "decal");
+	parallaxViewFragmentArgs_.decal = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "decal");
 	checkForCgError("Getting fragment program decal parameter");
 
 	// Set light source color parameters once. 
-	cgSetParameter3fv(cgFragmentParamGlobalAmbient_, globalAmbient_);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.globalAmbient, globalAmbient_);
 	checkForCgError("Setting fragment global ambient lighting");
-	cgSetParameter3fv(cgFragmentParamLightColor_, lightColor_);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.lightColor, lightColor_);
 	checkForCgError("Setting fragment program light color");
 
 	// Set up head number for rendering/loading with skipped lines
-	cgSetParameter1i(cgFragmentParamHeadnum_, numHeads_);
+	cgSetParameter1i(parallaxViewFragmentArgs_.headNum, numHeads_);
 	checkForCgError("Setting head number parameter");
 
 	boost::filesystem::path workingDir(boost::filesystem::current_path());
@@ -367,16 +352,16 @@ void HoloRenderDSCP2::glutInitLoop()
 	checkForCgError2("loading fragment program");
 	LOG4CXX_INFO(logger_, "Loaded fringe computation fragment program file: " << vertexProgramFileName_);
 
-	cgFragmentParamHogelYes_ = cgGetNamedParameter(cgFragmentProgram_, "hogelYes"); 
-	cgSetParameter1f(cgFragmentParamHogelYes_, 0.0f);
-	cgFragmentParamHologramGain_ = cgGetNamedParameter(cgFragmentProgram_, "hologramGain");
-	cgSetParameter1f(cgFragmentParamHologramGain_, masterHologramGain_);
-	cgFragmentParamHologramDebugSwitch_ = cgGetNamedParameter(cgFragmentProgram_, "hologramDebugSwitch");
-	cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
-	cgFragmentParamHeadnum_ = cgGetNamedParameter(cgFragmentProgram_, "headnum");
-	cgSetParameter1f(cgFragmentParamHeadnum_, numHeads_);
+	fringeFragmentArgs_.hogelYes = cgGetNamedParameter(cgFragmentProgram_, "hogelYes");
+	cgSetParameter1f(fringeFragmentArgs_.hogelYes, 0.0f);
+	fringeFragmentArgs_.hologramGain = cgGetNamedParameter(cgFragmentProgram_, "hologramGain");
+	cgSetParameter1f(fringeFragmentArgs_.hologramGain, masterHologramGain_);
+	fringeFragmentArgs_.debugSwitch = cgGetNamedParameter(cgFragmentProgram_, "hologramDebugSwitch");
+	cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
+	fringeFragmentArgs_.headNum = cgGetNamedParameter(cgFragmentProgram_, "headnum");
+	cgSetParameter1f(fringeFragmentArgs_.headNum, numHeads_);
 
-	cgFragmentParamDecal1_ = cgGetNamedParameter(cgFragmentProgram_, "decal0");
+	fringeFragmentArgs_.decal = cgGetNamedParameter(cgFragmentProgram_, "decal0");
 	checkForCgError2("getting decal parameter");
 
 	glCheckErrors();
@@ -447,12 +432,12 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 	case 'x': //cycle through debug modes in shader (output intermediate variables)
 		hologramOutputDebugSwitch_++;
 		hologramOutputDebugSwitch_ = hologramOutputDebugSwitch_ % HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES;
-		cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
+		cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
 		break;
 	case 'X':
 		hologramOutputDebugSwitch_--;
 		hologramOutputDebugSwitch_ = hologramOutputDebugSwitch_ % HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES;
-		cgSetParameter1f(cgFragmentParamHologramDebugSwitch_, hologramOutputDebugSwitch_);
+		cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
 		break;
 	case 'j':
 		translateX_ = translateX_ + 0.01;
@@ -606,7 +591,7 @@ void HoloRenderDSCP2::display(int headNum)
 		
 		//glBindTexture(GL_TEXTURE_2D, textureIDs_[headNum]);
 
-		cgGLSetTextureParameter(cgFragmentParamDecal0_, textureIDs_[headNum]);
+		cgGLSetTextureParameter(parallaxViewFragmentArgs_.decal, textureIDs_[headNum]);
 		checkForCgError("Setting decal texture");
 
 		cgGLBindProgram(normalMapLightingCgVertexProgram_);
@@ -756,9 +741,9 @@ void HoloRenderDSCP2::display(int headNum)
 #endif
 
 //Fringe computation
-#if 0
+#if 1
 
-	cgGLSetTextureParameter(cgFragmentParamDecal1_, textureIDs_[headNum]);
+	cgGLSetTextureParameter(fringeFragmentArgs_.decal, textureIDs_[headNum]);
 
 	checkForCgError2("setting decal 3D texture0");
 		float quadRadius = 0.5;
@@ -795,7 +780,7 @@ void HoloRenderDSCP2::display(int headNum)
 		cgGLEnableProfile(cgFragmentProfile_);
 		//checkForCgError("enabling fragment profile");
 
-		cgGLEnableTextureParameter(cgFragmentParamDecal1_);
+		cgGLEnableTextureParameter(fringeFragmentArgs_.decal);
 		//  checkForCgError2("enable decal texture0");
 		//  cgGLEnableTextureParameter(myCgFragmentParam_decal1);
 		//  checkForCgError2("enable decal texture1");
@@ -889,14 +874,14 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 
 //#endif
 
-	cgSetParameter1f(cgFragmentParamDrawdepth_, drawdepthOn);
+	cgSetParameter1f(parallaxViewFragmentArgs_.drawDepth, drawdepthOn);
 	/* Transform world-space eye and light positions to sphere's object-space. */
 	//transform(objSpaceEyePosition, invModelMatrix_sphere, eyePosition);
 
-	cgSetParameter3fv(cgFragmentParamEyePosition_, objSpaceEyePosition);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.eyePosition, objSpaceEyePosition);
 
 	//transform(objSpaceLightPosition, invModelMatrix_sphere, lightPosition);
-	cgSetParameter3fv(cgFragmentParamLightPosition_, objSpaceLightPosition_sphere);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.lightPosition, objSpaceLightPosition_sphere);
 
 	holo::utils::MultMatrix(modelViewProjMatrix, projectionMatrix1_, modelMatrix_sphere);
 
@@ -909,7 +894,7 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 	//glViewport(h,v,64,440);
 
 	/* Set matrix parameter with row-major matrix. */
-	cgSetMatrixParameterfr(cgVertexParamModelViewProj_, modelViewProjMatrix);
+	cgSetMatrixParameterfr(parallaxViewVertexArgs_.modelViewProj, modelViewProjMatrix);
 	cgUpdateProgramParameters(normalMapLightingCgVertexProgram_);
 
 	this->drawPointCloud();
@@ -1022,11 +1007,11 @@ void HoloRenderDSCP2::cgSetBrassMaterial(){
 	{ 0.78, 0.78, 0.78 }, brassSpecular[3] =
 	{ 0.99, 0.99, 0.99 }, brassShininess = 27.8;
 
-	cgSetParameter3fv(cgFragmentParamKe_, brassEmissive);
-	cgSetParameter3fv(cgFragmentParamKa_, brassAmbient);
-	cgSetParameter3fv(cgFragmentParamKd_, brassDiffuse);
-	cgSetParameter3fv(cgFragmentParamKs_, brassSpecular);
-	cgSetParameter1f(cgFragmentParamShininess_, brassShininess);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ke, brassEmissive);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ka, brassAmbient);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.kd, brassDiffuse);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ks, brassSpecular);
+	cgSetParameter1f(parallaxViewFragmentArgs_.shininess, brassShininess);
 }
 
 void HoloRenderDSCP2::cgSetRedPlasticMaterial()
@@ -1037,15 +1022,15 @@ void HoloRenderDSCP2::cgSetRedPlasticMaterial()
 	{ 0.5, 0.5, 0.5 }, redPlasticSpecular[3] =
 	{ 0.6, 0.6, 0.6 }, redPlasticShininess = 32.0;
 
-	cgSetParameter3fv(cgFragmentParamKe_, redPlasticEmissive);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ke, redPlasticEmissive);
 	checkForCgError("setting Ke parameter");
-	cgSetParameter3fv(cgFragmentParamKa_, redPlasticAmbient);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ka, redPlasticAmbient);
 	checkForCgError("setting Ka parameter");
-	cgSetParameter3fv(cgFragmentParamKd_, redPlasticDiffuse);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.kd, redPlasticDiffuse);
 	checkForCgError("setting Kd parameter");
-	cgSetParameter3fv(cgFragmentParamKs_, redPlasticSpecular);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ks, redPlasticSpecular);
 	checkForCgError("setting Ks parameter");
-	cgSetParameter1f(cgFragmentParamShininess_, redPlasticShininess);
+	cgSetParameter1f(parallaxViewFragmentArgs_.shininess, redPlasticShininess);
 	checkForCgError("setting shininess parameter");
 }
 
@@ -1053,15 +1038,15 @@ void HoloRenderDSCP2::cgSetEmissiveLightColorOnly()
 {
 	const float zero[3] = { 0.0, 0.0, 0.0 };
 
-	cgSetParameter3fv(cgFragmentParamKe_, lightColor_);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ke, lightColor_);
 	checkForCgError("setting Ke parameter");
-	cgSetParameter3fv(cgFragmentParamKa_, zero);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ka, zero);
 	checkForCgError("setting Ka parameter");
-	cgSetParameter3fv(cgFragmentParamKd_, zero);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.kd, zero);
 	checkForCgError("setting Kd parameter");
-	cgSetParameter3fv(cgFragmentParamKs_, zero);
+	cgSetParameter3fv(parallaxViewFragmentArgs_.ks, zero);
 	checkForCgError("setting Ks parameter");
-	cgSetParameter1f(cgFragmentParamShininess_, 0);
+	cgSetParameter1f(parallaxViewFragmentArgs_.shininess, 0);
 	checkForCgError("setting shininess parameter");
 }
 
