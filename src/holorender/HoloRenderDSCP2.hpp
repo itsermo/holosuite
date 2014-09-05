@@ -70,7 +70,7 @@ namespace holo
 		{
 		public:
 			HoloRenderDSCP2();
-			HoloRenderDSCP2(int numHeads);
+			HoloRenderDSCP2(int headNumber);
 			~HoloRenderDSCP2();
 
 			bool init();
@@ -79,7 +79,7 @@ namespace holo
 			void updateFromPointCloud(HoloCloudPtr && pointCloud);
 			void* getContext() { return nullptr; }
 
-			void display(int head);
+			void display(void);
 			void idle(void);
 			void keyboard(unsigned char c, int x, int y);
 			void cleanup(void);
@@ -153,7 +153,7 @@ namespace holo
 			void cgSetRedPlasticMaterial();
 			void cgSetEmissiveLightColorOnly();
 
-			int numHeads_, *windowIndecies_;
+			int headNum_;
 
 			float masterHologramGain_;
 
@@ -182,7 +182,7 @@ namespace holo
 
 			float mag_, fieldOfView_;
 
-			GLuint *textureIDs_;
+			GLuint textureID_;
 
 			GLfloat lightAmbient_[4];
 			GLfloat lightDiffuse_[4];
@@ -230,7 +230,6 @@ namespace holo
 			log4cxx::LoggerPtr logger_;
 		};
 
-		static int gNumDSCP2Heads = 0;
 		static HoloRenderDSCP2 *gCurrentDSCP2Instance = nullptr;
 	}
 }
