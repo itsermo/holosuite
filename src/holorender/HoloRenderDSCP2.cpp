@@ -125,32 +125,7 @@ HoloRenderDSCP2::HoloRenderDSCP2(int numHeads) : IHoloRender(),
 
 	localFramebufferStore_ = new GLubyte[viewTexWidth_ * viewTexHeight_ * 4];
 
-	// Get the screen resolution from the desktop (Windows or X11)
-#ifdef WIN32
-	RECT desktop;
-	// Get a handle to the desktop window
-	const HWND hDesktop = GetDesktopWindow();
-	// Get the size of screen to the variable desktop
-	GetWindowRect(hDesktop, &desktop);
-	// The top left corner will have coordinates (0,0)
-	// and the bottom right corner will have coordinates
-	// (horizontal, vertical)
-	displayModeWidth_ = desktop.right;
-	displayModeHeight_ = desktop.bottom;
-#elif defined(__linux) || defined(__unix) || defined(__posix)
-	Display *displayName;
-	int depth, screen, connection;
-
-	/*Opening display and setting defaults*/
-	displayName = XOpenDisplay(":0.0");
-	screen = DefaultScreen(displayName);
-
-	displayModeWidth_ = DisplayWidth(displayName, screen);
-	displayModeHeight_ = DisplayHeight(displayName, screen);
-#endif
-
 	LOG4CXX_INFO(logger_, "Window environment display mode resolution: " << displayModeWidth_ << "x" << displayModeHeight_);
-
 
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderDSCP2 object");
 }
@@ -176,6 +151,38 @@ HoloRenderDSCP2::~HoloRenderDSCP2()
 bool HoloRenderDSCP2::init()
 {
 	LOG4CXX_INFO(logger_, "Initializing DSCP2 render algorithm...");
+
+	// Get the screen resolution from the desktop (Windows or X11)
+#ifdef WIN32
+	RECT desktop;
+	// Get a handle to the desktop window
+	const HWND hDesktop = GetDesktopWindow();
+	// Get the size of screen to the variable desktop
+	GetWindowRect(hDesktop, &desktop);
+	// The top left corner will have coordinates (0,0)
+	// and the bottom right corner will have coordinates
+	// (horizontal, vertical)
+	displayModeWidth_ = desktop.right;
+	displayModeHeight_ = desktop.bottom;
+#elif defined(__linux) || defined(__unix) || defined(__posix)
+	Display *displayName;
+	int depth, screen, connection;
+
+	char *displayHeadVar = getenv("DISPLAY");
+	if(displayHeadVar == nullptr)
+	{
+		LOG4CXX_ERROR(logger_, "DISPLAY envirnoment variable not set. Please set which head to run DSCP2 algorithm on by typing something like DISPLAY=:0.0");
+	}
+
+	LOG4CXX_INFO(logger_, "Running DSCP2 OpenGL window on X display " << displayHeadVar);
+
+	/*Opening display and setting defaults*/
+	displayName = XOpenDisplay(displayHeadVar);
+	screen = DefaultScreen(displayName);
+
+	displayModeWidth_ = DisplayWidth(displayName, screen);
+	displayModeHeight_ = DisplayHeight(displayName, screen);
+#endif
 
 	cloud_ = HoloCloudPtr(new HoloCloud);
 
@@ -735,7 +742,7 @@ void HoloRenderDSCP2::display()
 #endif
 
 //Fringe computation
-#if 0
+#if 1
 		float quadRadius = 0.5;
 
 		// glViewport(0,0,imwidth,512);
@@ -906,7 +913,7 @@ void HoloRenderDSCP2::drawPointCloud()
 
 		glEnable(GL_POINT_SMOOTH);
 		glPointSize(1.0f);
-		//float attenparams[3] = {0,0,0}; //a b c	//size × 1 a + b × d + c × d 2
+		//float attenparams[3] = {0,0,0}; //a b c	//size ï¿½ 1 a + b ï¿½ d + c ï¿½ d 2
 		//glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION,attenparams);
 		glBegin(GL_POINTS);
 
