@@ -44,8 +44,9 @@
 #define HOLO_RENDER_DSCP2_LIGHT_LOCATION_Z 1.100f
 
 // CG code defines
+#define HOLO_RENDER_DSCP2_WINDOW_NAME "edu.mit.media.obmg.dscp.mk2"
+
 #define HOLO_RENDER_DSCP2_CG_PROGRAM_PATH "../shaders"
-#define HOLO_RENDER_DSCP2_CG_PROGRAM_NAME "edu.mit.media.obmg.dscp.mk2"
 
 #define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_NAME "HoloRenderDSCP2CloudVertexShader"
 #define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2CloudVertexShader.cg"
@@ -78,10 +79,49 @@ namespace holo
 			void updateFromPointCloud(HoloCloudPtr && pointCloud);
 			void* getContext() { return nullptr; }
 
-			void display(void);
+			void display(int head);
 			void idle(void);
 			void keyboard(unsigned char c, int x, int y);
 			void cleanup(void);
+
+
+			struct ParallaxViewVertexArgs
+			{
+				CGparameter modelViewProj;
+				CGparameter modelUIScale;
+			};
+
+			struct ParallaxViewFragmentArgs
+			{
+				CGparameter globalAmbient;
+				CGparameter lightColor;
+				CGparameter lightPosition;
+				CGparameter eyePosition;
+				CGparameter ke;
+				CGparameter ka;
+				CGparameter kd;
+				CGparameter ks;
+				CGparameter	shininess;
+				CGparameter drawDepth;
+				CGparameter headNum;
+				CGparameter decal;
+			};
+
+			struct CgFringeVertexArgs
+			{
+				CGparameter placeHolder;
+			};
+
+			struct FringeFragmentArgs
+			{
+				CGparameter hogelYes;
+				CGparameter hologramGain;
+				CGparameter debugSwitch;
+				CGparameter textureMatrix;
+				CGparameter depthMatrix;
+				CGparameter decal;
+				CGparameter headNum;
+			};
 
 		private:
 
@@ -109,12 +149,11 @@ namespace holo
 			bool checkForCgError2(const char *situation);
 			bool checkForCgError(const char *situation);
 
-
 			void cgSetBrassMaterial();
 			void cgSetRedPlasticMaterial();
 			void cgSetEmissiveLightColorOnly();
 
-			int numHeads_;
+			int numHeads_, *windowIndecies_;
 
 			float masterHologramGain_;
 
@@ -143,8 +182,7 @@ namespace holo
 
 			float mag_, fieldOfView_;
 
-			GLuint textureID_;
-			GLuint texNum_;
+			GLuint *textureIDs_;
 
 			GLfloat lightAmbient_[4];
 			GLfloat lightDiffuse_[4];
@@ -159,30 +197,22 @@ namespace holo
 			float translateX_, translateY_, translateZ_;
 			float rot_, rotX_;
 
-			const char *vertexProgramFileName_, *vertexProgramName_;
-			const char *fragmentProgramFileName_, *fragmentProgramName_;
 			const char *normalMapLightingVertexProgramName_, *normalMapLightingVertexProgramFileName_;
 			const char *normalMapLightingFragmentProgramName_, *normalMapLightingFragmentProgramFileName_;
 
+			const char *vertexProgramFileName_, *vertexProgramName_;
+			const char *fragmentProgramFileName_, *fragmentProgramName_;
+
 			CGcontext normalMapLightingCgContext_;
-			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
+
 			CGprogram cgVertexProgram_, cgFragmentProgram_, normalMapLightingCgVertexProgram_, normalMapLightingCgFragmentProgram_;
-
-			//CGparameter cgVertexParamModelUIScale_;
-
-			CGparameter cgVertexParamModelViewProj_;
-			CGparameter cgFragmentParamGlobalAmbient_,
-				cgFragmentParamLightColor_, cgFragmentParamLightPosition_,
-				cgFragmentParamEyePosition_, cgFragmentParamKe_,
-				cgFragmentParamKa_, cgFragmentParamKd_, cgFragmentParamKs_,
-				cgFragmentParamShininess_, cgFragmentParamDrawdepth_, cgFragmentParamHeadnum_;
-
-			CGparameter cgFragmentParamHogelYes_, cgFragmentParamHologramGain_,
-				cgFragmentParamHologramDebugSwitch_, cgVertexParamTextureMatrix_,
-				cgVertexParamDepthMatrix_, cgVertexParamDrawdepth_;
-
+			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
 			CGprofile cgVertexProfile_, cgFragmentProfile_;
-			CGparameter cgFragmentParamDecal0_, cgFragmentParamDecal1_;
+
+			ParallaxViewVertexArgs parallaxViewVertexArgs_;
+			ParallaxViewFragmentArgs parallaxViewFragmentArgs_;
+
+			FringeFragmentArgs fringeFragmentArgs_;
 
 			std::mutex cloudMutex_;
 			HoloCloudPtr cloud_;
@@ -200,7 +230,8 @@ namespace holo
 			log4cxx::LoggerPtr logger_;
 		};
 
-		static HoloRenderDSCP2 *gCurrentInstance;
+		static int gNumDSCP2Heads = 0;
+		static HoloRenderDSCP2 *gCurrentDSCP2Instance = nullptr;
 	}
 }
 
