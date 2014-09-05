@@ -48,15 +48,15 @@
 
 #define HOLO_RENDER_DSCP2_CG_PROGRAM_PATH "../shaders"
 
-#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_NAME "HoloRenderDSCP2CloudVertexShader"
-#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2CloudVertexShader.cg"
-#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_NAME "HoloRenderDSCP2CloudFragmentShader"
-#define HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_FILENAME "HoloRenderDSCP2CloudFragmentShader.cg"
+#define HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_VERTEX_PROGRAM_NAME "HoloRenderDSCP2CloudVertexShader"
+#define HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2CloudVertexShader.cg"
+#define HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_FRAGMENT_PROGRAM_NAME "HoloRenderDSCP2CloudFragmentShader"
+#define HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_FRAGMENT_PROGRAM_FILENAME "HoloRenderDSCP2CloudFragmentShader.cg"
 
-#define HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_NAME "HoloRenderDSCP2FringeVertexShader"
-#define HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2FringeVertexShader.cg"
-#define HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_NAME "HoloRenderDSCP2FringeFragmentShader"
-#define HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_FILENAME "HoloRenderDSCP2FringeFragmentShader.cg"
+#define HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_VERTEX_PROGRAM_NAME "HoloRenderDSCP2FringeVertexShader"
+#define HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_VERTEX_PROGRAM_FILENAME "HoloRenderDSCP2FringeVertexShader.cg"
+#define HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_FRAGMENT_PROGRAM_NAME "HoloRenderDSCP2FringeFragmentShader"
+#define HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_FRAGMENT_PROGRAM_FILENAME "HoloRenderDSCP2FringeFragmentShader.cg"
 
 #include <atomic>
 #include <string>
@@ -84,7 +84,6 @@ namespace holo
 			void keyboard(unsigned char c, int x, int y);
 			void cleanup(void);
 
-
 			struct ParallaxViewVertexArgs
 			{
 				CGparameter modelViewProj;
@@ -107,12 +106,12 @@ namespace holo
 				CGparameter decal;
 			};
 
-			struct CgFringeVertexArgs
+			struct FringePatternVertexArgs
 			{
 				CGparameter placeHolder;
 			};
 
-			struct FringeFragmentArgs
+			struct FringePatternFragmentArgs
 			{
 				CGparameter hogelYes;
 				CGparameter hologramGain;
@@ -197,22 +196,22 @@ namespace holo
 			float translateX_, translateY_, translateZ_;
 			float rot_, rotX_;
 
-			const char *normalMapLightingVertexProgramName_, *normalMapLightingVertexProgramFileName_;
-			const char *normalMapLightingFragmentProgramName_, *normalMapLightingFragmentProgramFileName_;
+			const char *parallaxViewVertexProgramName_, *parallaxViewVertexProgramFileName_;
+			const char *parallaxViewFragmentProgramName_, *parallaxViewFragmentProgramFileName_;
 
-			const char *vertexProgramFileName_, *vertexProgramName_;
-			const char *fragmentProgramFileName_, *fragmentProgramName_;
+			const char *fringePatternVertexProgramFileName_, *fringePatternVertexProgramName_;
+			const char *fringePatternFragmentProgramFileName_, *fringePatternFragmentProgramName_;
 
-			CGcontext normalMapLightingCgContext_;
+			CGcontext cgContext_;
 
-			CGprogram cgVertexProgram_, cgFragmentProgram_, normalMapLightingCgVertexProgram_, normalMapLightingCgFragmentProgram_;
-			CGprofile normalMapLightingCgVertexProfile_, normalMapLightingCgFragmentProfile_;
-			CGprofile cgVertexProfile_, cgFragmentProfile_;
-
+			CGprogram parallaxViewCgVertexProgram_, parallaxViewCgFragmentProgram_;
+			CGprofile parallaxViewCgVertexProfile_, parallaxViewCgFragmentProfile_;
 			ParallaxViewVertexArgs parallaxViewVertexArgs_;
 			ParallaxViewFragmentArgs parallaxViewFragmentArgs_;
 
-			FringeFragmentArgs fringeFragmentArgs_;
+			CGprogram fringePatternCgVertexProgram_, fringePatternCgFragmentProgram_;
+			CGprofile fringePatternCgVertexProfile_, fringePatternCgFragmentProfile_;
+			FringePatternFragmentArgs fringeFragmentArgs_;
 
 			std::mutex cloudMutex_;
 			HoloCloudPtr cloud_;

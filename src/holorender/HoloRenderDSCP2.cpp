@@ -47,21 +47,21 @@ HoloRenderDSCP2::HoloRenderDSCP2(int headNumber) : IHoloRender(),
 	translateZ_(0.0f),
 	rot_(0.0f),
 	rotX_(0.0f),
-	vertexProgramName_(HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_NAME),
-	vertexProgramFileName_(HOLO_RENDER_DSCP2_CG_VERTEX_PROGRAM_FILENAME),
-	fragmentProgramName_(HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_NAME),
-	fragmentProgramFileName_(HOLO_RENDER_DSCP2_CG_FRAGMENT_PROGRAM_FILENAME),
-	normalMapLightingVertexProgramName_(HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_NAME),
-	normalMapLightingVertexProgramFileName_(HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_VERTEX_PROGRAM_FILENAME),
-	normalMapLightingFragmentProgramName_(HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_NAME),
-	normalMapLightingFragmentProgramFileName_(HOLO_RENDER_DSCP2_CG_NORMAL_MAPLIGHT_FRAGMENT_PROGRAM_FILENAME),
-	normalMapLightingCgContext_(nullptr),
-	normalMapLightingCgVertexProgram_(nullptr),
-	normalMapLightingCgFragmentProgram_(nullptr),
-	normalMapLightingCgVertexProfile_(CG_PROFILE_UNKNOWN),
-	normalMapLightingCgFragmentProfile_(CG_PROFILE_UNKNOWN),
-	cgVertexProfile_(CG_PROFILE_UNKNOWN),
-	cgFragmentProfile_(CG_PROFILE_UNKNOWN),
+	parallaxViewVertexProgramName_(HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_VERTEX_PROGRAM_NAME),
+	parallaxViewVertexProgramFileName_(HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_VERTEX_PROGRAM_FILENAME),
+	parallaxViewFragmentProgramName_(HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_FRAGMENT_PROGRAM_NAME),
+	parallaxViewFragmentProgramFileName_(HOLO_RENDER_DSCP2_CG_PARALLAX_VIEW_FRAGMENT_PROGRAM_FILENAME),
+	fringePatternVertexProgramName_(HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_VERTEX_PROGRAM_NAME),
+	fringePatternVertexProgramFileName_(HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_VERTEX_PROGRAM_FILENAME),
+	fringePatternFragmentProgramName_(HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_FRAGMENT_PROGRAM_NAME),
+	fringePatternFragmentProgramFileName_(HOLO_RENDER_DSCP2_CG_FRINGE_PATTERN_FRAGMENT_PROGRAM_FILENAME),
+	cgContext_(nullptr),
+	parallaxViewCgVertexProgram_(nullptr),
+	parallaxViewCgFragmentProgram_(nullptr),
+	parallaxViewCgVertexProfile_(CG_PROFILE_UNKNOWN),
+	parallaxViewCgFragmentProfile_(CG_PROFILE_UNKNOWN),
+	fringePatternCgVertexProfile_(CG_PROFILE_UNKNOWN),
+	fringePatternCgFragmentProfile_(CG_PROFILE_UNKNOWN),
 	localFramebufferStore_(nullptr),
 	firstInit_(true),
 	isInit_(false),
@@ -255,52 +255,52 @@ void HoloRenderDSCP2::glutInitLoop()
 	// CG program intialization
 	cgGLSetDebugMode(CG_FALSE);
 
-	normalMapLightingCgContext_ = cgCreateContext();
+	cgContext_ = cgCreateContext();
 	checkForCgError("Creating normal map lighting context...");
 
 	// Panoramagram generation vertex program
-	normalMapLightingCgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
-	cgGLSetOptimalOptions(normalMapLightingCgVertexProfile_);
+	parallaxViewCgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
+	cgGLSetOptimalOptions(parallaxViewCgVertexProfile_);
 	checkForCgError("Selecting vertex profile...");
-	normalMapLightingCgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, normalMapLightingVertexProgramFileName_, normalMapLightingCgVertexProfile_,normalMapLightingVertexProgramName_,NULL);
+	parallaxViewCgVertexProgram_ = cgCreateProgramFromFile(cgContext_, CG_SOURCE, parallaxViewVertexProgramFileName_, parallaxViewCgVertexProfile_, parallaxViewVertexProgramName_, NULL);
 	checkForCgError("Creating vertex program from file");
-	cgGLLoadProgram(normalMapLightingCgVertexProgram_);
+	cgGLLoadProgram(parallaxViewCgVertexProgram_);
 	checkForCgError("Loading vertex program");
-	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << normalMapLightingVertexProgramFileName_);
+	LOG4CXX_INFO(logger_, "Loaded panoramagram vertex program file: " << parallaxViewVertexProgramFileName_);
 
-	parallaxViewVertexArgs_.modelViewProj = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "modelViewProj");
+	parallaxViewVertexArgs_.modelViewProj = cgGetNamedParameter(parallaxViewCgVertexProgram_, "modelViewProj");
 	checkForCgError("could not get modelViewProj vertex parameter ln 1707");
-	//cgVertexParamTextureMatrix_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "textureMatrix");
+	//cgVertexParamTextureMatrix_ = cgGetNamedParameter(parallaxViewCgVertexProgram_, "textureMatrix");
 	//checkForCgError("could not get textureMatrix vertex parameter ln 1707");
-	//cgVertexParamDepthMatrix_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "depthMatrix");
+	//cgVertexParamDepthMatrix_ = cgGetNamedParameter(parallaxViewCgVertexProgram_, "depthMatrix");
 	//checkForCgError("could not get depthMatrix vertex parameter ln 1707");
-	//cgVertexParamDrawdepth_ = cgGetNamedParameter(normalMapLightingCgVertexProgram_, "drawDepth");
+	//cgVertexParamDrawdepth_ = cgGetNamedParameter(parallaxViewCgVertexProgram_, "drawDepth");
 	//checkForCgError("could not get drawDepth vertex parameter ln 1707");
 
 	// Panoramagram generation fragment program
-	normalMapLightingCgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
-	cgGLSetOptimalOptions(normalMapLightingCgFragmentProfile_);
+	parallaxViewCgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
+	cgGLSetOptimalOptions(parallaxViewCgFragmentProfile_);
 	checkForCgError("Selecting fragment profile...");
-	normalMapLightingCgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, normalMapLightingFragmentProgramFileName_, normalMapLightingCgFragmentProfile_, normalMapLightingFragmentProgramName_, NULL); 
+	parallaxViewCgFragmentProgram_ = cgCreateProgramFromFile(cgContext_, CG_SOURCE, parallaxViewFragmentProgramFileName_, parallaxViewCgFragmentProfile_, parallaxViewFragmentProgramName_, NULL); 
 	checkForCgError("Creating fragment program");
-	cgGLLoadProgram(normalMapLightingCgFragmentProgram_);
+	cgGLLoadProgram(parallaxViewCgFragmentProgram_);
 	checkForCgError("loading fragment program");
 
-	LOG4CXX_INFO(logger_, "Loaded panoramagram fragment program file: " << normalMapLightingFragmentProgramFileName_);
+	LOG4CXX_INFO(logger_, "Loaded panoramagram fragment program file: " << parallaxViewFragmentProgramFileName_);
 
-	parallaxViewFragmentArgs_.globalAmbient = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "globalAmbient");
-	parallaxViewFragmentArgs_.lightColor = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightColor");
-	parallaxViewFragmentArgs_.lightPosition = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "lightPosition");
-	parallaxViewFragmentArgs_.eyePosition = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "eyePosition");
-	parallaxViewFragmentArgs_.ke = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ke");
-	parallaxViewFragmentArgs_.ka = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ka");
-	parallaxViewFragmentArgs_.kd = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Kd");
-	parallaxViewFragmentArgs_.ks = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "Ks");
-	parallaxViewFragmentArgs_.shininess = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "shininess");
-	parallaxViewFragmentArgs_.drawDepth = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "drawdepth");
-	parallaxViewFragmentArgs_.headNum = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "headnum");
+	parallaxViewFragmentArgs_.globalAmbient = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "globalAmbient");
+	parallaxViewFragmentArgs_.lightColor = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "lightColor");
+	parallaxViewFragmentArgs_.lightPosition = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "lightPosition");
+	parallaxViewFragmentArgs_.eyePosition = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "eyePosition");
+	parallaxViewFragmentArgs_.ke = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "Ke");
+	parallaxViewFragmentArgs_.ka = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "Ka");
+	parallaxViewFragmentArgs_.kd = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "Kd");
+	parallaxViewFragmentArgs_.ks = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "Ks");
+	parallaxViewFragmentArgs_.shininess = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "shininess");
+	parallaxViewFragmentArgs_.drawDepth = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "drawdepth");
+	parallaxViewFragmentArgs_.headNum = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "headnum");
 
-	parallaxViewFragmentArgs_.decal = cgGetNamedParameter(normalMapLightingCgFragmentProgram_, "decal");
+	parallaxViewFragmentArgs_.decal = cgGetNamedParameter(parallaxViewCgFragmentProgram_, "decal");
 	checkForCgError("Getting fragment program decal parameter");
 	cgGLSetTextureParameter(parallaxViewFragmentArgs_.decal, textureID_);
 	checkForCgError("Setting decal texture");
@@ -319,35 +319,35 @@ void HoloRenderDSCP2::glutInitLoop()
 	LOG4CXX_INFO(logger_, "Accessing Cg files from working directory: " << workingDir.string());
 
 	// Fringe computation vertex program
-	cgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
-	cgGLSetOptimalOptions(cgVertexProfile_);
+	fringePatternCgVertexProfile_ = cgGLGetLatestProfile(CG_GL_VERTEX);
+	cgGLSetOptimalOptions(fringePatternCgVertexProfile_);
 	checkForCgError("Selecting vertex profile");
-	cgVertexProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_,	CG_SOURCE,	vertexProgramFileName_, cgVertexProfile_, vertexProgramName_, NULL);
+	fringePatternCgVertexProgram_ = cgCreateProgramFromFile(cgContext_, CG_SOURCE, fringePatternVertexProgramFileName_, fringePatternCgVertexProfile_, fringePatternVertexProgramName_, NULL);
 	checkForCgError2("Creating fringe vertex program from file");
-	cgGLLoadProgram(cgVertexProgram_);
+	cgGLLoadProgram(fringePatternCgVertexProgram_);
 	checkForCgError2("Loading vertex program");
-	LOG4CXX_INFO(logger_, "Loaded fringe computation vertex program file: " << vertexProgramFileName_);
+	LOG4CXX_INFO(logger_, "Loaded fringe computation vertex program file: " << fringePatternVertexProgramName_);
 
 	// Fringe computation fragment program
-	cgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
-	cgGLSetOptimalOptions(cgFragmentProfile_);
+	fringePatternCgFragmentProfile_ = cgGLGetLatestProfile(CG_GL_FRAGMENT);
+	cgGLSetOptimalOptions(fringePatternCgFragmentProfile_);
 	checkForCgError2("Selecting fragment profile");
-	cgFragmentProgram_ = cgCreateProgramFromFile(normalMapLightingCgContext_, CG_SOURCE, fragmentProgramFileName_, cgFragmentProfile_, fragmentProgramName_, NULL);
+	fringePatternCgFragmentProgram_ = cgCreateProgramFromFile(cgContext_, CG_SOURCE, fringePatternFragmentProgramFileName_, fringePatternCgFragmentProfile_, fringePatternFragmentProgramName_, NULL);
 	checkForCgError2("creating fragment program from file");
-	cgGLLoadProgram(cgFragmentProgram_);
+	cgGLLoadProgram(fringePatternCgFragmentProgram_);
 	checkForCgError2("loading fragment program");
-	LOG4CXX_INFO(logger_, "Loaded fringe computation fragment program file: " << vertexProgramFileName_);
+	LOG4CXX_INFO(logger_, "Loaded fringe computation fragment program file: " << fringePatternFragmentProgramFileName_);
 
-	fringeFragmentArgs_.hogelYes = cgGetNamedParameter(cgFragmentProgram_, "hogelYes");
+	fringeFragmentArgs_.hogelYes = cgGetNamedParameter(fringePatternCgFragmentProgram_, "hogelYes");
 	cgSetParameter1f(fringeFragmentArgs_.hogelYes, 0.0f);
-	fringeFragmentArgs_.hologramGain = cgGetNamedParameter(cgFragmentProgram_, "hologramGain");
+	fringeFragmentArgs_.hologramGain = cgGetNamedParameter(fringePatternCgFragmentProgram_, "hologramGain");
 	cgSetParameter1f(fringeFragmentArgs_.hologramGain, masterHologramGain_);
-	fringeFragmentArgs_.debugSwitch = cgGetNamedParameter(cgFragmentProgram_, "hologramDebugSwitch");
+	fringeFragmentArgs_.debugSwitch = cgGetNamedParameter(fringePatternCgFragmentProgram_, "hologramDebugSwitch");
 	cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
-	fringeFragmentArgs_.headNum = cgGetNamedParameter(cgFragmentProgram_, "headnum");
+	fringeFragmentArgs_.headNum = cgGetNamedParameter(fringePatternCgFragmentProgram_, "headnum");
 	cgSetParameter1f(fringeFragmentArgs_.headNum, headNum_);
 
-	fringeFragmentArgs_.decal = cgGetNamedParameter(cgFragmentProgram_, "decal0");
+	fringeFragmentArgs_.decal = cgGetNamedParameter(fringePatternCgFragmentProgram_, "decal0");
 	checkForCgError2("getting decal parameter");
 	cgGLSetTextureParameter(fringeFragmentArgs_.decal, textureID_);
 	checkForCgError2("setting decal 3D texture0");
@@ -522,8 +522,8 @@ void HoloRenderDSCP2::keyboard(unsigned char c, int x, int y)
 	case 27: /* Esc key */
 		/* Demonstrate proper deallocation of Cg runtime data structures.
 		Not strictly necessary if we are simply going to exit. */
-		cgDestroyProgram(normalMapLightingCgVertexProgram_);
-		cgDestroyContext(normalMapLightingCgContext_);
+		cgDestroyProgram(parallaxViewCgVertexProgram_);
+		cgDestroyContext(cgContext_);
 		// ShutDown();
 		exit(0);
 		break;
@@ -577,14 +577,14 @@ void HoloRenderDSCP2::display()
 		
 		//glBindTexture(GL_TEXTURE_2D, textureIDs_[headNum]);
 
-		cgGLBindProgram(normalMapLightingCgVertexProgram_);
+		cgGLBindProgram(parallaxViewCgVertexProgram_);
 		checkForCgError("Binding vertex lighting program");
-		cgGLEnableProfile(normalMapLightingCgVertexProfile_);
+		cgGLEnableProfile(parallaxViewCgVertexProfile_);
 		checkForCgError("Enabling vertex profile lighting");
 
-		cgGLBindProgram(normalMapLightingCgFragmentProgram_);
+		cgGLBindProgram(parallaxViewCgFragmentProgram_);
 		checkForCgError("Binding fragment program lighting");
-		cgGLEnableProfile(normalMapLightingCgFragmentProfile_);
+		cgGLEnableProfile(parallaxViewCgFragmentProfile_);
 		checkForCgError("enabling fragment profile lighting");
 		/*for sphere find model and invModelMatrix */
 
@@ -693,9 +693,9 @@ void HoloRenderDSCP2::display()
 
 		cloudLock.unlock();
 
-		cgGLDisableProfile(normalMapLightingCgVertexProfile_);
+		cgGLDisableProfile(parallaxViewCgVertexProfile_);
 		//checkForCgError("disabling vertex profile");
-		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
+		cgGLDisableProfile(parallaxViewCgFragmentProfile_);
 		//checkForCgError("disabling fragment profile");
 
 		glDisable(GL_TEXTURE_2D);
@@ -724,7 +724,7 @@ void HoloRenderDSCP2::display()
 #endif
 
 //Fringe computation
-#if 1
+#if 0
 
 		float quadRadius = 0.5;
 
@@ -750,14 +750,14 @@ void HoloRenderDSCP2::display()
 
 		glDisable(GL_LIGHTING);
 
-		cgGLBindProgram(cgVertexProgram_);
+		cgGLBindProgram(fringePatternCgVertexProgram_);
 		//checkForCgError2("binding vertex program -fringes");
-		cgGLEnableProfile(cgVertexProfile_);
+		cgGLEnableProfile(fringePatternCgVertexProfile_);
 		//checkForCgError2("enabling vertex profile -fringes");
 
-		cgGLBindProgram(cgFragmentProgram_);
+		cgGLBindProgram(fringePatternCgFragmentProgram_);
 		//checkForCgError("binding fragment program");
-		cgGLEnableProfile(cgFragmentProfile_);
+		cgGLEnableProfile(fringePatternCgFragmentProfile_);
 		//checkForCgError("enabling fragment profile");
 
 		cgGLEnableTextureParameter(fringeFragmentArgs_.decal);
@@ -789,9 +789,9 @@ void HoloRenderDSCP2::display()
 		glDisable(GL_TEXTURE_2D);
 		//glBindTexture(GL_TEXTURE_2D, textureID_);
 
-		cgGLDisableProfile(normalMapLightingCgVertexProfile_);
+		cgGLDisableProfile(parallaxViewCgVertexProfile_);
 		checkForCgError("disabling vertex profile");
-		cgGLDisableProfile(normalMapLightingCgFragmentProfile_);
+		cgGLDisableProfile(parallaxViewCgFragmentProfile_);
 		checkForCgError("disabling fragment profile");
 
 		//glutPostRedisplay();
@@ -872,7 +872,7 @@ void HoloRenderDSCP2::drawScene(float *eyePosition, float *modelMatrix_sphere,
 
 	/* Set matrix parameter with row-major matrix. */
 	cgSetMatrixParameterfr(parallaxViewVertexArgs_.modelViewProj, modelViewProjMatrix);
-	cgUpdateProgramParameters(normalMapLightingCgVertexProgram_);
+	cgUpdateProgramParameters(parallaxViewCgVertexProgram_);
 
 	this->drawPointCloud();
 
@@ -943,7 +943,7 @@ bool HoloRenderDSCP2::checkForCgErrorLine(const char *situation, int line)
 		LOG4CXX_ERROR(logger_, situation << ": " << string);
 		if (error == CG_COMPILER_ERROR)
 		{
-			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(normalMapLightingCgContext_));
+			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(cgContext_));
 			exit(-1);
 		}
 		
@@ -968,7 +968,7 @@ bool HoloRenderDSCP2::checkForCgError2(const char *situation)
 		LOG4CXX_ERROR(logger_, situation << ": " << string);
 		if (error == CG_COMPILER_ERROR)
 		{
-			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(normalMapLightingCgContext_));
+			LOG4CXX_ERROR(logger_, "Cg compiler error: " << cgGetLastListing(cgContext_));
 		}
 
 		return true;
