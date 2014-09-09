@@ -8,7 +8,6 @@
 #include <condition_variable>
 #include <atomic>
 
-
 namespace holo
 {
 	namespace net
@@ -25,7 +24,7 @@ namespace holo
 
 			bool isConnected();
 
-			void performHandshake(HoloNetProtocolHandshake localInfo);
+			void performHandshake(HoloNetProtocolHandshake localInfo, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
 
 			static HoloNetProtocolHandshake GetHandshakeFromPacket(boost::shared_ptr<HoloNetPacket> & packet);
 
@@ -34,19 +33,30 @@ namespace holo
 		protected:
 			void start();
 
+			void addSocket(boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+			{
+				//std::lock_guard<std::mutex> lg(socketListMutex_);
+				this->sockets_.push_back(socket);
+			}
+
 			std::thread sendQueueThread_;
 			//std::thread recvQueueThread_;
-			boost::shared_ptr<boost::asio::ip::tcp::socket> socket_;
+			std::vector<boost::shared_ptr<boost::asio::ip::tcp::socket>> sockets_;
 			void sendLoop();
 			//void recvLoop();
 
 			bool isConnected_;
+
+			static void sendPacket(boost::shared_ptr<HoloNetPacket> & packet, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
+			static void recvPacket(boost::shared_ptr<HoloNetPacket> & packet, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
 
 		private:
 
 
 			void popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet);
 			void pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet);
+
+			std::mutex socketListMutex_;
 
 			//void popRemotePacket(boost::shared_ptr<HoloNetPacket> & packet);
 			//void pushRemotePacket(boost::shared_ptr<HoloNetPacket> && packet);

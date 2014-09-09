@@ -24,7 +24,7 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	LOG4CXX_INFO(logger_, "Resolving address " << address << ":" << port);
 
-	socket_ = boost::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(io_service_));
+	auto socket = boost::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(io_service_));
 
 	boost::asio::ip::tcp::resolver::query query(address.c_str(), std::to_string(port));
 	boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_->resolve(query);
@@ -34,8 +34,8 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	while (error && endpoint_iterator != end)
 	{
-		socket_->close();
-		socket_->connect(*endpoint_iterator++, error);
+		socket->close();
+		socket->connect(*endpoint_iterator++, error);
 	}
 	if (error)
 	{
@@ -46,7 +46,7 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	isConnected_ = true;
 	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
 
-	socket_->set_option(boost::asio::ip::tcp::no_delay(true), error);
+	socket->set_option(boost::asio::ip::tcp::no_delay(true), error);
 	if (error)
 	{
 		LOG4CXX_WARN(logger_, "Could not set socket no delay option")
@@ -54,10 +54,10 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
-	performHandshake(localInfo);
+	performHandshake(localInfo, socket);
 
 	boost::shared_ptr<HoloNetPacket> handshakePacket;
-	this->recvPacket(handshakePacket);
+	this->recvPacket(handshakePacket, socket);
 
 	auto hs = GetHandshakeFromPacket(handshakePacket);
 
@@ -68,6 +68,7 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	LOG4CXX_INFO(logger_, "RGBAZ Field-of-view: " << hs.captureHOV << " deg horiz, " << hs.captureVOV << " deg vert");
 	LOG4CXX_INFO(logger_, "Audio Mode: " << hs.audioNumChan << " chan, " << hs.audioBitDepth << " bits @ " << hs.audioFreq << " kHz");
 
+	this->addSocket(socket);
 
 	isConnected_ = true;
 

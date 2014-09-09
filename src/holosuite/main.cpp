@@ -757,9 +757,10 @@ int main(int argc, char *argv[])
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
 			{
 				server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer);
-				auto serverFunc = std::bind<holo::net::HoloNetProtocolHandshake>(&holo::net::HoloNetServer::listenAndWait, server, HOLO_NET_DEFAULT_PORT, std::placeholders::_1);
-				serverHandle = std::future<holo::net::HoloNetProtocolHandshake>(std::async(std::launch::async, serverFunc, localInfo));
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				//auto serverFunc = std::bind<holo::net::HoloNetProtocolHandshake>(&holo::net::HoloNetServer::listenAndWait, server, HOLO_NET_DEFAULT_PORT, std::placeholders::_1);
+				//serverHandle = std::future<holo::net::HoloNetProtocolHandshake>(std::async(std::launch::async, serverFunc, localInfo));
+				//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				server->listenAsync(HOLO_NET_DEFAULT_PORT, localInfo);
 			}
 			
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_CLIENT || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
@@ -780,7 +781,7 @@ int main(int argc, char *argv[])
 			}
 			
 			if (sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK)
-				infoFromClient = serverHandle.get();
+				infoFromClient = server->waitForNextClient();
 
 			switch (videoCodecType)
 			{
