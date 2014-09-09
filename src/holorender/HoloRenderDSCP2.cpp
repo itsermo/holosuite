@@ -13,7 +13,8 @@
 using namespace holo;
 using namespace holo::render;
 
-HoloRenderDSCP2::HoloRenderDSCP2(int headNumber) : IHoloRender(),
+HoloRenderDSCP2::HoloRenderDSCP2(int headNumber, std::string displayEnv) : IHoloRender(),
+	displayEnv_(displayEnv),
 	haveNewCloud_(false),
 	textureID_(0),
 	headNum_(headNumber),
@@ -115,7 +116,7 @@ HoloRenderDSCP2::HoloRenderDSCP2(int headNumber) : IHoloRender(),
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderDSCP2 object");
 }
 
-HoloRenderDSCP2::HoloRenderDSCP2() : HoloRenderDSCP2(0)
+HoloRenderDSCP2::HoloRenderDSCP2() : HoloRenderDSCP2(0, "")
 {
 
 }
@@ -149,11 +150,18 @@ bool HoloRenderDSCP2::init()
 	// (horizontal, vertical)
 	displayModeWidth_ = desktop.right;
 	displayModeHeight_ = desktop.bottom;
+
+
 #elif defined(__linux) || defined(__unix) || defined(__posix)
 	Display *displayName;
 	int depth, screen, connection;
 
-	char *displayHeadVar = getenv("DISPLAY");
+	const char * displayHeadVar;
+	if (!displayEnv_.empty())
+		displayEnv_ = std::string(getenv("DISPLAY"));
+
+	displayHeadVar = displayEnv_.c_str();
+
 	if(displayHeadVar == nullptr)
 	{
 		LOG4CXX_ERROR(logger_, "DISPLAY envirnoment variable not set. Please set which head to run DSCP2 algorithm on by typing something like DISPLAY=:0.0");
@@ -183,9 +191,18 @@ void HoloRenderDSCP2::glutInitLoop()
 {
 	GLenum glError = GL_NO_ERROR;
 	CGerror cgError = CG_NO_ERROR;
-	char fakeParam[] = "fake";
-	char *fakeargv[] = { fakeParam, NULL };
+
+#ifdef WIN32
+	//char fakeParam[] = "dscp2";
+	char *fakeargv[] = { "holosuite", NULL };
 	int fakeargc = 1;
+#elif defined(__linux) || defined(__unix) || defined(__posix)
+	char displayEnvArg[1024];
+	strncpy(displayEnvArg, displayEnv_.c_str(), displayEnv_.length());
+
+	char *fakeargv[] = { "holosuite", "-display", displayEnvArg, NULL };
+	int fakeargc = 3;
+#endif
 
 	//glCheckErrors();
 

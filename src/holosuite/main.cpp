@@ -52,6 +52,11 @@ int main(int argc, char *argv[])
 	holo::HoloAudioFormat audioCaptureFormat = { 0 };
 	holo::HoloAudioFormat audioRenderFormat = { 0 };
 
+#ifdef ENABLE_HOLO_DSCP2
+	int dscp2HeadNumber = 0;
+	std::string dscp2DisplayEnv;
+#endif
+
 	holo::net::HoloNetProtocolHandshake localInfo = {0};
 	holo::net::HoloNetProtocolHandshake infoFromClient = {0};
 	holo::net::HoloNetProtocolHandshake infoFromServer = {0};
@@ -151,6 +156,8 @@ int main(int argc, char *argv[])
 		;
 #endif
 
+
+
 	// Video encoder options
 	boost::program_options::options_description codec_options("Video encoder");
 	codec_options.add_options()
@@ -170,11 +177,16 @@ int main(int argc, char *argv[])
 	render_options.add_options()
 		("render-output,o",
 		boost::program_options::value<std::string>()->default_value("visualizer"),
-		"valid setting is [visualizer]")
+		"valid setting is [visualizer,dscp2]")
 		("visualizer-settings",
 		boost::program_options::value<std::string>()->composing(),
 		"PCL visualizer settings [voxel size]")
 		;
+
+#ifdef ENABLE_HOLO_DSCP2
+	render_options.add_options()("dscp2-head-number", boost::program_options::value<int>()->default_value(0), "DSCP2 instance head number")
+		("dscp2-display-env", boost::program_options::value<std::string>()->default_value(":0.0"), "X server display (e.g. \":0.0\")");
+#endif
 
 	boost::program_options::options_description cmdline_options;
 	cmdline_options.add(generic_options).add(network_options).add(capture_options).add(codec_options).add(render_options);
@@ -586,10 +598,22 @@ int main(int argc, char *argv[])
 
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
 		}
+#ifdef ENABLE_HOLO_DSCP2
 		else if (vm["render-output"].as<std::string>().compare("dscp2") == 0)
 		{
+			if (vm.count("dscp2-head-number"))
+			{
+				dscp2HeadNumber = vm["dscp2-head-number"].as<int>();
+			}
+
+			if (vm.count("dscp2-display-env"))
+			{
+				dscp2DisplayEnv = vm["dscp2-display-env"].as<string>();
+			}
+
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKII;
 		}
+#endif
 		else if (vm["render-output"].as<std::string>().compare("none") == 0)
 		{
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_NONE;
@@ -902,7 +926,7 @@ int main(int argc, char *argv[])
 					break;
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:
-					renderer = holo::render::HoloRenderGenerator::fromDSCP2();
+					renderer = holo::render::HoloRenderGenerator::fromDSCP2(dscp2HeadNumber, dscp2DisplayEnv);
 					break;
 #endif
 				case holo::render::RENDER_TYPE_DSCP_MKIV:

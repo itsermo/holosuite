@@ -49,6 +49,11 @@ namespace holo
 			{
 				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2());
 			}
+
+			static std::unique_ptr<IHoloRender> fromDSCP2(int headNumber, std::string displayEnv)
+			{
+				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2(headNumber, displayEnv));
+			}
 #endif
 
 		};

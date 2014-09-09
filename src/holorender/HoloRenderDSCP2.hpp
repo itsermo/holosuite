@@ -70,7 +70,7 @@ namespace holo
 		{
 		public:
 			HoloRenderDSCP2();
-			HoloRenderDSCP2(int headNumber);
+			HoloRenderDSCP2(int headNumber, std::string displayEnv);
 			~HoloRenderDSCP2();
 
 			bool init();
@@ -224,6 +224,7 @@ namespace holo
 			std::mutex hasInitMutex_;
 			std::condition_variable hasInitCV_;
 
+			std::string displayEnv_;
 			//cv::Mat localFrameImg_;
 
 			log4cxx::LoggerPtr logger_;
