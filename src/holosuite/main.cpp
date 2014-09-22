@@ -923,7 +923,7 @@ int main(int argc, char *argv[])
 					//TODO: implement 2D VIS
 					break;
 				case holo::render::RENDER_TYPE_VIS3D:
-					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazWidth : infoFromClient.rgbazWidth, sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? infoFromServer.rgbazHeight : infoFromClient.rgbazHeight);
+					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, false);
 					break;
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:

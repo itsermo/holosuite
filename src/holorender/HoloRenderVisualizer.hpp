@@ -9,6 +9,9 @@
 #include <condition_variable>
 #include <atomic>
 
+#define HOLO_RENDER_VISUALIZER_DEFAULT_VOXEL_SIZE HOLO_RENDER_DEFAULT_VOXEL_SIZE
+#define HOLO_RENDER_VISUALIZER_DEFAULT_ENABLE_MESH_CONSTRUCTION false
+
 namespace holo
 {
 	namespace render
@@ -17,7 +20,7 @@ namespace holo
 		{
 		public:
 			HoloRenderVisualizer();
-			HoloRenderVisualizer(int voxelSize, int zWidth, int zHeight);
+			HoloRenderVisualizer(int voxelSize, bool enableMeshContruction);
 			~HoloRenderVisualizer();
 			virtual bool init();
 			virtual void deinit();

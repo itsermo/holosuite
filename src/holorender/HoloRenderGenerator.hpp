@@ -27,9 +27,9 @@ namespace holo
 				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer());
 			}
 
-			static std::unique_ptr<IHoloRender> fromPCLVisualizer(int voxelSize, int zWidth, int zHeight)
+			static std::unique_ptr<IHoloRender> fromPCLVisualizer(int voxelSize, bool enableMeshConstruction)
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer(voxelSize, zWidth, zHeight));
+				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer(voxelSize, enableMeshConstruction));
 			}
 
 #ifdef ENABLE_HOLO_AUDIO

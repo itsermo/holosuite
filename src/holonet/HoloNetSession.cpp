@@ -126,6 +126,7 @@ void HoloNetSession::disconnect()
 					sockets_[i]->shutdown(boost::asio::socket_base::shutdown_both, error);
 					sockets_[i]->close();
 				}
+
 				sockets_[i].reset();
 			}
 		}
@@ -210,7 +211,6 @@ void HoloNetSession::sendLoop()
 				this->sendPacket(std::move(packet));
 			}
 			catch (boost::system::system_error) {
-				shouldSend_ = false;
 				return;
 			}
 		}

@@ -11,6 +11,7 @@ HoloNetServer::HoloNetServer() : HoloNetSession(), shouldListen_(false)
 HoloNetServer::~HoloNetServer()
 {
 	disconnect();
+	stopListening();
 }
 
 void HoloNetServer::listenAsync(unsigned short port, HoloNetProtocolHandshake localInfo)
@@ -27,6 +28,7 @@ void HoloNetServer::listenAsync(unsigned short port, HoloNetProtocolHandshake lo
 
 void HoloNetServer::stopListening()
 {
+	acceptor_->cancel();
 	shouldListen_.store(false);
 	listenThread_.join();
 }
@@ -62,8 +64,14 @@ void HoloNetServer::listenLoop()
 	while (shouldListen_)
 	{
 		auto socket = boost::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(*io_service_));
+		boost::system::error_code ec;
+		acceptor_->accept(*socket, ec);
 
-		acceptor_->accept(*socket);
+		if (ec.value() != boost::system::errc::success)
+		{
+			shouldListen_ = false;
+			return;
+		}
 
 		LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client" << port_);
 

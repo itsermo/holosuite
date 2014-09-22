@@ -51,8 +51,8 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	{
 		LOG4CXX_WARN(logger_, "Could not set socket no delay option")
 	}
-	//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
-	//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
+	socket->set_option(boost::asio::socket_base::send_buffer_size(65536));
+	socket->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
 	performHandshake(localInfo, socket);
 

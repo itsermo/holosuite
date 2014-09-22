@@ -3,19 +3,17 @@
 using namespace holo;
 using namespace holo::render;
 
-HoloRenderVisualizer::HoloRenderVisualizer() : HoloRenderVisualizer(HOLO_RENDER_DEFAULT_VOXEL_SIZE, HOLO_CAPTURE_DEFAULT_Z_WIDTH, HOLO_CAPTURE_DEFAULT_Z_WIDTH)
+HoloRenderVisualizer::HoloRenderVisualizer() : HoloRenderVisualizer(HOLO_RENDER_VISUALIZER_DEFAULT_VOXEL_SIZE, HOLO_RENDER_VISUALIZER_DEFAULT_ENABLE_MESH_CONSTRUCTION)
 {
 
 }
 
-HoloRenderVisualizer::HoloRenderVisualizer(int voxelSize, int zWidth, int zHeight) :
+HoloRenderVisualizer::HoloRenderVisualizer(int voxelSize, bool enableMeshConstruction) : IHoloRender(),
 	voxelSize_(voxelSize),
-	zWidth_(zWidth),
-	zHeight_(zHeight),
 	shouldRun_(false),
 	haveNewCloud_(false),
 	isInit_(false),
-	enableMeshConstruction_(false),
+	enableMeshConstruction_(enableMeshConstruction),
 	firstTime_(true)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
