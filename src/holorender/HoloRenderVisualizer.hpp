@@ -3,6 +3,7 @@
 #include "../common/CommonDefs.hpp"
 #include "IHoloRender.hpp"
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/surface/organized_fast_mesh.h>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -34,6 +35,11 @@ namespace holo
 
 			int voxelSize_;
 			pcl::visualization::PCLVisualizer::Ptr visualizer_;
+
+			pcl::OrganizedFastMesh<HoloPoint3D> organizedFastMesh_;
+			boost::shared_ptr<std::vector<pcl::Vertices>> organizedFastMeshVertices_;
+			pcl::PolygonMesh::Ptr mesh_;
+
 			HoloCloudPtr pointCloud_;
 			std::thread renderThread_;
 			std::unique_lock<std::mutex> cloudLock_;
@@ -46,6 +52,10 @@ namespace holo
 			int zHeight_;
 
 			bool isInit_;
+
+			bool firstTime_;
+
+			bool enableMeshConstruction_;
 
 			log4cxx::LoggerPtr logger_;
 		};

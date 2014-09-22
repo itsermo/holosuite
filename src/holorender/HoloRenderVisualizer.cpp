@@ -3,17 +3,9 @@
 using namespace holo;
 using namespace holo::render;
 
-HoloRenderVisualizer::HoloRenderVisualizer() :
-	voxelSize_(HOLO_RENDER_DEFAULT_VOXEL_SIZE),
-	zWidth_(HOLO_CAPTURE_DEFAULT_Z_WIDTH),
-	zHeight_(HOLO_CAPTURE_DEFAULT_Z_WIDTH),
-	shouldRun_(false),
-	haveNewCloud_(false),
-	isInit_(false)
+HoloRenderVisualizer::HoloRenderVisualizer() : HoloRenderVisualizer(HOLO_RENDER_DEFAULT_VOXEL_SIZE, HOLO_CAPTURE_DEFAULT_Z_WIDTH, HOLO_CAPTURE_DEFAULT_Z_WIDTH)
 {
-	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
 
-	LOG4CXX_DEBUG(logger_, "HoloRenderVisualizer object instantiated with default args");
 }
 
 HoloRenderVisualizer::HoloRenderVisualizer(int voxelSize, int zWidth, int zHeight) :
@@ -22,11 +14,13 @@ HoloRenderVisualizer::HoloRenderVisualizer(int voxelSize, int zWidth, int zHeigh
 	zHeight_(zHeight),
 	shouldRun_(false),
 	haveNewCloud_(false),
-	isInit_(false)
+	isInit_(false),
+	enableMeshConstruction_(false),
+	firstTime_(true)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.visualizer");
 
-	LOG4CXX_DEBUG(logger_, "HoloRenderVisualizer object instantiated with custom args");
+	LOG4CXX_DEBUG(logger_, "HoloRenderVisualizer object instantiated");
 }
 
 HoloRenderVisualizer::~HoloRenderVisualizer()
@@ -37,6 +31,12 @@ HoloRenderVisualizer::~HoloRenderVisualizer()
 bool HoloRenderVisualizer::init()
 {
 	LOG4CXX_INFO(logger_, "Initializing point cloud visualizer...");
+
+	if (enableMeshConstruction_)
+	{
+		organizedFastMesh_.setTrianglePixelSize(1);
+		organizedFastMesh_.setTriangulationType(pcl::OrganizedFastMesh<HoloPoint3D>::TRIANGLE_ADAPTIVE_CUT);
+	}
 
 	cloudLock_ = std::unique_lock<std::mutex>(cloudMutex_);
 	cloudLock_.unlock();
@@ -76,13 +76,19 @@ void HoloRenderVisualizer::run()
 		visualizer_ = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer("holosuite visualizer"));
 		visualizer_->setBackgroundColor(0, 0, 0);
 
-		pointCloud_ = HoloCloudPtr(new HoloCloud(zWidth_, zHeight_));
-		pointCloud_->is_dense = false;
-		pointCloud_->sensor_origin_.setZero();
-		pointCloud_->sensor_orientation_.setIdentity();
+		//pointCloud_ = HoloCloudPtr(new HoloCloud(zWidth_, zHeight_));
+		//pointCloud_->is_dense = false;
+		//pointCloud_->sensor_origin_.setZero();
+		//pointCloud_->sensor_orientation_.setIdentity();
 
-		visualizer_->addPointCloud(pointCloud_, "holocloud");
-		visualizer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, voxelSize_, "holocloud");
+
+
+		if (enableMeshConstruction_)
+		{
+			mesh_ = pcl::PolygonMeshPtr(new pcl::PolygonMesh());
+			organizedFastMeshVertices_ = boost::shared_ptr<std::vector<pcl::Vertices>>(new std::vector<pcl::Vertices>);
+		}
+
 		//visualizer_->addCoordinateSystem(1.0, "global");
 		visualizer_->initCameraParameters();
 
@@ -98,7 +104,32 @@ void HoloRenderVisualizer::run()
 		if (haveNewCloud_)
 		{
 			std::lock_guard<std::mutex> lg(cloudMutex_);
-			visualizer_->updatePointCloud(pointCloud_, "holocloud");
+			if (enableMeshConstruction_)
+			{
+				if (!firstTime_)
+					visualizer_->removePolygonMesh("holomesh");
+
+				organizedFastMesh_.setInputCloud(pointCloud_);
+				organizedFastMesh_.reconstruct(*organizedFastMeshVertices_);
+				mesh_->polygons = *organizedFastMeshVertices_;
+				pcl::PCLPointCloud2 cloud2;
+				pcl::toPCLPointCloud2<HoloPoint3D>((const HoloCloud)*pointCloud_, cloud2);
+				mesh_->cloud = cloud2;
+
+				visualizer_->addPolygonMesh(*mesh_, "holomesh");
+			}
+			else
+			{
+				if (firstTime_)
+				{
+					visualizer_->addPointCloud(pointCloud_, "holocloud");
+					visualizer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, voxelSize_, "holocloud");
+				}
+				else
+					visualizer_->updatePointCloud(pointCloud_, "holocloud");
+			}
+
+			firstTime_ = false;
 			haveNewCloud_ = false;
 		}
 

@@ -721,7 +721,7 @@ void HoloRenderDSCP2::display()
 
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-		if (1)
+		if (0)
 		{
 			glViewport(0, numY_*tileY_, numX_*tileX_, numY_*tileY_); //setup viewport for covering depth views
 			glColor4f(1.0, 1.0, 1.0, 1.0);
@@ -742,6 +742,33 @@ void HoloRenderDSCP2::display()
 			glPopMatrix();
 			glMatrixMode(GL_MODELVIEW);
 			glPopMatrix();
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_TEXTURE_2D);
+		}
+
+
+		if (0)
+		{
+			glViewport(0, 0, numX_*tileX_, numY_*tileY_); //setup viewport for covering color views
+			glColor4f(0.5, 0.5, 0.5, 0.5);
+			glDisable(GL_TEXTURE_2D);
+			glDisable(GL_DEPTH_TEST);
+			glDisable(GL_LIGHTING);
+			glMatrixMode(GL_MODELVIEW);
+			glPushMatrix();
+			glLoadIdentity();
+			glMatrixMode(GL_PROJECTION);
+			glPushMatrix();
+			glLoadIdentity();
+
+			glBegin(GL_QUADS);
+			glVertex2f(-1, -1); glVertex2f(-1, 1); glVertex2f(1, 1); glVertex2f(1, -1);
+			glEnd();
+
+			glPopMatrix();
+			glMatrixMode(GL_MODELVIEW);
+			glPopMatrix();
+
 			glEnable(GL_DEPTH_TEST);
 			glEnable(GL_TEXTURE_2D);
 		}
@@ -768,7 +795,7 @@ void HoloRenderDSCP2::display()
 #endif
 
 //Fringe computation
-#if 1
+#if 0
 
 		float quadRadius = 0.5;
 

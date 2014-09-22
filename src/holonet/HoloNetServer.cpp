@@ -73,6 +73,7 @@ void HoloNetServer::listenLoop()
 		//socket_->set_option(boost::asio::socket_base::send_buffer_size(65536));
 		//socket_->set_option(boost::asio::socket_base::receive_buffer_size(65536));
 
+
 		this->performHandshake(localInfo_, socket);
 
 		LOG4CXX_DEBUG(logger_, "Trying to get handshake info from client" << port_);
@@ -98,16 +99,3 @@ void HoloNetServer::listenLoop()
 		start();
 	}
 }
-
-//void HoloNetServer::disconnect()
-//{
-//
-//	if (socket_ && isConnected())
-//	{
-//		socket_->shutdown(boost::asio::socket_base::shutdown_both);
-//		socket_->close();
-//		socket_.reset();
-//	}
-//
-//	isConnected_ = false;
-//}
