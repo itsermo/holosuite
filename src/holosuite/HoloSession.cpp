@@ -1,5 +1,5 @@
 #include "HoloSession.hpp"
-#include "../holoutils/HoloUtils.hpp"
+#include <holoutils/HoloUtils.hpp>
 
 #include <vector>
 #include <chrono>

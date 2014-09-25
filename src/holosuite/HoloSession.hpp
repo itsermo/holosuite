@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../common/CommonDefs.hpp"
-#include "../holocapture/IHoloCapture.hpp"
-#include "../holocodec/IHoloCodec.hpp"
-#include "../holofilter/IHoloFilter.hpp"
-#include "../holonet/HoloNetSession.hpp"
-#include "../holorender/IHoloRender.hpp"
-#include "../holocapture/IHoloCaptureAudio.hpp"
-#include "../holorender/IHoloRenderAudio.hpp"
+#include <holocommon/CommonDefs.hpp>
+#include <holocapture/IHoloCapture.hpp>
+#include <holocodec/IHoloCodec.hpp>
+#include <holofilter/IHoloFilter.hpp>
+#include <holonet/HoloNetSession.hpp>
+#include <holorender/IHoloRender.hpp>
+#include <holocapture/IHoloCaptureAudio.hpp>
+#include <holorender/IHoloRenderAudio.hpp>
 
 #include <memory>
 #include <string>

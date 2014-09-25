@@ -5,11 +5,11 @@
 #include <log4cxx/consoleappender.h>
 #include <log4cxx/basicconfigurator.h>
 
-#include "../holocapture/HoloCaptureGenerator.hpp"
-#include "../holorender/HoloRenderGenerator.hpp"
-#include "../holocodec/HoloCodecGenerator.hpp"
-#include "../holonet/HoloNetClient.hpp"
-#include "../holonet/HoloNetServer.hpp"
+#include <holocapture/HoloCaptureGenerator.hpp>
+#include <holorender/HoloRenderGenerator.hpp>
+#include <holocodec/HoloCodecGenerator.hpp>
+#include <holonet/HoloNetClient.hpp>
+#include <holonet/HoloNetServer.hpp>
 #include "HoloSession.hpp"
 
 #include <future>
