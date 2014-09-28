@@ -50,6 +50,7 @@ OPTION(BUILD_TESTS "Configures unit test project for compiling test code" OFF)
 OPTION(WITH_STATIC_LOG4CXX "Defines LOG4CXX_STATIC for use with static LOG4CXX libraries" OFF)
 OPTION(BOOST_DISABLE_AUTOLINK "Defines BOOST_ALL_NO_LIB macro to turn off boost auto linking" OFF)
 OPTION(WITH_DSCP2 "Enables compiling DSCP holographic render algorithm for MK II" OFF)
+OPTION(WITH_UNITY_PLUGIN "Enables compiling of DLL plugin supported by Unity" OFF)
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)

@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	holo::render::RENDER_AUDIO_TYPE audioRenderType = holo::render::RENDER_AUDIO_TYPE_NONE;
 	holo::HoloAudioFormat audioCaptureFormat = { 0 };
 	holo::HoloAudioFormat audioRenderFormat = { 0 };
-
+	bool enableMeshConstruction = HOLO_RENDER_VISUALIZER_DEFAULT_ENABLE_MESH_CONSTRUCTION;
 #ifdef ENABLE_HOLO_DSCP2
 	int dscp2HeadNumber = 0;
 	std::string dscp2DisplayEnv;
@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 	std::unique_ptr<holo::render::IHoloRender> renderer = nullptr;
 	std::unique_ptr<holo::HoloSession> clientSession = nullptr;
 	std::unique_ptr<holo::HoloSession> serverSession = nullptr;
+	std::unique_ptr<holo::HoloSession> directSession = nullptr;
 
 	// Declare a group of options that will be 
 	// allowed only on command line
@@ -97,9 +98,10 @@ int main(int argc, char *argv[])
 	boost::program_options::options_description network_options("Network session options");
 	network_options.add_options()
 		("name", boost::program_options::value<std::string>()->composing(), "(optional) friendly name of the server or client session")
+		("direct", "capture input is directly routed to renderer")
 		("server", "start holosuite in server mode, listen for connections")
 		("client", boost::program_options::value<std::string>()->composing(), "start holosuite in client mode. (e.g. client=192.168.0.3)")
-		("loopback", "capture input is routed to local renderer")
+		("loopback", "capture input is routed through network and to localhost renderer")
 		;
     
 	// Capture input options
@@ -180,7 +182,7 @@ int main(int argc, char *argv[])
 		"valid setting is [visualizer,dscp2]")
 		("visualizer-settings",
 		boost::program_options::value<std::string>()->composing(),
-		"PCL visualizer settings [voxel size]")
+		"PCL visualizer settings [voxel size, enable fast mesh construction]")
 		;
 
 #ifdef ENABLE_HOLO_DSCP2
@@ -306,14 +308,16 @@ int main(int argc, char *argv[])
 		//server = std::shared_ptr<holo::net::HoloNetServer>(new holo::net::HoloNetServer());
 		sessionMode = holo::HOLO_SESSION_MODE_LOOPBACK;
 	}
+	else if (vm.count("direct"))
+	{
+		sessionMode = holo::HOLO_SESSION_MODE_DIRECT;
+	}
 	else
 	{
-		std::cout << "You must select a session mode by using the \"--server\", \"--client=<HOSTNAME>\" or \"--loopback\" command line options." << std::endl << std::endl;
+		std::cout << "You must select a session mode by using the \"--server\", \"--client=<HOSTNAME>\", \"--loopback\" or \"--direct\" command line options." << std::endl << std::endl;
 		std::cout << network_options << std::endl;
 		return -1;
 	}
-
-
 
 	if (vm.count("capture-input"))
 	{
@@ -584,9 +588,11 @@ int main(int argc, char *argv[])
 					visSettings.push_back(t);
 				}
 
-				if (visSettings.size() == 1)
+				if (visSettings.size() >= 1)
 				{
 					voxelSize = atoi(visSettings[0].c_str());
+					if (visSettings.size() == 2)
+						enableMeshConstruction = visSettings[1].compare("true") == 0 ? true : false;
 				}
 				else
 				{
@@ -670,6 +676,8 @@ int main(int argc, char *argv[])
 	case holo::HOLO_SESSION_MODE::HOLO_SESSION_MODE_LOOPBACK:
 		LOG4CXX_INFO(logger_main, "Holosuite starting in loopback mode...");
 		break;
+	case holo::HOLO_SESSION_MODE_DIRECT:
+		LOG4CXX_INFO(logger_main, "Holosuite starting in direct mode...");
 	default:
 		break;
 	}
@@ -923,7 +931,7 @@ int main(int argc, char *argv[])
 					//TODO: implement 2D VIS
 					break;
 				case holo::render::RENDER_TYPE_VIS3D:
-					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, false);
+					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, enableMeshConstruction);
 					break;
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:
@@ -975,6 +983,24 @@ int main(int argc, char *argv[])
 				}
 			}
 
+			if (sessionMode == holo::HOLO_SESSION_MODE_DIRECT)
+			{
+				directSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
+					std::move(videoCapture),
+					std::move(audioCapture),
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					std::move(renderer),
+					std::move(audioRenderer),
+					nullptr,
+					localInfo
+					));
+				directSession->start();
+			}
 
 			if (sessionMode == holo::HOLO_SESSION_MODE_SERVER || sessionMode == holo::HOLO_SESSION_MODE_LOOPBACK)
 			{
@@ -1035,6 +1061,7 @@ int main(int argc, char *argv[])
 				shouldConnect = true;
 			}
 		}
+
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 

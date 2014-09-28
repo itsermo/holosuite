@@ -311,6 +311,7 @@ void HoloSession::captureLoop()
 
 	while (shouldCapture_)
 	{
+
 		if (rgbazEncoder_)
 		{
 			std::unique_lock<std::mutex> ulLocalPixMaps(localRGBAZMutex_);
@@ -330,8 +331,16 @@ void HoloSession::captureLoop()
 			haveLocalCloudCV_.notify_all();
 		}
 		else
-			shouldCapture_ = false;
+		{
+			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
+			capture_->waitAndGetNextPointCloud(remoteCloud_);
 
+			ulRemoteCloud.unlock();
+
+			haveRemoteCloud_ = true;
+
+			haveRemoteCloudCV_.notify_all();
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
