@@ -28,13 +28,20 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
 	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
 	) :
+	shouldCallback_(false),
 	shouldCapture_(false),
 	shouldEncode_(false),
 	shouldDecode_(false),
 	shouldRender_(false),
 	isRunning_(false),
 	remoteInfo_(remoteInfo),
-	worldConvertCache_()
+	worldConvertCache_(),
+	localCloudCallback_(nullptr),
+	localRGBAZCallback_(nullptr),
+	localAudioCallback_(nullptr),
+	remoteCloudCallback_(nullptr),
+	remoteRGBAZCallback_(nullptr),
+	remoteAudioCallback_(nullptr)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.session");
 
@@ -87,8 +94,8 @@ bool HoloSession::start()
 	shouldCapture_ = capture_ ? true : false;
 	shouldRender_ = render_ ? true : false;
 
-	shouldEncode_ = shouldCapture_.load();
-	shouldDecode_ = shouldRender_.load();
+	shouldEncode_ = rgbazEncoder_ || cloudEncoder_ ? true : false;
+	shouldDecode_ = rgbazDecoder_ || cloudDecoder_ ? true : false;
 
 	shouldRecv_ = netSession_ ? true : false;
 
@@ -97,6 +104,8 @@ bool HoloSession::start()
 
 	shouldRenderAudio_ = audioRender_ ? true : false;
 	shouldDecodeAudio_ = shouldRenderAudio_.load();
+
+	shouldCallback_ = localAudioCallback_ || localCloudCallback_ || localRGBAZCallback_ || remoteAudioCallback_ || remoteCloudCallback_ || remoteRGBAZCallback_ ? true : false;
 
 	if (shouldCapture_)
 		captureThread_ = std::thread(&HoloSession::captureLoop, this);
@@ -124,6 +133,22 @@ bool HoloSession::start()
 
 	if (shouldDecodeAudio_)
 		decodeAudioThread_ = std::thread(&HoloSession::decodeAudioLoop, this);
+
+	if (shouldCallback_)
+	{
+		if (localRGBAZCallback_)
+			localRGBAZCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_LOCAL_RGBAZ));
+		//if (localCloudCallback_)
+		//	localCloudCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_LOCAL_CLOUD, this);
+		//if (localAudioCallback_)
+		//	localAudioCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_LOCAL_AUDIO, this);
+		//if (remoteRGBAZCallback_)
+		//	remoteRGBAZCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_RGBAZ, this);
+		//if (remoteCloudCallback_)
+		//	remoteCloudCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_CLOUD, this);
+		//if (remoteAudioCallback_)
+		//	remoteAudioCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_AUDIO, this);
+	}
 
 	isRunning_ = true;
 
@@ -192,6 +217,23 @@ void HoloSession::stop(std::thread::id callingThread)
 	{
 		shouldRenderAudio_ = false;
 		renderAudioThread_.join();
+	}
+
+	if (shouldCallback_)
+	{
+		shouldCallback_ = false;
+		if (localRGBAZCallback_)
+			localRGBAZCallbackThread_.join();
+		if (localCloudCallback_)
+			localCloudCallbackThread_.join();
+		if (localAudioCallback_)
+			localAudioCallbackThread_.join();
+		if (remoteRGBAZCallback_)
+			remoteRGBAZCallbackThread_.join();
+		if (remoteCloudCallback_)
+			remoteCloudCallbackThread_.join();
+		if (remoteAudioCallback_)
+			remoteAudioCallbackThread_.join();
 	}
 
 	//workaround to stop all threads when destructor calls stop()
@@ -626,5 +668,124 @@ void HoloSession::renderAudioLoop()
 
 		haveRemoteAudio_ = false;
 		ulRemoteAudioData.unlock();
+	}
+}
+
+//callbacks
+void HoloSession::setLocalCloudCallback(CloudCallback cloudCallback)
+{
+	localCloudCallback_ = cloudCallback;
+}
+
+void HoloSession::setLocalRGBAZCallback(RGBAZCallback rgbazCallback)
+{
+	localRGBAZCallback_ = rgbazCallback;
+}
+
+void HoloSession::setLocalAudioCallback(AudioCallback audioCallback)
+{
+	localAudioCallback_ = audioCallback;
+}
+
+void HoloSession::setRemoteCloudCallback(CloudCallback cloudCallback)
+{
+	remoteCloudCallback_ = cloudCallback;
+}
+
+void HoloSession::setRemoteRGBAZCallback(RGBAZCallback rgbazCallback)
+{
+	remoteRGBAZCallback_ = rgbazCallback;
+}
+
+void HoloSession::setRemoteAudioCallback(AudioCallback audioCallback)
+{
+	remoteAudioCallback_ = audioCallback;
+}
+
+void HoloSession::callbackLoop(HoloSessionCallbackType type)
+{
+	const holo::capture::HoloCaptureInfo localCaptureInfo = capture_->getCaptureInfo();
+	const holo::capture::HoloCaptureInfo remoteCaptureInfo = {
+		remoteInfo_.rgbazWidth,
+		remoteInfo_.rgbazWidth,
+		remoteInfo_.rgbazHeight,
+		remoteInfo_.rgbazHeight,
+		remoteInfo_.captureFPS,
+		remoteInfo_.captureFPS,
+		remoteInfo_.captureHOV,
+		remoteInfo_.captureHOV,
+		remoteInfo_.captureVOV,
+		remoteInfo_.captureVOV
+	};
+
+	const holo::HoloAudioFormat localAudioFormat = audioCapture_->getAudioFormat();
+	const holo::HoloAudioFormat remoteAudioFormat = { remoteInfo_.audioFreq, remoteInfo_.audioNumChan, remoteInfo_.audioBitDepth };
+
+	while (shouldCallback_)
+	{
+		switch (type)
+		{
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_LOCAL_RGBAZ:
+		{
+			std::unique_lock<std::mutex> ulLocalRGBAZ(localRGBAZMutex_);
+			if (std::cv_status::timeout == haveLocalRGBAZCV_.wait_for(ulLocalRGBAZ, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+			localRGBAZCallback_(localRGBAZ_->rgba.data, (unsigned short*)localRGBAZ_->z.data, &localCaptureInfo);
+		}
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_LOCAL_CLOUD:
+		{
+			std::unique_lock<std::mutex> ulLocalCloud(localCloudMutex_);
+			if (std::cv_status::timeout == haveLocalCloudCV_.wait_for(ulLocalCloud, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+			localCloudCallback_(localCloud_->points.data(), localCloud_->points.size());
+
+		}
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_LOCAL_MESH:
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_LOCAL_AUDIO:
+		{
+			std::unique_lock<std::mutex> ulLocalAudio(localAudioMutex_);
+			if (std::cv_status::timeout == haveLocalAudioCV_.wait_for(ulLocalAudio, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+
+		}
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_REMOTE_RGBAZ:
+		{
+			std::unique_lock<std::mutex> ulRemoteRGBAZData(remoteRGBAZMutex_);
+			if (std::cv_status::timeout == haveRemoteRGBAZCV_.wait_for(ulRemoteRGBAZData, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+			remoteRGBAZCallback_(remoteRGBAZ_->rgba.data, (unsigned short*)remoteRGBAZ_->z.data, &remoteCaptureInfo);
+		}
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_REMOTE_CLOUD:
+		{
+			std::unique_lock<std::mutex> ulRemoteCloud(remoteCloudMutex_);
+			if (std::cv_status::timeout == haveRemoteCloudCV_.wait_for(ulRemoteCloud, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+			remoteCloudCallback_(remoteCloud_->points.data(), remoteCloud_->points.size());
+		}
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_REMOTE_MESH:
+			break;
+		case holo::HoloSession::HOLO_SESSION_CALLBACK_REMOTE_AUDIO:
+		{
+			std::unique_lock<std::mutex> ulRemoteAudioData(remoteAudioMutex_);
+			if (std::cv_status::timeout == haveRemoteAudioCV_.wait_for(ulRemoteAudioData, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+
+			remoteAudioCallback_(remoteAudio_->data(), remoteAudio_->size());
+		}
+			break;
+		default:
+			break;
+		}
 	}
 }

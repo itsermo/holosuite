@@ -1,41 +1,19 @@
 #define HOLOUNITY_API __declspec(dllexport)
+#include <holocommon/CommonDefs.hpp>
 
-enum CAPTURE_TYPE
-{
-	CAPTURE_TYPE_NONE = -1,
-	CAPTURE_TYPE_FILE_PLY = 0,
-	CAPTURE_TYPE_FILE_PCD = 1,
-	CAPTURE_TYPE_FILE_OBJ = 2,
-	CAPTURE_TYPE_FILE_ONI = 3,
-	CAPTURE_TYPE_OPENNI2 = 4,
-};
+HOLOUNITY_API void setLocalVisualCallback(CloudCallback visualCallback);
+HOLOUNITY_API void setRemoteVisualCallback(CloudCallback visualCallback);
+HOLOUNITY_API void setLocalAudioCallback(AudioCallback audioCallback);
+HOLOUNITY_API void setRemoteAudioCallback(AudioCallback audioCallback);
 
-enum CAPTURE_AUDIO_TYPE
-{
-	CAPTURE_AUDIO_TYPE_NONE = -1,
-	CAPTURE_AUDIO_TYPE_PORTAUDIO = 0
-};
-
-enum CODEC_TYPE
-{
-	CODEC_TYPE_NONE = -1,
-	CODEC_TYPE_PASSTHROUGH_CLOUD = 0,
-	CODEC_TYPE_PASSTHROUGH_RGBAZ = 1,
-	CODEC_TYPE_OCTREE = 2,
-	CODEC_TYPE_H264 = 3,
-	CODEC_TYPE_OPUS = 4
-};
-
-enum RENDER_AUDIO_TYPE
-{
-	RENDER_AUDIO_TYPE_NONE = -1,
-	RENDER_AUDIO_TYPE_PORTAUDIO = 0
-};
-
-HOLOUNITY_API void initHoloSuite(CAPTURE_TYPE capture,
-	CAPTURE_AUDIO_TYPE audioCapture, 
-	CODEC_TYPE encoder);
-
+HOLOUNITY_API void initHoloSuite(holo::capture::CAPTURE_TYPE capture,
+	holo::capture::CAPTURE_AUDIO_TYPE audioCapture,
+	holo::codec::CODEC_TYPE captureEncoder, holo::codec::CODEC_TYPE audioCaptureEncoder, holo::render::RENDER_TYPE visOutput, holo::render::RENDER_AUDIO_TYPE audioOutput);
 HOLOUNITY_API void deinitHoloSuite();
 
-HOLOUNITY_API void initSession
+HOLOUNITY_API void startServer();
+HOLOUNITY_API void connectToServer(unsigned char * address);
+
+HOLOUNITY_API void initSession(holo::HOLO_SESSION_MODE sessionMode, unsigned char * address);
+HOLOUNITY_API void deInitSession();
+

@@ -203,21 +203,33 @@ bool HoloCaptureOpenNI2::init(int which)
 	zHeight_ = depthstreamMode.getResolutionY();
 	zFPS_ = depthstreamMode.getFps();
 
-	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &hov_) != Status::STATUS_OK)
+	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &zHOV_) != Status::STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not get horizontal field-of-view from depth stream");
 		return false;
 	}
 
-	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &vov_) != Status::STATUS_OK)
+	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &zVOV_) != Status::STATUS_OK)
+	{
+		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
+		return false;
+	}
+
+	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &rgbHOV_) != Status::STATUS_OK)
+	{
+		LOG4CXX_ERROR(logger_, "Could not get horizontal field-of-view from depth stream");
+		return false;
+	}
+
+	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &rgbVOV_) != Status::STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
 		return false;
 	}
 
 	// constants for reprojecting the point cloud to real-world coordinates
-	worldConvertCache_.xzFactor = tan(hov_ / 2) * 2;
-	worldConvertCache_.yzFactor = tan(vov_ / 2) * 2;
+	worldConvertCache_.xzFactor = tan(rgbHOV_ / 2) * 2;
+	worldConvertCache_.yzFactor = tan(rgbVOV_ / 2) * 2;
 	worldConvertCache_.resolutionX = zWidth_;
 	worldConvertCache_.resolutionY = zHeight_;
 	worldConvertCache_.halfResX = worldConvertCache_.resolutionX / 2;
@@ -265,12 +277,12 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
 		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
-		//memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
 		
-		short * dsrc = (short*)depth.getData();
-		short * ddest = (short*)depthImage_.data;
-		for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
-			*ddest = *dsrc < 1000 ? *dsrc : 0;
+		//short * dsrc = (short*)depth.getData();
+		//short * ddest = (short*)depthImage_.data;
+		//for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
+		//	*ddest = *dsrc < 1000 ? *dsrc : 0;
 
 		zImage = depthImage_;
 

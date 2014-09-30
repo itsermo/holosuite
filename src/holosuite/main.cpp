@@ -10,7 +10,7 @@
 #include <holocodec/HoloCodecGenerator.hpp>
 #include <holonet/HoloNetClient.hpp>
 #include <holonet/HoloNetServer.hpp>
-#include "HoloSession.hpp"
+#include <holosession/HoloSession.hpp>
 
 #include <future>
 #include <functional>
@@ -725,8 +725,8 @@ int main(int argc, char *argv[])
 				localInfo.rgbazWidth = captureInfo.zWidth;
 				localInfo.rgbazHeight = captureInfo.zHeight;
 				localInfo.captureFPS = captureInfo.zFPS;
-				localInfo.captureHOV = captureInfo.zHOV;
-				localInfo.captureVOV = captureInfo.zVOV;
+				localInfo.captureHOV = captureInfo.rgbHOV;
+				localInfo.captureVOV = captureInfo.rgbVOV;
 
 				h264Args.width = captureInfo.zWidth;
 				h264Args.height = captureInfo.zHeight;

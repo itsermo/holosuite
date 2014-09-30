@@ -17,14 +17,30 @@
 #include <atomic>
 #include <condition_variable>
 
-
+typedef void(__stdcall * RGBAZCallback)(unsigned char*, unsigned short*, const holo::capture::HoloCaptureInfo*);
+typedef void(__stdcall * CloudCallback)(holo::HoloPoint3D*, int);
+typedef void(__stdcall * MeshCallback)(unsigned char*, int, const holo::HoloPoint3D*, int);
+typedef void(__stdcall * AudioCallback)(unsigned char*, int);
 
 namespace holo
 {
-
+	
 	class HoloSession
 	{
 	public:
+
+		enum HoloSessionCallbackType
+		{
+			HOLO_SESSION_CALLBACK_LOCAL_RGBAZ,
+			HOLO_SESSION_CALLBACK_LOCAL_CLOUD,
+			HOLO_SESSION_CALLBACK_LOCAL_MESH,
+			HOLO_SESSION_CALLBACK_LOCAL_AUDIO,
+			HOLO_SESSION_CALLBACK_REMOTE_RGBAZ,
+			HOLO_SESSION_CALLBACK_REMOTE_CLOUD,
+			HOLO_SESSION_CALLBACK_REMOTE_MESH,
+			HOLO_SESSION_CALLBACK_REMOTE_AUDIO,
+		};
+
 		HoloSession();
 		HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
 			std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
@@ -48,6 +64,14 @@ namespace holo
 
 		bool isRunning();
 		bool isConnected();
+
+		void setLocalCloudCallback(CloudCallback cloudCallback);
+		void setLocalRGBAZCallback(RGBAZCallback cloudCallback);
+		void setLocalAudioCallback(AudioCallback cloudCallback);
+
+		void setRemoteCloudCallback(CloudCallback cloudCallback);
+		void setRemoteRGBAZCallback(RGBAZCallback cloudCallback);
+		void setRemoteAudioCallback(AudioCallback cloudCallback);
 
 	private:
 		
@@ -83,6 +107,15 @@ namespace holo
 		std::thread renderAudioThread_;
 
 		std::thread netRecvThread_;
+
+		std::thread localCloudCallbackThread_;
+		std::thread remoteCloudCallbackThread_;
+
+		std::thread localRGBAZCallbackThread_;
+		std::thread remoteRGBAZCallbackThread_;
+
+		std::thread localAudioCallbackThread_;
+		std::thread remoteAudioCallbackThread_;
 
 		std::mutex localCloudMutex_;
 		std::mutex remoteCloudMutex_;
@@ -130,6 +163,14 @@ namespace holo
 		std::unique_ptr<holo::render::IHoloRender> render_;
 		std::unique_ptr<holo::render::IHoloRenderAudio> audioRender_;
 
+		CloudCallback localCloudCallback_;
+		RGBAZCallback localRGBAZCallback_;
+		AudioCallback localAudioCallback_;
+
+		CloudCallback remoteCloudCallback_;
+		RGBAZCallback remoteRGBAZCallback_;
+		AudioCallback remoteAudioCallback_;
+
 		std::atomic<bool> shouldCapture_;
 		std::atomic<bool> shouldCaptureAudio_;
 
@@ -143,6 +184,8 @@ namespace holo
 		std::atomic<bool> shouldRenderAudio_;
 
 		std::atomic<bool> shouldRecv_;
+
+		std::atomic<bool> shouldCallback_;
 
 		std::atomic<bool> isRunning_;
 
@@ -159,6 +202,8 @@ namespace holo
 		void renderAudioLoop();
 
 		void netRecvLoop();
+
+		void callbackLoop(HoloSessionCallbackType type);
 
 		holo::capture::WorldConvertCache worldConvertCache_;
 

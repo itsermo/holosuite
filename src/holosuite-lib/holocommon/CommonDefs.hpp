@@ -55,23 +55,23 @@ namespace holo
 		unsigned int depth;
 	};
 
-	enum HOLO_SESSION_MODE
+	typedef enum
 	{
 		HOLO_SESSION_MODE_SERVER = 0,
 		HOLO_SESSION_MODE_CLIENT = 1,
 		HOLO_SESSION_MODE_LOOPBACK = 2,
 		HOLO_SESSION_MODE_DIRECT = 3
-	};
+	} HOLO_SESSION_MODE;
 
 	namespace capture
 	{
-		enum CAPTURE_AUDIO_TYPE
+		typedef enum
 		{
 			CAPTURE_AUDIO_TYPE_NONE = -1,
 			CAPTURE_AUDIO_TYPE_PORTAUDIO = 0
-		};
+		} CAPTURE_AUDIO_TYPE;
 
-		enum CAPTURE_TYPE
+		typedef enum
 		{
 			CAPTURE_TYPE_NONE = -1,
 			CAPTURE_TYPE_FILE_PLY = 0,
@@ -79,7 +79,7 @@ namespace holo
 			CAPTURE_TYPE_FILE_OBJ = 2,
 			CAPTURE_TYPE_FILE_ONI = 3,
 			CAPTURE_TYPE_OPENNI2 = 4,
-		};
+		} CAPTURE_TYPE;
 
 		struct WorldConvertCache
 		{
@@ -97,7 +97,7 @@ namespace holo
 	namespace codec
 	{
 
-		enum CODEC_TYPE
+		typedef enum
 		{
 			CODEC_TYPE_NONE = -1,
 			CODEC_TYPE_PASSTHROUGH_CLOUD = 0,
@@ -105,38 +105,38 @@ namespace holo
 			CODEC_TYPE_OCTREE = 2,
 			CODEC_TYPE_H264 = 3,
 			CODEC_TYPE_OPUS = 4
-		};
+		} CODEC_TYPE;
 
-		enum CODEC_MODE
+		typedef enum
 		{
 			CODEC_MODE_ENCODER = 0,
 			CODEC_MODE_DECODER = 1,
 			CODEC_MODE_BOTH = 3
-		};
+		} CODEC_MODE;
 
-		enum CODEC_METHOD
+		typedef enum
 		{
 			CODEC_METHOD_PIXMAP = 0,
 			CODEC_METHOD_CLOUD = 1,
 			CODEC_METHOD_AUDIO = 2,
-		};
+		}CODEC_METHOD ;
 	}
 
 	namespace render
 	{
-		enum RENDER_AUDIO_TYPE
+		typedef enum
 		{
 			RENDER_AUDIO_TYPE_NONE = -1,
 			RENDER_AUDIO_TYPE_PORTAUDIO = 0
-		};
+		}RENDER_AUDIO_TYPE;
 
-		enum RENDER_TYPE
+		typedef enum
 		{
 			RENDER_TYPE_NONE = -1,
 			RENDER_TYPE_VIS2D = 0,
 			RENDER_TYPE_VIS3D = 1,
 			RENDER_TYPE_DSCP_MKII = 2,
 			RENDER_TYPE_DSCP_MKIV = 3
-		};
+		} RENDER_TYPE;
 	}
 };

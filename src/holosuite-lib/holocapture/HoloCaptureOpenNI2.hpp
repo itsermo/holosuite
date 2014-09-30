@@ -39,13 +39,13 @@ namespace holo
 				info.rgbaWidth = rgbWidth_;
 				info.rgbaHeight = rgbHeight_;
 				info.rgbFPS = rgbFPS_;
-				info.rgbHOV = 0;
-				info.rgbVOV = 0;
+				info.rgbHOV = rgbHOV_ * 180.0f / M_PI;
+				info.rgbVOV = rgbVOV_ * 180.0f / M_PI;
 				info.zWidth = zWidth_;
 				info.zHeight = zHeight_;
 				info.zFPS = zFPS_;
-				info.zHOV = hov_ * 180.0f / M_PI;
-				info.zVOV = vov_ * 180.0f / M_PI;
+				info.zHOV = zHOV_ * 180.0f / M_PI;
+				info.zVOV = zVOV_ * 180.0f / M_PI;
 
 				return info;
 			}
@@ -76,8 +76,10 @@ namespace holo
 			unsigned int zHeight_;
 			float rgbFPS_;
 			float zFPS_;
-			float hov_;
-			float vov_;
+			float rgbHOV_;
+			float rgbVOV_;
+			float zHOV_;
+			float zVOV_;
 			bool isOpen_;
 			bool isOpenNI2Init_;
 

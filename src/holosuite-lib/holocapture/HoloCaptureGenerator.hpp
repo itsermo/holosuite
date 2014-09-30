@@ -43,6 +43,11 @@ namespace holo
 				return std::unique_ptr<IHoloCapture>(new HoloCaptureOpenNI2(filePath));
 			}
 
+			static std::unique_ptr<IHoloCapture> fromOpenNI2()
+			{
+				return std::unique_ptr<IHoloCapture>(new HoloCaptureOpenNI2());
+			}
+
 #ifdef ENABLE_HOLO_AUDIO
 			static std::unique_ptr<IHoloCaptureAudio> fromPortaudio()
 			{
