@@ -73,7 +73,7 @@ void HoloNetServer::listenLoop()
 			return;
 		}
 
-		LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client" << port_);
+		LOG4CXX_DEBUG(logger_, "Accepted socket connection from a client on port " << port_);
 
 		isConnected_ = true;
 
