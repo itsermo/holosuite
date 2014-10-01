@@ -28,8 +28,9 @@ void HoloNetServer::listenAsync(unsigned short port, HoloNetProtocolHandshake lo
 
 void HoloNetServer::stopListening()
 {
-	acceptor_->cancel();
 	shouldListen_.store(false);
+	acceptor_->cancel();
+	acceptor_->close();
 	listenThread_.join();
 }
 
