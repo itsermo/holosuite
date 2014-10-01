@@ -194,20 +194,20 @@ void HoloRenderDSCP2::glutInitLoop()
 
 #ifdef WIN32
 	//char fakeParam[] = "dscp2";
-	char *fakeargv[] = { "holosuite", NULL };
+	const char *fakeargv[] = { "holosuite", NULL };
 	int fakeargc = 1;
 #elif defined(__linux) || defined(__unix) || defined(__posix)
 	char displayEnvArg[1024];
 	strncpy(displayEnvArg, displayEnv_.c_str(), displayEnv_.length());
 
-	char *fakeargv[] = { "holosuite", "-display", displayEnvArg, NULL };
+	const char *fakeargv[] = { "holosuite", "-display", displayEnvArg, NULL };
 	int fakeargc = 3;
 #endif
 
 	//glCheckErrors();
 
 	// Initialize GLUT window and callbacks
-	glutInit(&fakeargc, fakeargv);
+	glutInit(&fakeargc, const_cast<char**>(fakeargv));
 	glutInitWindowSize(displayModeWidth_, displayModeHeight_);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
 	
