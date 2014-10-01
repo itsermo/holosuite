@@ -233,8 +233,8 @@ void HoloCodecH264::deinit()
 				avcodec_close(encoderCtx_);
 				LOG4CXX_DEBUG(logger_, "Freeing encoder context");
 				av_freep(&encoderCtx_);
-				LOG4CXX_DEBUG(logger_, "Freeing encoder object");
-				av_freep(&encoder_);
+				//LOG4CXX_DEBUG(logger_, "Freeing encoder object");
+				//av_freep(&encoder_);
 			}
 
 			LOG4CXX_INFO(logger_, "H264 encoder deinitialized");
@@ -264,7 +264,7 @@ void HoloCodecH264::deinit()
 				avcodec_close(decoderCtx_);
 				LOG4CXX_DEBUG(logger_, "Freeing decoder context");
 				av_freep(&decoderCtx_);
-				LOG4CXX_DEBUG(logger_, "Freeing decoder object");
+				//LOG4CXX_DEBUG(logger_, "Freeing decoder object");
 				//av_freep(&decoder_);
 			}
 

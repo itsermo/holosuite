@@ -415,7 +415,7 @@ void HoloRenderDSCP2::idle()
 		//sprintf(msg, "Wafel %d fps: %f\n", headNumber_, fps);
 		//printf("%s", msg);
 
-		LOG4CXX_TRACE(logger_, "DSCP2 rendering on head " << headNumber_, << " @ " << fps << " fps");
+		LOG4CXX_TRACE(logger_, "DSCP2 rendering on head " << headNum_ << " @ " << fps << " fps");
 //		fflush(stdout);
 	}
 
