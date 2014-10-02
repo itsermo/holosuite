@@ -103,6 +103,7 @@ extern "C" {
 		holo::render::RENDER_TYPE visOutput,
 		holo::render::RENDER_AUDIO_TYPE audioOutput)
 	{
+
 		holo::capture::HoloCaptureInfo captureInfo = { 0 };
 		holo::HoloAudioFormat audioFormat = { 0 };
 
@@ -260,6 +261,8 @@ extern "C" {
 				));
 		}
 
+
+		g_sessionMode = sessionMode;
 	}
 
 	HOLOUNITY_API void deInitSession()

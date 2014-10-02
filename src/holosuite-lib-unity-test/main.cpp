@@ -9,9 +9,14 @@ int main(int argc, char *argv[])
 	
 	initSession(holo::HOLO_SESSION_MODE_DIRECT, "NOTHING");
 
-	setLocalVisualCallback(localCloudCallback);
+	setRemoteVisualCallback(localCloudCallback);
 
 	startSession();
+
+	while (true)
+	{
+		
+	}
 }
 
 void localCloudCallback(void* points, int numPoints)
@@ -19,6 +24,10 @@ void localCloudCallback(void* points, int numPoints)
 	for (int i = 0; i < numPoints; i++)
 	{
 		holo::HoloPoint3D * point = (holo::HoloPoint3D*)points;
+		if (point->x > 0)
+		{
+			printf("WOW");
+		}
 		point++;
 	}
 }

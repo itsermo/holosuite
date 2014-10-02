@@ -136,8 +136,8 @@ bool HoloSession::start()
 
 	if (shouldCallback_)
 	{
-		if (localRGBAZCallback_)
-			localRGBAZCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_LOCAL_RGBAZ));
+		if (remoteCloudCallback_)
+			remoteCloudCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_CLOUD));
 		//if (localCloudCallback_)
 		//	localCloudCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_LOCAL_CLOUD, this);
 		//if (localAudioCallback_)
@@ -704,22 +704,33 @@ void HoloSession::setRemoteAudioCallback(AudioCallback audioCallback)
 
 void HoloSession::callbackLoop(HoloSessionCallbackType type)
 {
-	const holo::capture::HoloCaptureInfo localCaptureInfo = capture_->getCaptureInfo();
-	const holo::capture::HoloCaptureInfo remoteCaptureInfo = {
-		remoteInfo_.rgbazWidth,
-		remoteInfo_.rgbazWidth,
-		remoteInfo_.rgbazHeight,
-		remoteInfo_.rgbazHeight,
-		remoteInfo_.captureFPS,
-		remoteInfo_.captureFPS,
-		remoteInfo_.captureHOV,
-		remoteInfo_.captureHOV,
-		remoteInfo_.captureVOV,
-		remoteInfo_.captureVOV
-	};
+	holo::HoloAudioFormat localAudioFormat = { 0 };
+	holo::HoloAudioFormat remoteAudioFormat = { 0 };
+	holo::capture::HoloCaptureInfo localCaptureInfo = { 0 };
+	holo::capture::HoloCaptureInfo remoteCaptureInfo = { 0 };
 
-	const holo::HoloAudioFormat localAudioFormat = audioCapture_->getAudioFormat();
-	const holo::HoloAudioFormat remoteAudioFormat = { remoteInfo_.audioFreq, remoteInfo_.audioNumChan, remoteInfo_.audioBitDepth };
+	if (capture_)
+	{
+		localCaptureInfo = capture_->getCaptureInfo();
+		remoteCaptureInfo = {
+			remoteInfo_.rgbazWidth,
+			remoteInfo_.rgbazWidth,
+			remoteInfo_.rgbazHeight,
+			remoteInfo_.rgbazHeight,
+			remoteInfo_.captureFPS,
+			remoteInfo_.captureFPS,
+			remoteInfo_.captureHOV,
+			remoteInfo_.captureHOV,
+			remoteInfo_.captureVOV,
+			remoteInfo_.captureVOV
+		};
+	}
+
+	if (audioCapture_)
+	{
+		localAudioFormat = audioCapture_->getAudioFormat();
+		remoteAudioFormat = { remoteInfo_.audioFreq, remoteInfo_.audioNumChan, remoteInfo_.audioBitDepth };
+	}
 
 	while (shouldCallback_)
 	{
