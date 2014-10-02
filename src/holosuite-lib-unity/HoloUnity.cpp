@@ -25,18 +25,75 @@ std::shared_ptr<holo::net::HoloNetServer> g_server = nullptr;
 std::unique_ptr<holo::render::IHoloRender> g_renderer = nullptr;
 std::unique_ptr<holo::HoloSession> g_clientSession = nullptr;
 std::unique_ptr<holo::HoloSession> g_serverSession = nullptr;
-std::unique_ptr<holo::HoloSession> g_directSession = nullptr;
 
 extern "C" {
 
-	HOLOUNITY_API void setVisualCallback(CloudCallback visualCallback)
+	HOLOUNITY_API void setLocalVisualCallback(cloud_cb_t visualCallback)
 	{
+		switch (g_sessionMode)
+		{
+		case holo::HOLO_SESSION_MODE_SERVER:
+			g_serverSession->setLocalCloudCallback(visualCallback);
+			break;
+		case holo::HOLO_SESSION_MODE_CLIENT:
+		case holo::HOLO_SESSION_MODE_LOOPBACK:
+		case holo::HOLO_SESSION_MODE_DIRECT:
+			g_clientSession->setLocalCloudCallback(visualCallback);
+			break;
+		default:
+			break;
+		}
 
 	}
 
-	HOLOUNITY_API void setAudioCallback(AudioCallback audioCallback)
+	HOLOUNITY_API void setLocalAudioCallback(audio_cb_t audioCallback)
 	{
+		switch (g_sessionMode)
+		{
+		case holo::HOLO_SESSION_MODE_SERVER:
+			g_serverSession->setLocalAudioCallback(audioCallback);
+			break;
+		case holo::HOLO_SESSION_MODE_CLIENT:
+		case holo::HOLO_SESSION_MODE_LOOPBACK:
+		case holo::HOLO_SESSION_MODE_DIRECT:
+			g_clientSession->setLocalAudioCallback(audioCallback);
+			break;
+		default:
+			break;
+		}
+	}
 
+	HOLOUNITY_API void setRemoteVisualCallback(cloud_cb_t visualCallback)
+	{
+		switch (g_sessionMode)
+		{
+		case holo::HOLO_SESSION_MODE_SERVER:
+			g_serverSession->setRemoteCloudCallback(visualCallback);
+			break;
+		case holo::HOLO_SESSION_MODE_CLIENT:
+		case holo::HOLO_SESSION_MODE_LOOPBACK:
+		case holo::HOLO_SESSION_MODE_DIRECT:
+			g_clientSession->setRemoteCloudCallback(visualCallback);
+		default:
+			break;
+		}
+	}
+
+	HOLOUNITY_API void setRemoteAudioCallback(audio_cb_t audioCallback)
+	{
+		switch (g_sessionMode)
+		{
+		case holo::HOLO_SESSION_MODE_SERVER:
+			g_serverSession->setRemoteAudioCallback(audioCallback);
+			break;
+		case holo::HOLO_SESSION_MODE_CLIENT:
+		case holo::HOLO_SESSION_MODE_LOOPBACK:
+		case holo::HOLO_SESSION_MODE_DIRECT:
+			g_clientSession->setRemoteAudioCallback(audioCallback);
+			break;
+		default:
+			break;
+		}
 	}
 
 	HOLOUNITY_API void initHoloSuite(holo::capture::CAPTURE_TYPE capture,
@@ -72,7 +129,11 @@ extern "C" {
 			break;
 		}
 
-		captureInfo = g_videoCapture->getCaptureInfo();
+		if (g_videoCapture)
+		{
+			g_videoCapture->init(0);
+			captureInfo = g_videoCapture->getCaptureInfo();
+		}
 
 		switch (audioCapture)
 		{
@@ -88,7 +149,11 @@ extern "C" {
 			break;
 		}
 
-		audioFormat = g_audioCapture->getAudioFormat();
+		if (g_audioCapture)
+		{
+			g_audioCapture->init(0);
+			audioFormat = g_audioCapture->getAudioFormat();
+		}
 
 		switch (captureEncoder)
 		{
@@ -159,9 +224,10 @@ extern "C" {
 			break;
 		}
 
-		g_localInfo.magicNumber = 655321;
-		g_localInfo.clientName = "UNITY";
-		g_localInfo.protocolVersion = 1;
+		//g_localInfo.magicNumber = 655321;
+		//g_localInfo.clientName = "UNITY";
+		//g_localInfo.protocolVersion = 1;
+		strcpy((char*)g_localInfo.clientName, "UNITY");
 		g_localInfo.videoCodecType = captureEncoder;
 		g_localInfo.audioCodecType = audioEncoder;
 		g_localInfo.rgbazWidth = captureInfo.zWidth;
@@ -174,11 +240,11 @@ extern "C" {
 
 	}
 
-	HOLOUNITY_API void initSession(holo::HOLO_SESSION_MODE sessionMode, unsigned char * address)
+	HOLOUNITY_API void initSession(holo::HOLO_SESSION_MODE sessionMode, const char * address)
 	{
 		if (sessionMode == holo::HOLO_SESSION_MODE_DIRECT)
 		{
-			g_directSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
+			g_clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 				std::move(g_videoCapture),
 				std::move(g_audioCapture),
 				nullptr,
@@ -190,16 +256,24 @@ extern "C" {
 				std::move(g_renderer),
 				std::move(g_audioRenderer),
 				nullptr,
-				localInfo
+				g_localInfo
 				));
-			directSession->start();
 		}
-
 
 	}
 
 	HOLOUNITY_API void deInitSession()
 	{
+		//g_clientSession->disconnect();
+	}
 
+	HOLOUNITY_API void startSession()
+	{
+		g_clientSession->start();
+	}
+
+	HOLOUNITY_API void stopSession()
+	{
+		g_clientSession->stop();
 	}
 }

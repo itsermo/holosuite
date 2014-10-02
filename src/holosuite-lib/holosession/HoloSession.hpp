@@ -17,9 +17,9 @@
 #include <atomic>
 #include <condition_variable>
 
-typedef void(__stdcall * RGBAZCallback)(unsigned char*, unsigned short*, const holo::capture::HoloCaptureInfo*);
-typedef void(__stdcall * CloudCallback)(holo::HoloPoint3D*, int);
-typedef void(__stdcall * MeshCallback)(unsigned char*, int, const holo::HoloPoint3D*, int);
+typedef void(__stdcall * RGBAZCallback)(unsigned char*, unsigned short*, const void*);
+typedef void(__stdcall * CloudCallback)(void*, int);
+typedef void(__stdcall * MeshCallback)(unsigned char*, int, const void*, int);
 typedef void(__stdcall * AudioCallback)(unsigned char*, int);
 
 namespace holo
