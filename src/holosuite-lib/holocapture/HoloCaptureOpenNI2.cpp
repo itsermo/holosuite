@@ -277,12 +277,12 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
 		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
-		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+		//memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
 		
-		//short * dsrc = (short*)depth.getData();
-		//short * ddest = (short*)depthImage_.data;
-		//for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
-		//	*ddest = *dsrc < 1000 ? *dsrc : 0;
+		short * dsrc = (short*)depth.getData();
+		short * ddest = (short*)depthImage_.data;
+		for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
+			*ddest = *dsrc < 1000 ? *dsrc : 0;
 
 		zImage = depthImage_;
 

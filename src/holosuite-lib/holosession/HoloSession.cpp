@@ -138,16 +138,16 @@ bool HoloSession::start()
 	{
 		if (remoteCloudCallback_)
 			remoteCloudCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_CLOUD));
-		//if (localCloudCallback_)
-		//	localCloudCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_LOCAL_CLOUD, this);
-		//if (localAudioCallback_)
-		//	localAudioCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_LOCAL_AUDIO, this);
-		//if (remoteRGBAZCallback_)
-		//	remoteRGBAZCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_RGBAZ, this);
-		//if (remoteCloudCallback_)
-		//	remoteCloudCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_CLOUD, this);
-		//if (remoteAudioCallback_)
-		//	remoteAudioCallbackThread_ = std::thread(&HoloSession::callbackLoop, HOLO_SESSION_CALLBACK_REMOTE_AUDIO, this);
+		if (localCloudCallback_)
+			localCloudCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_LOCAL_CLOUD));
+		if (localRGBAZCallback_)
+			localRGBAZCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_LOCAL_RGBAZ));
+		if (remoteRGBAZCallback_)
+			remoteRGBAZCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_RGBAZ));
+		if (localAudioCallback_)
+			localAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_LOCAL_AUDIO));
+		if (remoteAudioCallback_)
+			remoteAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_AUDIO));
 	}
 
 	isRunning_ = true;
@@ -161,97 +161,102 @@ void HoloSession::stop()
 
 void HoloSession::stop(std::thread::id callingThread)
 {
-	std::lock_guard<std::mutex> lg(stoppingMutex_);
+	if (isRunning_)
+	{
+		//std::unique_lock<std::mutex> stoppingLock(stoppingMutex_);
 
-	isRunning_ = false;
+		isRunning_ = false;
 
-	if (shouldCapture_)
-	{
-		shouldCapture_ = false;
-		captureThread_.join();
-	}
+		if (shouldCapture_)
+		{
+			shouldCapture_ = false;
+			captureThread_.join();
+		}
 
-	if (shouldRecv_)
-	{
-		shouldRecv_ = false;
-		netRecvThread_.join();
-	}
+		if (shouldRecv_)
+		{
+			shouldRecv_ = false;
+			netRecvThread_.join();
+		}
 
-	if (shouldRender_)
-	{
-		shouldRender_ = false;
-		renderThread_.join();
-	}
+		if (shouldRender_)
+		{
+			shouldRender_ = false;
+			renderThread_.join();
+		}
 
-	if (shouldDecode_)
-	{
-		shouldDecode_ = false;
-		decodeThread_.join();
-	}
+		if (shouldDecode_)
+		{
+			shouldDecode_ = false;
+			decodeThread_.join();
+		}
 
-	if (shouldEncode_)
-	{
-		shouldEncode_ = false;
-		encodeThread_.join();
-	}
+		if (shouldEncode_)
+		{
+			shouldEncode_ = false;
+			encodeThread_.join();
+		}
 
-	if (shouldCaptureAudio_)
-	{
-		shouldCaptureAudio_ = false;
-		captureAudioThread_.join();
-	}
+		if (shouldCaptureAudio_)
+		{
+			shouldCaptureAudio_ = false;
+			captureAudioThread_.join();
+		}
 
-	if (shouldEncodeAudio_)
-	{
-		shouldEncodeAudio_ = false;
-		encodeAudioThread_.join();
-	}
+		if (shouldEncodeAudio_)
+		{
+			shouldEncodeAudio_ = false;
+			encodeAudioThread_.join();
+		}
 
-	if (shouldDecodeAudio_)
-	{
-		shouldDecodeAudio_ = false;
-		decodeAudioThread_.join();
-	}
+		if (shouldDecodeAudio_)
+		{
+			shouldDecodeAudio_ = false;
+			decodeAudioThread_.join();
+		}
 
-	if (shouldRenderAudio_)
-	{
-		shouldRenderAudio_ = false;
-		renderAudioThread_.join();
-	}
+		if (shouldRenderAudio_)
+		{
+			shouldRenderAudio_ = false;
+			renderAudioThread_.join();
+		}
 
-	if (shouldCallback_)
-	{
-		shouldCallback_ = false;
-		if (localRGBAZCallback_)
-			localRGBAZCallbackThread_.join();
-		if (localCloudCallback_)
-			localCloudCallbackThread_.join();
-		if (localAudioCallback_)
-			localAudioCallbackThread_.join();
-		if (remoteRGBAZCallback_)
-			remoteRGBAZCallbackThread_.join();
-		if (remoteCloudCallback_)
-			remoteCloudCallbackThread_.join();
-		if (remoteAudioCallback_)
-			remoteAudioCallbackThread_.join();
-	}
+		if (shouldCallback_)
+		{
+			shouldCallback_ = false;
+			if (localRGBAZCallback_)
+				localRGBAZCallbackThread_.join();
+			if (localCloudCallback_)
+				localCloudCallbackThread_.join();
+			if (localAudioCallback_)
+				localAudioCallbackThread_.join();
+			if (remoteRGBAZCallback_)
+				remoteRGBAZCallbackThread_.join();
+			if (remoteCloudCallback_)
+				remoteCloudCallbackThread_.join();
+			if (remoteAudioCallback_)
+				remoteAudioCallbackThread_.join();
+		}
 
-	//workaround to stop all threads when destructor calls stop()
-	//only threads with send/recv socket functions can call stop()
-	//in that case need to set these variables to true so when destroctor of HoloSession
-	//is called, it will close these threads appropriately because apparently returning from
-	//a thread function does not close the thread properly in C++ 11
-	if (callingThread == encodeThread_.get_id())
-	{
-		shouldEncode_ = true;
-	}
-	else if (callingThread == netRecvThread_.get_id())
-	{
-		shouldRecv_ = true;
-	}
-	else if (callingThread == encodeAudioThread_.get_id())
-	{
-		shouldEncodeAudio_ = true;
+		//workaround to stop all threads when destructor calls stop()
+		//only threads with send/recv socket functions can call stop()
+		//in that case need to set these variables to true so when destroctor of HoloSession
+		//is called, it will close these threads appropriately because apparently returning from
+		//a thread function does not close the thread properly in C++ 11
+		if (callingThread == encodeThread_.get_id())
+		{
+			shouldEncode_ = true;
+		}
+		else if (callingThread == netRecvThread_.get_id())
+		{
+			shouldRecv_ = true;
+		}
+		else if (callingThread == encodeAudioThread_.get_id())
+		{
+			shouldEncodeAudio_ = true;
+		}
+
+		//stoppingLock.unlock();
 	}
 }
 
@@ -267,7 +272,9 @@ bool HoloSession::isConnected()
 
 HoloSession::~HoloSession()
 {
+	LOG4CXX_DEBUG(logger_, "Destroying HoloSession object...");
 	stop();
+	LOG4CXX_DEBUG(logger_, "Destroyed HoloSession object");
 }
 
 void HoloSession::netRecvLoop()

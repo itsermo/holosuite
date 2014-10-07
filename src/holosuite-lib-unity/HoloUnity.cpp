@@ -1,4 +1,10 @@
 #include "HoloUnity.h"
+
+#include <log4cxx/logger.h>
+#include <log4cxx/patternlayout.h>
+#include <log4cxx/consoleappender.h>
+#include <log4cxx/basicconfigurator.h>
+
 #include <holocommon/CommonDefs.hpp>
 
 #include <holocapture/HoloCaptureGenerator.hpp>
@@ -10,7 +16,7 @@
 
 holo::net::HoloNetProtocolHandshake g_localInfo = { 0 };
 holo::net::HoloNetProtocolHandshake g_remoteInfo = { 0 };
-holo::HOLO_SESSION_MODE g_sessionMode;
+holo::HOLO_SESSION_MODE g_sessionMode = holo::HOLO_SESSION_MODE_DIRECT;
 std::unique_ptr<holo::capture::IHoloCapture> g_videoCapture = nullptr;
 std::unique_ptr<holo::capture::IHoloCaptureAudio> g_audioCapture = nullptr;
 std::unique_ptr<holo::render::IHoloRenderAudio> g_audioRenderer = nullptr;
@@ -25,6 +31,10 @@ std::shared_ptr<holo::net::HoloNetServer> g_server = nullptr;
 std::unique_ptr<holo::render::IHoloRender> g_renderer = nullptr;
 std::unique_ptr<holo::HoloSession> g_clientSession = nullptr;
 std::unique_ptr<holo::HoloSession> g_serverSession = nullptr;
+
+log4cxx::LoggerPtr g_Logger(log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite-unity"));
+log4cxx::PatternLayoutPtr g_LogLayoutPtr = nullptr;
+log4cxx::ConsoleAppenderPtr g_LogAppenderPtr = nullptr;
 
 extern "C" {
 
@@ -103,6 +113,19 @@ extern "C" {
 		holo::render::RENDER_TYPE visOutput,
 		holo::render::RENDER_AUDIO_TYPE audioOutput)
 	{
+		if (!g_LogLayoutPtr)
+		{
+#ifdef WIN32
+			g_LogLayoutPtr = new log4cxx::PatternLayout(L"%-5p %m%n");
+#else
+			g_LogLayoutPtr = new log4cxx::PatternLayout("%-5p %m%n");
+#endif
+		}
+
+		if (!g_LogAppenderPtr)
+			g_LogAppenderPtr = new log4cxx::ConsoleAppender(g_LogLayoutPtr);
+
+		log4cxx::BasicConfigurator::configure(g_LogAppenderPtr);
 
 		holo::capture::HoloCaptureInfo captureInfo = { 0 };
 		holo::HoloAudioFormat audioFormat = { 0 };
@@ -238,6 +261,13 @@ extern "C" {
 
 	HOLOUNITY_API void deinitHoloSuite()
 	{
+		g_videoCapture.reset();
+		g_audioCapture.reset();
+		g_encoderAudio.reset();
+		g_encoderCloud.reset();
+		g_encoderRGBAZ.reset();
+		g_renderer.reset();
+		g_audioRenderer.reset();
 
 	}
 
@@ -267,7 +297,7 @@ extern "C" {
 
 	HOLOUNITY_API void deInitSession()
 	{
-		//g_clientSession->disconnect();
+		g_clientSession.reset();
 	}
 
 	HOLOUNITY_API void startSession()
