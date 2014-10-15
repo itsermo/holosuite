@@ -17,6 +17,10 @@
 #include <atomic>
 #include <condition_variable>
 
+#ifndef WIN32
+#define __stdcall
+#endif
+
 typedef void(__stdcall * RGBAZCallback)(unsigned char*, unsigned short*, const void*);
 typedef void(__stdcall * CloudCallback)(void*, int);
 typedef void(__stdcall * MeshCallback)(unsigned char*, int, const void*, int);
