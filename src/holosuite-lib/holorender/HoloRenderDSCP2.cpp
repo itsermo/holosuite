@@ -1103,11 +1103,16 @@ void HoloRenderDSCP2::deinit()
 	
 }
 
-void HoloRenderDSCP2::updateFromPointCloud(HoloCloudPtr && pointCloud)
+void HoloRenderDSCP2::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 {
 	std::lock_guard<std::mutex> lg(cloudMutex_);
 	cloud_ = std::move(pointCloud);
 	haveNewCloud_.store(true);
+}
+
+void HoloRenderDSCP2::updateLocalPointCloud(HoloCloudPtr && pointCloud)
+{
+
 }
 
 #endif

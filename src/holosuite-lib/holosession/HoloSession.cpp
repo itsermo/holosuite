@@ -556,7 +556,7 @@ void HoloSession::renderLoop()
 			ulRemoteCloud.unlock();
 
 			HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
-			render_->updateFromPointCloud(std::move(renderCloud));
+			render_->updateRemotePointCloud(std::move(renderCloud));
 		}
 		else
 		{
@@ -572,7 +572,7 @@ void HoloSession::renderLoop()
 			haveRemoteCloud_ = false;
 			ulRemoteCloud.unlock();
 
-			render_->updateFromPointCloud(std::move(renderCloud));
+			render_->updateRemotePointCloud(std::move(renderCloud));
 		}
 
 	}

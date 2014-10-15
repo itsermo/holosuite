@@ -76,7 +76,8 @@ namespace holo
 			bool init();
 			void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
-			void updateFromPointCloud(HoloCloudPtr && pointCloud);
+			void updateRemotePointCloud(HoloCloudPtr && pointCloud);
+			void updateLocalPointCloud(HoloCloudPtr && pointCloud);
 			void* getContext() { return nullptr; }
 
 			void display(void);

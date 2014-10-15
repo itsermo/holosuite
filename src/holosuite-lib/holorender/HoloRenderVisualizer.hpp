@@ -25,7 +25,8 @@ namespace holo
 			virtual bool init();
 			virtual void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
-			virtual void updateFromPointCloud(HoloCloudPtr && pointCloud);
+			virtual void updateRemotePointCloud(HoloCloudPtr && pointCloud);
+			virtual void updateLocalPointCloud(HoloCloudPtr && pointCloud);
 			virtual void* getContext();
 		
 		private:
@@ -34,7 +35,8 @@ namespace holo
 			void run();
 
 			std::atomic<bool> shouldRun_;
-			std::atomic<bool> haveNewCloud_;
+			std::atomic<bool> haveNewRemoteCloud_;
+			std::atomic<bool> haveNewLocalCloud_;
 
 			int voxelSize_;
 			pcl::visualization::PCLVisualizer::Ptr visualizer_;
@@ -43,10 +45,16 @@ namespace holo
 			boost::shared_ptr<std::vector<pcl::Vertices>> organizedFastMeshVertices_;
 			pcl::PolygonMesh::Ptr mesh_;
 
-			HoloCloudPtr pointCloud_;
+			HoloCloudPtr localCloud_;
+			HoloCloudPtr remoteCloud_;
+
 			std::thread renderThread_;
-			std::unique_lock<std::mutex> cloudLock_;
-			std::mutex cloudMutex_;
+
+			std::unique_lock<std::mutex> remoteCloudLock_;
+			std::mutex remoteCloudMutex_;
+
+			std::unique_lock<std::mutex> localCloudLock_;
+			std::mutex localCloudMutex_;
 
 			std::mutex initVisualizerMutex_;
 			std::condition_variable initVisualizerCV_;
@@ -59,6 +67,8 @@ namespace holo
 			bool firstTime_;
 
 			bool enableMeshConstruction_;
+
+			bool renderLocalPointCloud_;
 
 			log4cxx::LoggerPtr logger_;
 		};
