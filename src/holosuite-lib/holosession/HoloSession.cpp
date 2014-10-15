@@ -154,18 +154,21 @@ bool HoloSession::start()
 
 	return isRunning();
 }
+//void HoloSession::stop()
+//{
+//	stop(std::this_thread::get_id());
+//}
+
 void HoloSession::stop()
 {
-	stop(std::this_thread::get_id());
-}
 
-void HoloSession::stop(std::thread::id callingThread)
-{
-	if (isRunning_)
-	{
-		//std::unique_lock<std::mutex> stoppingLock(stoppingMutex_);
+	std::unique_lock<std::mutex> stoppingLock(stoppingMutex_);
+	//stoppingMutex_.lock();
 
-		isRunning_ = false;
+	//if (isRunning_)
+	//{
+	
+		//isRunning_ = false;
 
 		if (shouldCapture_)
 		{
@@ -238,26 +241,29 @@ void HoloSession::stop(std::thread::id callingThread)
 				remoteAudioCallbackThread_.join();
 		}
 
-		//workaround to stop all threads when destructor calls stop()
-		//only threads with send/recv socket functions can call stop()
-		//in that case need to set these variables to true so when destroctor of HoloSession
-		//is called, it will close these threads appropriately because apparently returning from
-		//a thread function does not close the thread properly in C++ 11
-		if (callingThread == encodeThread_.get_id())
-		{
-			shouldEncode_ = true;
-		}
-		else if (callingThread == netRecvThread_.get_id())
-		{
-			shouldRecv_ = true;
-		}
-		else if (callingThread == encodeAudioThread_.get_id())
-		{
-			shouldEncodeAudio_ = true;
-		}
+		////workaround to stop all threads when destructor calls stop()
+		////only threads with send/recv socket functions can call stop()
+		////in that case need to set these variables to true so when destroctor of HoloSession
+		////is called, it will close these threads appropriately because apparently returning from
+		////a thread function does not close the thread properly in C++ 11
+		//if (callingThread == encodeThread_.get_id())
+		//{
+		//	shouldEncode_ = true;
+		//}
+		//else if (callingThread == netRecvThread_.get_id())
+		//{
+		//	shouldRecv_ = true;
+		//}
+		//else if (callingThread == encodeAudioThread_.get_id())
+		//{
+		//	shouldEncodeAudio_ = true;
+		//}
 
-		//stoppingLock.unlock();
-	}
+	//}
+
+	stoppingLock.unlock();
+
+	isRunning_ = false;
 }
 
 bool HoloSession::isRunning()
@@ -273,7 +279,7 @@ bool HoloSession::isConnected()
 HoloSession::~HoloSession()
 {
 	LOG4CXX_DEBUG(logger_, "Destroying HoloSession object...");
-	stop();
+	//stop();
 	LOG4CXX_DEBUG(logger_, "Destroyed HoloSession object");
 }
 
@@ -289,9 +295,9 @@ void HoloSession::netRecvLoop()
 		}
 		catch (boost::system::system_error error)
 		{
-			shouldRecv_ = false;
+			//shouldRecv_ = false;
 			if (isRunning())
-				stop();
+				std::async(std::launch::async, &HoloSession::stop, this);
 			return;
 		}
 
@@ -301,9 +307,9 @@ void HoloSession::netRecvLoop()
 			remoteInfo_ = holo::net::HoloNetSession::GetHandshakeFromPacket(recvPacket);
 			break;
 		case HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT:
-			shouldRecv_ = false;
-			if (isRunning())
-				stop();
+			//shouldRecv_ = false;
+			//if (isRunning())
+				std::async(std::launch::async, &HoloSession::stop, this);
 			return;
 		case HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED:
 		{
@@ -491,9 +497,9 @@ void HoloSession::encodeLoop()
 				}
 				catch (boost::system::system_error error)
 				{
-					shouldEncode_ = false;
-					if (isRunning())
-						stop();
+					//shouldEncode_ = false;
+					//if (isRunning())
+						std::async(std::launch::async, &HoloSession::stop, this);
 					return;
 				}
 			}
@@ -525,9 +531,9 @@ void HoloSession::encodeLoop()
 			}
 			catch (boost::system::system_error error)
 			{
-				shouldEncode_ = false;
-				if (isRunning())
-					stop();
+				//shouldEncode_ = false;
+				//if (isRunning())
+					std::async(std::launch::async, &HoloSession::stop, this);
 				continue;
 			}
 		}
@@ -624,9 +630,9 @@ void HoloSession::encodeAudioLoop()
 		}
 		catch (boost::system::system_error error)
 		{
-			shouldEncodeAudio_ = false;
-			if (isRunning())
-				stop();
+			//shouldEncodeAudio_ = false;
+			//if (isRunning())
+				std::async(std::launch::async, &HoloSession::stop, this);
 			continue;
 		}
 	}

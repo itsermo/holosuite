@@ -95,38 +95,38 @@ void HoloRenderVisualizer::run()
 
 	LOG4CXX_DEBUG(logger_, "Point cloud visualizier render thread started");
 
-	//pcl::PointXYZ Pt;
-	//Pt.x = 0.15;
-	//Pt.y = 0;
-	//Pt.z = 0.6;
-	//visualizer_->addSphere(Pt, 0.1, 1.0, 0.0, 0.0, "Sphere0");
-	//
-	////pcl::ModelCoefficients coeffs;
-	////coeffs.values.push_back(0.0);
-	////coeffs.values.push_back(0.0);
-	////coeffs.values.push_back(1.0);
-	////coeffs.values.push_back(0.0);
-	////visualizer_->addPlane(coeffs, 0.0, 1.0, 0.0, "plane");
+	pcl::PointXYZ Pt;
+	Pt.x = 0.15;
+	Pt.y = 0;
+	Pt.z = 0.6;
+	visualizer_->addSphere(Pt, 0.1, 1.0, 0.0, 0.0, "Sphere0");
+	
+	//pcl::ModelCoefficients coeffs;
+	//coeffs.values.push_back(0.0);
+	//coeffs.values.push_back(0.0);
+	//coeffs.values.push_back(1.0);
+	//coeffs.values.push_back(0.0);
+	//visualizer_->addPlane(coeffs, 0.0, 1.0, 0.0, "plane");
 
-	//HoloCloudPtr planeCloud = HoloCloudPtr(new HoloCloud(200, 200));
-	//planeCloud->is_dense = false;
-	//planeCloud->sensor_origin_.setZero();
-	//planeCloud->sensor_orientation_.setIdentity();
+	HoloCloudPtr planeCloud = HoloCloudPtr(new HoloCloud(200, 200));
+	planeCloud->is_dense = false;
+	planeCloud->sensor_origin_.setZero();
+	planeCloud->sensor_orientation_.setIdentity();
 
-	//for (size_t y = 0, idx = 0; y < planeCloud->height; y++)
-	//{
-	//	for (size_t x = 0; x < planeCloud->width; x++, idx++)
-	//	{
-	//		planeCloud->points[idx].x = (x / 200.0f) - 0.5;
-	//		planeCloud->points[idx].y = (y/ 200.0f) - 0.5;
-	//		planeCloud->points[idx].z = 0.7;
-	//		planeCloud->points[idx].r = 0;
-	//		planeCloud->points[idx].g = 255;
-	//		planeCloud->points[idx].b = 255;
-	//	}
-	//}
+	for (size_t y = 0, idx = 0; y < planeCloud->height; y++)
+	{
+		for (size_t x = 0; x < planeCloud->width; x++, idx++)
+		{
+			planeCloud->points[idx].x = (x / 200.0f) - 0.5;
+			planeCloud->points[idx].y = (y/ 200.0f) - 0.5;
+			planeCloud->points[idx].z = 0.7;
+			planeCloud->points[idx].r = 0;
+			planeCloud->points[idx].g = 255;
+			planeCloud->points[idx].b = 255;
+		}
+	}
 
-	//visualizer_->addPointCloud(planeCloud, "planeCloud");
+	visualizer_->addPointCloud(planeCloud, "planeCloud");
 
 	while (shouldRun_)
 	{

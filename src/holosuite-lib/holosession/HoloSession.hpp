@@ -75,7 +75,7 @@ namespace holo
 
 	private:
 		
-		void stop(std::thread::id callingThread);
+		//void stop(std::thread::id callingThread);
 
 		std::string localName_;
 		
