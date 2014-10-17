@@ -24,7 +24,7 @@ namespace holo
 				float rgbFPS,
 				unsigned int zWidth,
 				unsigned int zHeight,
-				float zFPS);
+				float zFPS, bool shouldRecord = false, std::string fileName = "holocapture.oni");
 			~HoloCaptureOpenNI2();
 			virtual bool init(int which = 0);
 
@@ -59,6 +59,10 @@ namespace holo
 			openni::Device device_;
 			openni::VideoStream depthStream_;
 			openni::VideoStream colorStream_;
+			
+			openni::Recorder recorder_;
+			bool shouldRecord_;
+			std::string outputFilePath_;
 
 			//HoloCaptureOpenNI2Listener depthListener_;
 			//HoloCaptureOpenNI2Listener colorListener_;
@@ -85,7 +89,7 @@ namespace holo
 
 			WorldConvertCache worldConvertCache_;
 
-			std::string filePath_;
+			std::string inputFilePath_;
 
 			log4cxx::LoggerPtr logger_;
 		};

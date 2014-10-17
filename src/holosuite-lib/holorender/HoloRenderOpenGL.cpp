@@ -122,7 +122,11 @@ void HoloRenderOpenGL::glutInitLoop()
 	// Initialize GLUT window and callbacks
 	glutInit(&fakeargc, const_cast<char**>(fakeargv));
 	glutInitWindowSize(windowWidth_, windowHeight_);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STEREO);
+
+	if (enableZSpaceRendering_)
+		glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STEREO);
+	else
+		glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
 
 	std::stringstream ss;
 	ss << "holosuite";
@@ -196,8 +200,8 @@ void HoloRenderOpenGL::reshape(int width, int height)
 void HoloRenderOpenGL::idle()
 {
 	// refresh point cloud data
-	if (haveNewRemoteCloud_.load())
-		glutPostRedisplay();
+	//if (haveNewRemoteCloud_.load())
+	glutPostRedisplay();
 
 #ifdef TRACE_LOG_ENABLED
 
@@ -279,9 +283,10 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 	//	printf("%f \n", translateZ_ - 0.675);
 	//	break;
 
-	//case 'f':
-	//	//writeToFile2();
-	//	break;
+	case 'f':
+		glutFullScreen();
+		//writeToFile2();
+		break;
 	//case 'F':
 	//	//printf("writing view texture\n");
 	//	//writeViewsToFile();
@@ -504,7 +509,7 @@ void HoloRenderOpenGL::drawPointCloud()
 			continue;
 
 		//luma = (pointIdx->r + pointIdx->g + pointIdx->b) / 3 * gain;
-		glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
+		glVertex4f(pointIdx->x, pointIdx->y + 0.12, pointIdx->z, 1.0f);
 		glColor3f(pointIdx->r * gain, pointIdx->g * gain, pointIdx->b * gain);
 		pointIdx++;
 	}

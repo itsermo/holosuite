@@ -26,16 +26,19 @@ isOpenNI2Init_(false), worldConvertCache_()
 	LOG4CXX_DEBUG(logger_, "HoloCaptureOpenNI2 object instantiated");
 }
 
-HoloCaptureOpenNI2::HoloCaptureOpenNI2(std::string filePath) : IHoloCapture(),
-rgbWidth_(HOLO_CAPTURE_DEFAULT_RGB_WIDTH),
-rgbHeight_(HOLO_CAPTURE_DEFAULT_RGB_HEIGHT),
-rgbFPS_(HOLO_CAPTURE_DEFAULT_RGB_FPS),
-zWidth_(HOLO_CAPTURE_DEFAULT_Z_WIDTH),
-zHeight_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT),
-zFPS_(HOLO_CAPTURE_DEFAULT_Z_FPS),
-isOpen_(false),
-isOpenNI2Init_(false),
-filePath_(filePath), worldConvertCache_()
+HoloCaptureOpenNI2::HoloCaptureOpenNI2(std::string filePath) :
+	IHoloCapture(),
+	rgbWidth_(HOLO_CAPTURE_DEFAULT_RGB_WIDTH),
+	rgbHeight_(HOLO_CAPTURE_DEFAULT_RGB_HEIGHT),
+	rgbFPS_(HOLO_CAPTURE_DEFAULT_RGB_FPS),
+	zWidth_(HOLO_CAPTURE_DEFAULT_Z_WIDTH),
+	zHeight_(HOLO_CAPTURE_DEFAULT_Z_HEIGHT),
+	zFPS_(HOLO_CAPTURE_DEFAULT_Z_FPS),
+	isOpen_(false),
+	isOpenNI2Init_(false),
+	inputFilePath_(filePath),
+	worldConvertCache_(),
+	shouldRecord_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
 
@@ -47,15 +50,19 @@ HoloCaptureOpenNI2::HoloCaptureOpenNI2(unsigned int rgbWidth,
 	float rgbFPS,
 	unsigned int zWidth,
 	unsigned int zHeight,
-	float zFPS) :
-rgbWidth_(rgbWidth),
-rgbHeight_(rgbHeight),
-rgbFPS_(rgbFPS),
-zWidth_(zWidth),
-zHeight_(zHeight),
-zFPS_(zFPS),
-isOpen_(false),
-isOpenNI2Init_(false), worldConvertCache_()
+	float zFPS, bool shouldRecord,
+	std::string fileName) :
+	rgbWidth_(rgbWidth),
+	rgbHeight_(rgbHeight),
+	rgbFPS_(rgbFPS),
+	zWidth_(zWidth),
+	zHeight_(zHeight),
+	zFPS_(zFPS),
+	isOpen_(false),
+	isOpenNI2Init_(false),
+	outputFilePath_(fileName),
+	worldConvertCache_(),
+	shouldRecord_(shouldRecord)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.capture.openni2");
 
@@ -86,19 +93,19 @@ bool HoloCaptureOpenNI2::init(int which)
 	openni::Array<openni::DeviceInfo> deviceArray;
 	OpenNI::enumerateDevices(&deviceArray);
 
-	if (deviceArray.getSize() == 0 && filePath_.empty())
+	if (deviceArray.getSize() == 0 && inputFilePath_.empty())
 	{
 		LOG4CXX_ERROR(logger_, "Did not find any OpenNI2 devices");
 		return false;
 	}
-	else if ((deviceArray.getSize() < which || which < 0) && filePath_.empty())
+	else if ((deviceArray.getSize() < which || which < 0) && inputFilePath_.empty())
 	{
 		LOG4CXX_ERROR(logger_, "Depth camera device selection index was out of bounds");
 		return false;
 	}
 
 	LOG4CXX_INFO(logger_, "Opening device " << deviceArray[which].getVendor() << " " << deviceArray[which].getName() << " @ " << deviceArray[which].getUri());
-	rc = filePath_.empty() ? device_.open(deviceArray[which].getUri()) : device_.open(filePath_.c_str());
+	rc = inputFilePath_.empty() ? device_.open(deviceArray[which].getUri()) : device_.open(inputFilePath_.c_str());
 	if (rc != Status::STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not open device");
@@ -243,7 +250,35 @@ bool HoloCaptureOpenNI2::init(int which)
 
 	LOG4CXX_INFO(logger_, "OpenNI2 capture device intitalized")
 
-	//chdir("../");
+		//chdir("../");
+	if (shouldRecord_)
+	{
+		LOG4CXX_INFO(logger_, "Starting OpenNI2 recorder with file path \"" << outputFilePath_ << "\" ...")
+		if (recorder_.create(outputFilePath_.c_str()) != Status::STATUS_OK)
+		{
+			LOG4CXX_ERROR(logger_, "Could not create OpenNI2 recorder device");
+			return false;
+		}
+
+		if (recorder_.attach(colorStream_) != Status::STATUS_OK)
+		{
+			LOG4CXX_ERROR(logger_, "Could not attach color stream to OpenNI2 recorder device");
+			return false;
+		}
+		
+		if (recorder_.attach(depthStream_, false))
+		{
+			LOG4CXX_ERROR(logger_, "Could not attach depth stream to OpenNI2 recorder device");
+			return false;
+		}
+
+		if (recorder_.start() != Status::STATUS_OK)
+		{
+			LOG4CXX_ERROR(logger_, "Could not start OpenNI2 recorder device");
+			return false;
+		}
+		LOG4CXX_INFO(logger_, "OpenNI2 recorder device started");
+	}
 
 	return isOpen_;
 }
@@ -370,6 +405,9 @@ void HoloCaptureOpenNI2::deinit()
 {
 	if (isOpen_)
 	{
+
+		if (shouldRecord_)
+			recorder_.stop();
 		//depthStream_.removeNewFrameListener(&depthListener_);
 		//colorStream_.removeNewFrameListener(&colorListener_);
 
