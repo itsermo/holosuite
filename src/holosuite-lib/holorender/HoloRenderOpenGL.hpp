@@ -19,8 +19,27 @@
 #include <atomic>
 #include <condition_variable>
 
+#ifdef ENABLE_HOLO_ZSPACE
+#include <zSpace.h>
+#endif
+
 #define HOLO_RENDER_OPENGL_ENABLE_ZSPACE_RENDERING true
 #define HOLO_RENDER_OPENGL_DEFAULT_VOXEL_SIZE HOLO_RENDER_DEFAULT_VOXEL_SIZE
+
+#ifdef ENABLE_HOLO_ZSPACE
+
+#define CHECK_ERROR(error)                                                      \
+if (error != ZS_ERROR_OKAY)                                                     \
+  {                                                                             \
+  char errorString[256];                                                        \
+  zsGetErrorString(error, errorString, sizeof(errorString));                    \
+  LOG4CXX_ERROR(logger_, errorString);											\
+  }
+
+static const float ROTATION_PER_SECOND = 45.0f;
+static const float PI = 3.1415926535897932384626433832795f;
+
+#endif
 
 namespace holo
 {
@@ -80,7 +99,7 @@ namespace holo
 			std::condition_variable hasInitCV_;
 
 			bool enableZSpaceRendering_;
-			int voxelSize_;
+			float voxelSize_;
 
 			int mouseLeftButton_;
 			int mouseMiddleButton_;
@@ -89,8 +108,39 @@ namespace holo
 			int mouseDownY_;
 
 			int windowWidth_, windowHeight_;
+			int windowX_ = 0, windowY_ = 0;
 
 			float viewPhi_, viewTheta_, viewDepth_;
+
+#ifdef ENABLE_HOLO_ZSPACE
+			ZSContext   zSpaceContext_ = NULL;
+			ZSHandle    displayHandle_ = NULL;
+			ZSHandle    bufferHandle_ = NULL;
+			ZSHandle    viewportHandle_ = NULL;
+			ZSHandle    frustumHandle_ = NULL;
+			ZSHandle    stylusHandle_ = NULL;
+
+			float       cameraAngle_ = 0.0f;
+			ZSMatrix4   cameraMatrix_;
+			ZSMatrix4   modelViewMatrix_;
+			ZSMatrix4   stylusWorldMatrix_;
+
+			clock_t     previousTime_ = clock();
+			bool        isCameraOrbitEnabled_ = false;
+
+			bool update();
+			void updateCamera();
+
+			void draw();
+			void drawSceneForEye(ZSEye eye);
+
+			void setRenderTarget(ZSEye eye);
+			bool setViewMatrix(ZSEye eye);
+			bool setProjectionMatrix(ZSEye eye);
+
+			void matrixMultiply(const float a[16], const float b[16], float r[16]);
+			void matrixInverse(const float m[16], float i[16]);
+#endif
 
 			log4cxx::LoggerPtr logger_;
 		};
