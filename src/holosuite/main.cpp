@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 	render_options.add_options()
 		("render-output,o",
 		boost::program_options::value<std::string>()->default_value("visualizer"),
-		"valid setting is [visualizer,dscp2]")
+		"valid setting is [visualizer,dscp2,opengl]")
 		("visualizer-settings",
 		boost::program_options::value<std::string>()->composing(),
 		"PCL visualizer settings [voxel size, enable fast mesh construction]")
@@ -620,6 +620,10 @@ int main(int argc, char *argv[])
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKII;
 		}
 #endif
+		else if (vm["render-output"].as<std::string>().compare("opengl") == 0)
+		{
+			renderType = holo::render::RENDER_TYPE_OPENGL;
+		}
 		else if (vm["render-output"].as<std::string>().compare("none") == 0)
 		{
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_NONE;
@@ -932,6 +936,9 @@ int main(int argc, char *argv[])
 					break;
 				case holo::render::RENDER_TYPE_VIS3D:
 					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, enableMeshConstruction);
+					break;
+				case holo::render::RENDER_TYPE_OPENGL:
+					renderer = holo::render::HoloRenderGenerator::fromOpenGL(voxelSize, true);
 					break;
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:

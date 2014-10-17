@@ -10,6 +10,8 @@
 #include "HoloRenderDSCP2.hpp"
 #endif
 
+#include "HoloRenderOpenGL.hpp"
+
 #include <memory>
 
 namespace holo
@@ -55,6 +57,16 @@ namespace holo
 				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2(headNumber, displayEnv));
 			}
 #endif
+
+			static std::unique_ptr<IHoloRender> fromOpenGL()
+			{
+				return std::unique_ptr<IHoloRender>(new HoloRenderOpenGL());
+			}
+
+			static std::unique_ptr<IHoloRender> fromOpenGL(int voxelSize, bool enableZSpaceRendering)
+			{
+				return std::unique_ptr<IHoloRender>(new HoloRenderOpenGL(voxelSize, enableZSpaceRendering));
+			}
 
 		};
 

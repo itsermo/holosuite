@@ -1004,6 +1004,7 @@ void HoloRenderDSCP2::drawString(float posX, float posY, std::string theString)
 	}
 }
 
+
 bool HoloRenderDSCP2::checkForCgErrorLine(const char *situation, int line)
 {
 	CGerror error;
