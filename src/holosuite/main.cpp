@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
 	std::string dscp2DisplayEnv;
 #endif
 
+	bool enableZSpace = false;
+
 	holo::net::HoloNetProtocolHandshake localInfo = {0};
 	holo::net::HoloNetProtocolHandshake infoFromClient = {0};
 	holo::net::HoloNetProtocolHandshake infoFromServer = {0};
@@ -180,14 +182,18 @@ int main(int argc, char *argv[])
 		("render-output,o",
 		boost::program_options::value<std::string>()->default_value("visualizer"),
 		"valid setting is [visualizer,dscp2,opengl]")
-		("visualizer-settings",
+		("render-settings",
 		boost::program_options::value<std::string>()->composing(),
-		"PCL visualizer settings [voxel size, enable fast mesh construction]")
+		"Render display settings [voxel size, enable fast mesh construction]")
 		;
 
 #ifdef ENABLE_HOLO_DSCP2
 	render_options.add_options()("dscp2-head-number", boost::program_options::value<int>()->default_value(0), "DSCP2 instance head number")
 		("dscp2-display-env", boost::program_options::value<std::string>()->default_value(":0.0"), "X server display (e.g. \":0.0\")");
+#endif
+
+#ifdef ENABLE_HOLO_ZSPACE
+	render_options.add_options()("enable-zspace", boost::program_options::value<bool>()->default_value(false), "Enables ZSpace stereo and headtracking (only for use with OpenGL renderer)");
 #endif
 
 	boost::program_options::options_description cmdline_options;
@@ -575,33 +581,32 @@ int main(int argc, char *argv[])
 
 	if (vm.count("render-output"))
 	{
-		if (vm["render-output"].as<std::string>().compare("visualizer") == 0)
+		if (vm.count("render-settings"))
 		{
-
-			if (vm.count("visualizer-settings"))
-			{
-				auto visSettingsString = vm["visualizer-settings"].as<std::string>();
-				std::vector<std::string> visSettings;
-				boost::char_separator<char> sep(", ");
-				boost::tokenizer<boost::char_separator<char>> tokens(visSettingsString, sep);
-				for (const auto& t : tokens) {
-					visSettings.push_back(t);
-				}
-
-				if (visSettings.size() >= 1)
-				{
-					voxelSize = atoi(visSettings[0].c_str());
-					if (visSettings.size() == 2)
-						enableMeshConstruction = visSettings[1].compare("true") == 0 ? true : false;
-				}
-				else
-				{
-					std::cout << "The visualizer settings entered are invalid. Please check the number of arguments and separate values by a comma." << std::endl << std::endl;
-					std::cout << render_options << std::endl;
-					return -1;
-				}
+			auto visSettingsString = vm["render-settings"].as<std::string>();
+			std::vector<std::string> visSettings;
+			boost::char_separator<char> sep(", ");
+			boost::tokenizer<boost::char_separator<char>> tokens(visSettingsString, sep);
+			for (const auto& t : tokens) {
+				visSettings.push_back(t);
 			}
 
+			if (visSettings.size() >= 1)
+			{
+				voxelSize = atoi(visSettings[0].c_str());
+				if (visSettings.size() == 2)
+					enableMeshConstruction = visSettings[1].compare("true") == 0 ? true : false;
+			}
+			else
+			{
+				std::cout << "The visualizer settings entered are invalid. Please check the number of arguments and separate values by a comma." << std::endl << std::endl;
+				std::cout << render_options << std::endl;
+				return -1;
+			}
+		}
+
+		if (vm["render-output"].as<std::string>().compare("visualizer") == 0)
+		{
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_VIS3D;
 		}
 #ifdef ENABLE_HOLO_DSCP2
@@ -622,6 +627,9 @@ int main(int argc, char *argv[])
 #endif
 		else if (vm["render-output"].as<std::string>().compare("opengl") == 0)
 		{
+			if (vm.count("enable-zspace"))
+				enableZSpace = vm["enable-zspace"].as<bool>();
+				
 			renderType = holo::render::RENDER_TYPE_OPENGL;
 		}
 		else if (vm["render-output"].as<std::string>().compare("none") == 0)
@@ -938,7 +946,7 @@ int main(int argc, char *argv[])
 					renderer = holo::render::HoloRenderGenerator::fromPCLVisualizer(voxelSize, enableMeshConstruction);
 					break;
 				case holo::render::RENDER_TYPE_OPENGL:
-					renderer = holo::render::HoloRenderGenerator::fromOpenGL(voxelSize, true);
+					renderer = holo::render::HoloRenderGenerator::fromOpenGL(voxelSize, enableZSpace);
 					break;
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:

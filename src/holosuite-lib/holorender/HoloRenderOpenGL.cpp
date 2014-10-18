@@ -581,7 +581,14 @@ void HoloRenderOpenGL::drawPointCloud()
 
 	glDisable(GL_LINE_SMOOTH);
 
+
 	glEnd();
+
+	glShadeModel(GL_FLAT);
+	glPushMatrix();
+	glTranslatef(0.1, 0, 0.9);
+	glutSolidSphere(0.05, 16, 16);
+	glPopMatrix();
 
 	//glDisable(GL_TEXTURE_2D);
 
