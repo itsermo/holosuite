@@ -496,7 +496,7 @@ void HoloRenderOpenGL::drawPointCloud()
 	//glEnable(GL_TEXTURE_2D);
 
 	glEnable(GL_POINT_SMOOTH);
-	glPointSize(voxelSize_*2);
+	glPointSize(voxelSize_*4);
 	//float attenparams[3] = {0,0,0}; //a b c	//size ? 1 a + b ? d + c ? d 2
 	//glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION,attenparams);
 	glBegin(GL_POINTS);
@@ -509,7 +509,7 @@ void HoloRenderOpenGL::drawPointCloud()
 			continue;
 
 		//luma = (pointIdx->r + pointIdx->g + pointIdx->b) / 3 * gain;
-		glVertex4f(pointIdx->x, pointIdx->y + 0.12, pointIdx->z, 1.0f);
+		glVertex4f(pointIdx->x+0.1, pointIdx->y + 0.12, pointIdx->z - 0.05, 1.0f);
 		glColor3f(pointIdx->r * gain, pointIdx->g * gain, pointIdx->b * gain);
 		pointIdx++;
 	}
@@ -517,6 +517,72 @@ void HoloRenderOpenGL::drawPointCloud()
 	glEnd();
 
 	glDisable(GL_POINT_SMOOTH);
+
+	glColor3f(.3, .3, .3);
+	glBegin(GL_QUADS);
+	glVertex3f(-5, -1.01, 0);
+	glVertex3f(-5, -1.01, 5);
+	glVertex3f(5, -1.01, 5);
+	glVertex3f(5, -1.01, 0);
+	glEnd();
+
+	glColor3f(.3, .3, .3);
+	glBegin(GL_QUADS);
+	glVertex3f(-5, -1.01, 5);
+	glVertex3f(-5, 1.01, 5);
+	glVertex3f(5, 1.01, 5);
+	glVertex3f(5, -1.01, 5);
+	glEnd();
+
+	glColor3f(.3, .3, .3);
+	glBegin(GL_QUADS);
+	glVertex3f(-5, 1.01, 5);
+	glVertex3f(-5, 1.01, 0);
+	glVertex3f(5, 1.01, 0);
+	glVertex3f(5, 1.01, 5);
+	glEnd();
+
+	glEnable(GL_LINE_SMOOTH);
+	glLineWidth(6);
+
+	glBegin(GL_LINES);
+
+	for (int i = -5; i <= 5; i++) {
+		if (i == 0) { glColor3f(.6, .3, .3); }
+		else { glColor3f(.6, .6, .25); };
+		glVertex3f(i, -1, -5);
+		glVertex3f(i, -1, 5);
+		if (i == 0) { glColor3f(.3, .3, .6); }
+		else { glColor3f(.6, .6, .25); };
+		glVertex3f(-5, -1, i);
+		glVertex3f(5, -1, i);
+		//glVertex3f(-10, -1, i);
+	};
+
+	for (int i = -5; i <= 5; i++) {
+		glColor3f(.6, .6, .25);
+		glVertex3f(-5, 1, i);
+		glVertex3f(5, 1, i);
+		glColor3f(.6, .6, .25);
+		glVertex3f(i, 1, -5);
+		glVertex3f(i, 1, 5);
+		//glVertex3f(-10, -1, i);
+	};
+
+	for (int i = -5; i <= 5; i++) {
+		glColor3f(.6, .6, .25);
+		glVertex3f(-5, i, 5);
+		glVertex3f(5, i, 5);
+		glColor3f(.6, .6, .25);
+		glVertex3f(i, -1, 5);
+		glVertex3f(i, 1, 5);
+		//glVertex3f(-10, -1, i);
+	};
+
+	glDisable(GL_LINE_SMOOTH);
+
+	glEnd();
+
 	//glDisable(GL_TEXTURE_2D);
 
 	//haveNewCloud_.store(false);
