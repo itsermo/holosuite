@@ -23,11 +23,18 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	mouseRightButton_(0),
 	mouseDownX_(0),
 	mouseDownY_(0),
-	windowWidth_(640),
-	windowHeight_(480),
+	windowX_(0),
+	windowY_(0),
+	windowWidth_(1024),
+	windowHeight_(768),
 	viewPhi_(0.0f),
 	viewTheta_(0.0f),
-	viewDepth_(0.0f)
+	viewDepth_(0.0f),
+	isFullScreen_(false),
+	prevWindowWidth_(0),
+	prevWindowHeight_(0),
+	prevWindowX_(0),
+	prevWindowY_(0)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
@@ -177,6 +184,13 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glCheckErrors();
 
+	prevWindowWidth_ = glutGet(GLUT_WINDOW_WIDTH);
+	prevWindowHeight_ = glutGet(GLUT_WINDOW_HEIGHT);
+	prevWindowX_ = glutGet(GLUT_WINDOW_X);
+	prevWindowY_ = glutGet(GLUT_WINDOW_Y);
+	glutFullScreen();
+	isFullScreen_ = true;
+
 	glutMainLoop();
 }
 
@@ -207,11 +221,30 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 	//printf("keyboard \n");
 	switch (c)
 	{
+	case 'w':
+		viewDepth_ -= 0.05;
+		break;
+	case 's':
+		viewDepth_ += 0.05;
+		break;
 	case 'f':
-		glutFullScreen();
+		if (!isFullScreen_)
+		{
+			prevWindowWidth_ = glutGet(GLUT_WINDOW_WIDTH);
+			prevWindowHeight_ = glutGet(GLUT_WINDOW_HEIGHT);
+			prevWindowX_ = glutGet(GLUT_WINDOW_X);
+			prevWindowY_ = glutGet(GLUT_WINDOW_Y);
+			glutFullScreen();
+			isFullScreen_ = true;
+		}
+		else
+		{
+			glutPositionWindow(prevWindowX_, prevWindowY_);
+			glutReshapeWindow(prevWindowWidth_, prevWindowHeight_);
+			isFullScreen_ = false;
+		}
 		break;
 	case '1':
-
 		glEnable(GL_LIGHTING);
 		break;
 	case '2':
@@ -289,14 +322,28 @@ void HoloRenderOpenGL::cleanup()
 void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
 {
 	mouseDownX_ = x; mouseDownY_ = y;
-	mouseLeftButton_ = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
-	mouseMiddleButton_ = ((button == GLUT_MIDDLE_BUTTON) && (state == GLUT_DOWN));
-	glutPostRedisplay();
+
+	if (button == 3)
+	{
+		if (state == GLUT_UP)
+			viewDepth_ + 0.01;
+	}
+	else if (button == 4)
+	{
+		if (state == GLUT_UP)
+			viewDepth_ - 0.01;
+	}
+	else
+	{
+		mouseLeftButton_ = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
+		mouseMiddleButton_ = ((button == GLUT_MIDDLE_BUTTON) && (state == GLUT_DOWN));
+		glutPostRedisplay();
+	}
 }
 
 void HoloRenderOpenGL::mouseMotion(int x, int y)
 {
-	if (mouseLeftButton_){ viewPhi_ += (float)(x - mouseDownX_) / 4.0; viewTheta_ += (float)(mouseDownY_ - y) / 4.0; } // rotate
+	if (mouseLeftButton_){ viewPhi_ -= (float)(x - mouseDownX_) / 4.0; viewTheta_ -= (float)(mouseDownY_ - y) / 4.0; } // rotate
 	if (mouseMiddleButton_){ viewDepth_ += (float)(mouseDownY_ - y) / 10.0; } // scale
 	mouseDownX_ = x;   mouseDownY_ = y;
 	glutPostRedisplay();
@@ -351,7 +398,7 @@ void HoloRenderOpenGL::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth)
 {
 	const GLfloat lineColor[3] = { 0.6f, 0.6f, 0.25f };
-	const GLfloat tileColor[3] = { 0.2f, 0.2f, 0.2f };
+	const GLfloat tileColor[3] = { 0.1f, 0.1f, 0.1f };
 	const GLint lineThickness = 10;
 
 	width /= 2;
@@ -466,7 +513,7 @@ void HoloRenderOpenGL::drawPointCloud()
 			continue;
 
 		//luma = (pointIdx->r + pointIdx->g + pointIdx->b) / 3 * gain;
-		glVertex4f(pointIdx->x+0.1, pointIdx->y + 0.12, pointIdx->z - 0.05, 1.0f);
+		glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
 		glColor3f(pointIdx->r * gain, pointIdx->g * gain, pointIdx->b * gain);
 		pointIdx++;
 	}
@@ -544,7 +591,7 @@ void HoloRenderOpenGL::updateCamera()
 	// the world's origin.
 	GLfloat eyeX = 0.222f * sin(cameraAngle_ * PI / 180.0f);
 	GLfloat eyeY = 0.345f;
-	GLfloat eyeZ = 0.222f * cos(cameraAngle_ * PI / 180.0f);
+	GLfloat eyeZ = -0.222f * cos(cameraAngle_ * PI / 180.0f);
 
 	// Use gluLookAt to calculate the new model-view matrix.
 	glMatrixMode(GL_MODELVIEW);

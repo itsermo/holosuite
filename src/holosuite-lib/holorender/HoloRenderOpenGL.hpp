@@ -108,8 +108,11 @@ namespace holo
 			int mouseDownX_;
 			int mouseDownY_;
 
+			bool isFullScreen_;
 			int windowWidth_, windowHeight_;
-			int windowX_ = 0, windowY_ = 0;
+			int prevWindowWidth_, prevWindowHeight_;
+			int windowX_, windowY_;
+			int prevWindowX_, prevWindowY_;
 
 			float viewPhi_, viewTheta_, viewDepth_;
 
