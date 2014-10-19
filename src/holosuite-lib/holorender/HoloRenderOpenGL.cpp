@@ -199,40 +199,7 @@ void HoloRenderOpenGL::reshape(int width, int height)
 
 void HoloRenderOpenGL::idle()
 {
-	// refresh point cloud data
-	//if (haveNewRemoteCloud_.load())
 	glutPostRedisplay();
-
-#ifdef TRACE_LOG_ENABLED
-
-	float fps;
-	if (rotateCounter_ == 1)
-	{
-		rot_ = rot_ - 5;
-		rot_ = fmod(rot_, 360);
-	}
-	//tz=tz-.5;
-	//  glutPostRedisplay();
-
-	frameNumber_++;
-	currentTime_ = glutGet(GLUT_ELAPSED_TIME);
-	//printf("idle\n");
-	if (currentTime_ - timeBase_ > 1000)
-	{
-		const int len = 1024;
-		char msg[len];
-		//	printf("here\n");
-		fps = frameNumber_ * 1000.0 / (currentTime_ - timeBase_);
-		timeBase_ = currentTime_;
-		frameNumber_ = 0;
-		//sprintf(msg, "Wafel %d fps: %f\n", headNumber_, fps);
-		//printf("%s", msg);
-
-		LOG4CXX_TRACE(logger_, "DSCP2 rendering on head " << headNum_ << " @ " << fps << " fps");
-		//		fflush(stdout);
-	}
-
-#endif
 }
 
 void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
@@ -240,114 +207,15 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 	//printf("keyboard \n");
 	switch (c)
 	{
-
-	//case 'z': //invert set of disabled views
-	//	viewEnableBitmask_ = ~viewEnableBitmask_;
-	//	break;
-	//case 'Z': //enable all views
-	//	viewEnableBitmask_ = -1;
-	//	break;
-	//case 'x': //cycle through debug modes in shader (output intermediate variables)
-	//	hologramOutputDebugSwitch_++;
-	//	hologramOutputDebugSwitch_ = hologramOutputDebugSwitch_ % HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES;
-	//	cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
-	//	break;
-	//case 'X':
-	//	hologramOutputDebugSwitch_--;
-	//	hologramOutputDebugSwitch_ = hologramOutputDebugSwitch_ % HOLO_RENDER_DSCP2_NUM_DEBUG_SWITCHES;
-	//	cgSetParameter1f(fringeFragmentArgs_.debugSwitch, hologramOutputDebugSwitch_);
-	//	break;
-	//case 'j':
-	//	translateX_ = translateX_ + 0.01;
-	//	printf("tx %f \n", translateX_);
-	//	break;
-	//case 'l':
-	//	translateX_ = translateX_ - 0.01;
-	//	printf("tx %f \n", translateX_);
-	//	break;
-	//case 'i':
-	//	translateY_ = translateY_ - 0.01;
-	//	printf("ty %f \n", translateY_);
-	//	break;
-	//case 'k':
-	//	translateY_ = translateY_ + 0.01;
-	//	printf("ty %f \n", translateY_);
-	//	break;
-
-	//case 'w':
-	//	translateZ_ = translateZ_ - 0.01;
-	//	printf("%f \n", translateZ_ - 0.675);
-	//	break;
-	//case 's':
-	//	translateZ_ = translateZ_ + 0.01;
-	//	printf("%f \n", translateZ_ - 0.675);
-	//	break;
-
 	case 'f':
 		glutFullScreen();
-		//writeToFile2();
 		break;
-	//case 'F':
-	//	//printf("writing view texture\n");
-	//	//writeViewsToFile();
-	//	break;
-	//case 'e':
-	//	translateZ_ = translateZ_ - 0.01;
-	//	printf("%f \n", translateZ_ - 675);
-	//	break;
-	//case 'd':
-	//	translateZ_ = translateZ_ + 0.01;
-	//	printf("%f \n", translateZ_ - 675);
-	//	break;
-	//case 'c':
-	//	translateZ_ = 0;
-	//	printf("%f \n", translateZ_ - 675);
-	//	break;
-	//case 'r':
-	//	rot_ = rot_ - 5;
-	//	rotateCounter_ = (rotateCounter_ * -1) + 1;
-
-	//	printf("rotate %i \n", rotateCounter_);
-	//	break;
-	//case ' ':
-	//	//makeViewtexFromFile();
-	//	break;
-	//case ']':
-	//	lightLocationZ_ = lightLocationZ_ - 1.0f;
-	//	printf("%f \n", lightLocationZ_);
-	//	break;
-	//case '[':
-	//	lightLocationZ_ = lightLocationZ_ + 1.0f;
-	//	printf("%f \n", lightLocationZ_);
-	//	break;
-	//case '=':
-	//	lightLocationY_ = lightLocationY_ - 1.0f;
-	//	printf("%f \n", lightLocationY_);
-	//	break;
-	//case '-':
-	//	lightLocationY_ = lightLocationY_ + 1.0f;
-	//	printf("%f \n", lightLocationY_);
-	//	break;
-	//case ';':
-	//	lightLocationX_ = lightLocationX_ - 1.0f;
-	//	printf("%f \n", lightLocationX_);
-	//	break;
-	//case '/':
-	//	lightLocationX_ = lightLocationX_ + 1.0f;
-	//	printf("%f \n", lightLocationX_);
-	//	break;
 	case '1':
 
 		glEnable(GL_LIGHTING);
-		//cgSetParameter1f(myCgFragmentParam_hogelYes, 0.);
-		//cgUpdateProgramParameters(myCgFragmentProgram2);
-		//printf("Wafel");
 		break;
 	case '2':
 		glDisable(GL_LIGHTING);
-		//cgSetParameter1f(myCgFragmentParam_hogelYes, 1.);
-		//cgUpdateProgramParameters(myCgFragmentProgram2);
-		//printf("Hogel");
 		break;
 
 	case 27: /* Esc key */
@@ -359,10 +227,6 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 	//int mods = glutGetModifiers();
 	//if (mods != 0)
 	//{
-	//	if (c >= '0' && c <= '9') viewEnableBitmask_ ^= 1 << (c - '0' + 10); //toggle view enable bit for numbered view 10-19 (only 16 views used)
-	//}
-	//else {
-	//	if (c >= '0' && c <= '9') viewEnableBitmask_ ^= 1 << (c - '0'); //toggle view enable bit for numbered view 0-9
 
 	//}
 
@@ -373,7 +237,6 @@ void HoloRenderOpenGL::display()
 {
 	if (firstInit_)
 	{
-		//cv::namedWindow("TextureView", CV_WINDOW_FREERATIO);
 		firstInit_ = false;
 		isInit_ = true;
 		hasInitCV_.notify_all();
@@ -404,6 +267,7 @@ void HoloRenderOpenGL::display()
 
 		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
 
+		this->drawBackgroundGrid(4, 2, 3);
 		this->drawPointCloud();
 
 		haveNewRemoteCloud_.store(false);
@@ -484,6 +348,99 @@ void HoloRenderOpenGL::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 	remoteCloud_ = std::move(pointCloud);
 	haveNewRemoteCloud_.store(true);
 }
+void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth)
+{
+	const GLfloat lineColor[3] = { 0.6f, 0.6f, 0.25f };
+	const GLfloat tileColor[3] = { 0.2f, 0.2f, 0.2f };
+	const GLint lineThickness = 10;
+
+	width /= 2;
+	height /= 2;
+
+	glColor3f(tileColor[0], tileColor[1], tileColor[2]);
+	glBegin(GL_QUADS);
+
+	// bottom plane
+	glVertex3f(-width, -height - 0.01, 0);
+	glVertex3f(-width, -height - 0.01, depth);
+	glVertex3f(width, -height - 0.01, depth);
+	glVertex3f(width, -height -0.01, 0);
+	//glEnd();
+
+	// far plane
+	glVertex3f(-width, -height, depth + 0.01);
+	glVertex3f(-width, height, depth + 0.01);
+	glVertex3f(width, height, depth + 0.01);
+	glVertex3f(width, -height, depth + 0.01);
+	//glEnd();
+
+	// top plane
+	glVertex3f(-width, height + 0.01, depth);
+	glVertex3f(-width, height + 0.01, 0);
+	glVertex3f(width, height + 0.01, 0);
+	glVertex3f(width, height + 0.01, depth);
+	//glEnd();
+
+	// left plane
+	glVertex3f(-width - 0.01, -height, 0);
+	glVertex3f(-width - 0.01, -height, depth);
+	glVertex3f(-width - 0.01, height, depth);
+	glVertex3f(-width - 0.01, height, 0);
+	//glEnd();
+
+	// right plane
+	glVertex3f(width + 0.01, -height, 0);
+	glVertex3f(width + 0.01, -height, depth);
+	glVertex3f(width + 0.01, height, depth);
+	glVertex3f(width + 0.01, height, 0);
+	
+	glEnd();
+
+	glEnable(GL_LINE_SMOOTH);
+	glLineWidth(lineThickness);
+
+	glBegin(GL_LINES);
+
+	glColor3f(lineColor[0], lineColor[1], lineColor[2]);
+
+	for (int i = -height; i <= height; i++)
+	{
+		glVertex3f(-width, i, depth);
+		glVertex3f(width, i, depth);
+
+		glVertex3f(-width, i, 0);
+		glVertex3f(-width, i, depth);
+
+		glVertex3f(width, i, 0);
+		glVertex3f(width, i, depth);
+	}
+
+	for (int i = 0; i <= depth; i++)
+	{
+		glVertex3f(-width, height, i);
+		glVertex3f(width, height, i);
+		glVertex3f(-width, -height, i);
+		glVertex3f(width, -height, i);
+
+		glVertex3f(-width, -height, i);
+		glVertex3f(-width, height, i);
+
+		glVertex3f(width, -height, i);
+		glVertex3f(width, height, i);
+	}
+
+	for (int i = -width; i <= width; i++) {
+		glVertex3f(i, height, 0);
+		glVertex3f(i, height, depth);
+		glVertex3f(i, -height, 0);
+		glVertex3f(i, -height, depth);
+		glVertex3f(i, height, depth);
+		glVertex3f(i, -height, depth);
+	};
+
+	glEnd();
+	glDisable(GL_LINE_SMOOTH);
+}
 
 void HoloRenderOpenGL::drawPointCloud()
 {
@@ -518,72 +475,7 @@ void HoloRenderOpenGL::drawPointCloud()
 
 	glDisable(GL_POINT_SMOOTH);
 
-	glColor3f(.3, .3, .3);
-	glBegin(GL_QUADS);
-	glVertex3f(-5, -1.01, 0);
-	glVertex3f(-5, -1.01, 5);
-	glVertex3f(5, -1.01, 5);
-	glVertex3f(5, -1.01, 0);
-	glEnd();
-
-	glColor3f(.3, .3, .3);
-	glBegin(GL_QUADS);
-	glVertex3f(-5, -1.01, 5);
-	glVertex3f(-5, 1.01, 5);
-	glVertex3f(5, 1.01, 5);
-	glVertex3f(5, -1.01, 5);
-	glEnd();
-
-	glColor3f(.3, .3, .3);
-	glBegin(GL_QUADS);
-	glVertex3f(-5, 1.01, 5);
-	glVertex3f(-5, 1.01, 0);
-	glVertex3f(5, 1.01, 0);
-	glVertex3f(5, 1.01, 5);
-	glEnd();
-
-	glEnable(GL_LINE_SMOOTH);
-	glLineWidth(6);
-
-	glBegin(GL_LINES);
-
-	for (int i = -5; i <= 5; i++) {
-		if (i == 0) { glColor3f(.6, .3, .3); }
-		else { glColor3f(.6, .6, .25); };
-		glVertex3f(i, -1, -5);
-		glVertex3f(i, -1, 5);
-		if (i == 0) { glColor3f(.3, .3, .6); }
-		else { glColor3f(.6, .6, .25); };
-		glVertex3f(-5, -1, i);
-		glVertex3f(5, -1, i);
-		//glVertex3f(-10, -1, i);
-	};
-
-	for (int i = -5; i <= 5; i++) {
-		glColor3f(.6, .6, .25);
-		glVertex3f(-5, 1, i);
-		glVertex3f(5, 1, i);
-		glColor3f(.6, .6, .25);
-		glVertex3f(i, 1, -5);
-		glVertex3f(i, 1, 5);
-		//glVertex3f(-10, -1, i);
-	};
-
-	for (int i = -5; i <= 5; i++) {
-		glColor3f(.6, .6, .25);
-		glVertex3f(-5, i, 5);
-		glVertex3f(5, i, 5);
-		glColor3f(.6, .6, .25);
-		glVertex3f(i, -1, 5);
-		glVertex3f(i, 1, 5);
-		//glVertex3f(-10, -1, i);
-	};
-
-	glDisable(GL_LINE_SMOOTH);
-
-
-	glEnd();
-
+	glColor3f(0.6, 0.1, 0);
 	glShadeModel(GL_FLAT);
 	glPushMatrix();
 	glTranslatef(0.1, 0, 0.9);

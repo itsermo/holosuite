@@ -103,8 +103,14 @@ bool HoloCaptureOpenNI2::init(int which)
 		LOG4CXX_ERROR(logger_, "Depth camera device selection index was out of bounds");
 		return false;
 	}
+	
+	if (inputFilePath_.empty())
+	{
+		LOG4CXX_INFO(logger_, "Opening device " << deviceArray[which].getVendor() << " " << deviceArray[which].getName() << " @ " << deviceArray[which].getUri());
+	}
+	else
+		LOG4CXX_INFO(logger_, "Opening ONI file \"" << inputFilePath_ << "\"...");
 
-	LOG4CXX_INFO(logger_, "Opening device " << deviceArray[which].getVendor() << " " << deviceArray[which].getName() << " @ " << deviceArray[which].getUri());
 	rc = inputFilePath_.empty() ? device_.open(deviceArray[which].getUri()) : device_.open(inputFilePath_.c_str());
 	if (rc != Status::STATUS_OK)
 	{
@@ -224,14 +230,14 @@ bool HoloCaptureOpenNI2::init(int which)
 
 	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &rgbHOV_) != Status::STATUS_OK)
 	{
-		LOG4CXX_ERROR(logger_, "Could not get horizontal field-of-view from depth stream");
-		return false;
+		LOG4CXX_WARN(logger_, "Could not get HOV from color stream. Using depth value instead.");
+		rgbHOV_ = zHOV_;
 	}
 
 	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &rgbVOV_) != Status::STATUS_OK)
 	{
-		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
-		return false;
+		LOG4CXX_WARN(logger_, "Could not get VOV from color stream. Using depth value instead.");
+		rgbVOV_ = zVOV_;
 	}
 
 	// constants for reprojecting the point cloud to real-world coordinates
@@ -312,12 +318,12 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		auto futureRGBA = std::async(std::launch::async, &holo::utils::ConvertRGBToRGBA, std::ref(rgbImage_), std::ref(rgbaImage_));
 		//cv::cvtColor(rgbImage_, rgbaImage_, CV_BGR2RGBA, 4);
 
-		//memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
+		memcpy(depthImage_.datastart, depth.getData(), depth.getDataSize());
 		
-		short * dsrc = (short*)depth.getData();
-		short * ddest = (short*)depthImage_.data;
-		for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
-			*ddest = *dsrc < 1000 ? *dsrc : 0;
+		//short * dsrc = (short*)depth.getData();
+		//short * ddest = (short*)depthImage_.data;
+		//for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
+		//	*ddest = *dsrc < 1000 ? *dsrc : 0;
 
 		zImage = depthImage_;
 

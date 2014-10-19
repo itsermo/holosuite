@@ -81,6 +81,7 @@ namespace holo
 			void glCheckErrors();
 
 			void drawPointCloud();
+			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
 
 			std::mutex localCloudMutex_;
 			HoloCloudPtr localCloud_;
