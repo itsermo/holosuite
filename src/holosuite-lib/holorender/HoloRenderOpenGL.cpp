@@ -45,6 +45,7 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 HoloRenderOpenGL::~HoloRenderOpenGL()
 {
 	LOG4CXX_DEBUG(logger_, "Destroying HoloRenderOpenGL object...");
+	cleanup();
 	LOG4CXX_DEBUG(logger_, "Done destroying HoloRenderOpenGL object");
 }
 
@@ -65,12 +66,17 @@ bool HoloRenderOpenGL::init()
 
 void HoloRenderOpenGL::deinit()
 {
-
+#ifdef ENABLE_HOLO_ZSPACE
+	if (enableZSpaceRendering_)
+		zsShutdown(zSpaceContext_);
+#endif
 }
 
 
 void HoloRenderOpenGL::glutInitLoop()
 {
+
+
 
 #ifdef ENABLE_HOLO_ZSPACE
 
@@ -149,19 +155,46 @@ void HoloRenderOpenGL::glutInitLoop()
 	glutReshapeFunc(this->glutReshape);
 	atexit(this->glutCleanup);
 
+	GLfloat lightPosition[] = { 1, 1, 1 };
+	GLfloat lightAmbientColor[] = { 0.6, 0.3, 0.3, 1 };
+	GLfloat lightDiffuseColor[] = { 0.6, 1, 1, 1 };
+	GLfloat lightSpecularColor[] = { 1, 1, 1, 1 };
+	GLfloat lightGlobalAmbient[] = { 0.2, 0.2, 0.2, 1 };
+
+	GLfloat materialSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat materialShininess[] = { 50.0 };
+
 	// GLUT settings
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
-	//glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+
+
+
+	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularColor);
+
+	//glLightModelfv(GL_AMBIENT, lightGlobalAmbient);
+
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, materialShininess);
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	//Takes care of occlusions for point cloud
+	glEnable(GL_DEPTH_TEST);
 
 	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient_); // Setup The Ambient Light
 	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse_); // Setup The Diffuse Light
 	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition_); // Position The Light
-	//glEnable(GL_LIGHTING);
-	//glEnable(GL_LIGHT0);
-	//glEnable(GL_DEPTH_TEST); // Enables Depth Testing
 	//glEnable(GL_COLOR_MATERIAL);
+	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+
+
+	 // Enables Depth Testing
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 	//glClearColor(0, 0, 0, 0);
@@ -177,8 +210,8 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	if (enableZSpaceRendering_)
 		gluLookAt(0.0f, 0.345f, 0.222f,   // Eye
-			0.0f, 0.0f, 0.0f,     // Center
-			0.0f, 1.0f, 0.0f);    // Up
+			0.0f, 0.0f, 1.0f,     // Center
+			0.0f, 1.0f, 1.0f);    // Up
 	else
 		gluLookAt(0.0f, 0.0f, 0.0f,   // Eye
 		0.0f, 0.0f, 0.0f,     // Center
@@ -190,12 +223,14 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glCheckErrors();
 
+#ifndef _DEBUG
 	prevWindowWidth_ = glutGet(GLUT_WINDOW_WIDTH);
 	prevWindowHeight_ = glutGet(GLUT_WINDOW_HEIGHT);
 	prevWindowX_ = glutGet(GLUT_WINDOW_X);
 	prevWindowY_ = glutGet(GLUT_WINDOW_Y);
 	glutFullScreen();
 	isFullScreen_ = true;
+#endif
 
 	glutMainLoop();
 }
@@ -306,9 +341,19 @@ void HoloRenderOpenGL::display()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		glPushMatrix();
+		glTranslatef(0.03, 0.01, -0.6);
+		glRotatef(35.0f, 0, 1, 0);
+		glRotatef(25.0f, 1, 0, 0);
+		glutSolidCube(0.07f);
+		//glutSolidSphere(0.03f, 16, 16);
+		glPopMatrix();
+
+		glDisable(GL_LIGHTING);
+
+		glPushMatrix();
 		glRotatef(180.0f, 0, 1, 0);
 		this->drawBackgroundGrid(4, 2, 3);
-		
+
 		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
 
 		this->drawPointCloud();
@@ -317,6 +362,8 @@ void HoloRenderOpenGL::display()
 		cloudLock.unlock();
 
 		glPopMatrix();
+
+		glEnable(GL_LIGHTING);
 
 		glutSwapBuffers();
 
@@ -328,7 +375,7 @@ void HoloRenderOpenGL::display()
 
 void HoloRenderOpenGL::cleanup()
 {
-
+	deinit();
 }
 
 void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
@@ -409,8 +456,8 @@ void HoloRenderOpenGL::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 }
 void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth)
 {
-	const GLfloat lineColor[3] = { 0.6f, 0.6f, 0.25f };
-	const GLfloat tileColor[3] = { 0.1f, 0.1f, 0.1f };
+	const GLfloat lineColor[3] = { 0.2f, 0.2f, 0.2f };
+	const GLfloat tileColor[3] = { 0.15f, 0.15f, 0.15f };
 	const GLint lineThickness = 10;
 
 	width /= 2;
@@ -503,6 +550,13 @@ void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat
 
 void HoloRenderOpenGL::drawPointCloud()
 {
+	if (enableZSpaceRendering_)
+	{
+		glPushMatrix();
+		glTranslatef(-0.13, 0.05, -0.05);
+		//glRotatef(30.0f, 1, 0, 0);
+	}
+
 	const float gain = 1 / 255.0; // converting from char units to float
 
 	glEnable(GL_POINT_SMOOTH);
@@ -525,12 +579,9 @@ void HoloRenderOpenGL::drawPointCloud()
 
 	glDisable(GL_POINT_SMOOTH);
 
-	glColor3f(0.6, 0.1, 0);
-	glShadeModel(GL_FLAT);
-	glPushMatrix();
-	glTranslatef(0.1, 0, 0.9);
-	glutSolidSphere(0.05, 16, 16);
-	glPopMatrix();
+	if (enableZSpaceRendering_)
+		glPopMatrix();
+
 }
 
 
@@ -585,16 +636,22 @@ void HoloRenderOpenGL::updateCamera()
 {
 	// Calculate the camera's new position such that it orbits
 	// the world's origin.
-	GLfloat eyeX = 0.222f * sin(cameraAngle_ * PI / 180.0f);
-	GLfloat eyeY = 0.345f;
-	GLfloat eyeZ = 0.222f * cos(cameraAngle_ * PI / 180.0f);
+	//GLfloat eyeX = 0.222f * sin(cameraAngle_ * PI / 180.0f);
+	//GLfloat eyeY = 0.545f;
+	//GLfloat eyeZ = 0.222f * cos(cameraAngle_ * PI / 180.0f);
+
+	// Calculate the camera's new position such that it orbits
+	// the world's origin.
+	GLfloat eyeX = 0;
+	GLfloat eyeY = 0.2;
+	GLfloat eyeZ = 0.3;
 
 	// Use gluLookAt to calculate the new model-view matrix.
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(eyeX, eyeY, eyeZ,   // Eye
-		0.0f, 0.0f, 0.0f,     // Center
-		0.0f, 1.0f, 0.0f);  // Up
+		0.0f, 0.0f, 1.0f,     // Center
+		0.0f, 1.0f, 1.0f);  // Up
 
 	// Grab the model-view matrix so that we can reference it later.
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix_.f);
@@ -637,7 +694,32 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glPushMatrix();
+	glTranslatef(-0.15, 0.30, -0.6);
+	//glRotatef(35.0f, 0, 1, 0);
+	//glRotatef(25.0f, 1, 0, 0);
+	glutSolidCube(0.07f);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0.15, 0.30, -0.6);
+	//glRotatef(35.0f, 0, 1, 0);
+	//glRotatef(25.0f, 1, 0, 0);
+	glutSolidSphere(0.035f,16,16);
+	glPopMatrix();
+
+	//glPushMatrix();
+	//glRotatef(180.0f, 0, 1, 0);
+	//glTranslatef(0, 0, 5);
+	glDisable(GL_LIGHTING);
+
+	this->drawBackgroundGrid(4, 2, 5);
+
 	this->drawPointCloud();
+
+	glEnable(GL_LIGHTING);
+
+	//glPopMatrix();
 	////// Draw the cube.
 	////drawCube();
 
@@ -793,6 +875,8 @@ void HoloRenderOpenGL::draw()
 	// for left/right frame detection.
 	ZSError error = zsBeginStereoBufferFrame(bufferHandle_);
 
+
+	
 	// Set the application window's rendering context as the current rendering context.
 	//wglMakeCurrent(g_hDC, g_hRC);
 	std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
@@ -803,6 +887,7 @@ void HoloRenderOpenGL::draw()
 
 	haveNewRemoteCloud_.store(false);
 	cloudLock.unlock();
+
 
 	// Flush the render buffers.
 	glutSwapBuffers();
