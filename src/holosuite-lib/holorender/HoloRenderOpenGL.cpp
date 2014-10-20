@@ -153,16 +153,16 @@ void HoloRenderOpenGL::glutInitLoop()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
-	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	//glShadeModel(GL_SMOOTH); // Enable Smooth Shading
 
 	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient_); // Setup The Ambient Light
 	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse_); // Setup The Diffuse Light
 	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition_); // Position The Light
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
-	glEnable(GL_COLOR_MATERIAL);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
+	//glEnable(GL_DEPTH_TEST); // Enables Depth Testing
+	//glEnable(GL_COLOR_MATERIAL);
+	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 	//glClearColor(0, 0, 0, 0);
 	//glMatrixMode(GL_PROJECTION);
@@ -174,13 +174,19 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(0.0f, 0.345f, 0.222f,   // Eye
+
+	if (enableZSpaceRendering_)
+		gluLookAt(0.0f, 0.345f, 0.222f,   // Eye
+			0.0f, 0.0f, 0.0f,     // Center
+			0.0f, 1.0f, 0.0f);    // Up
+	else
+		gluLookAt(0.0f, 0.0f, 0.0f,   // Eye
 		0.0f, 0.0f, 0.0f,     // Center
-		0.0f, 1.0f, 0.0f);    // Up 
+		0.0f, 1.0f, 0.0f);    // Up
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glDisable(GL_LIGHTING);
+	//glDisable(GL_LIGHTING);
 
 	glCheckErrors();
 
@@ -222,10 +228,10 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 	switch (c)
 	{
 	case 'w':
-		viewDepth_ -= 0.05;
+		viewDepth_ += 0.05;
 		break;
 	case 's':
-		viewDepth_ += 0.05;
+		viewDepth_ -= 0.05;
 		break;
 	case 'f':
 		if (!isFullScreen_)
@@ -290,21 +296,27 @@ void HoloRenderOpenGL::display()
 		gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.01f, 10.0f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		gluLookAt(0, 0, 0, 0, 0, 1, 0, 1, 1);
+		gluLookAt(0.0f, 0.0f, 0.222f,   // Eye
+			0.0f, 0.0f, 0.0f,     // Center
+			0.0f, 1.0f, 0.0f);
 		glTranslatef(0.0, 0.0, viewDepth_);
 		glRotatef(-viewTheta_, 1.0, 0.0, 0.0);
 		glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
-
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		
+		glPushMatrix();
+		glRotatef(180.0f, 0, 1, 0);
+		this->drawBackgroundGrid(4, 2, 3);
+		
 		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
 
-		this->drawBackgroundGrid(4, 2, 3);
 		this->drawPointCloud();
 
 		haveNewRemoteCloud_.store(false);
 		cloudLock.unlock();
+
+		glPopMatrix();
 
 		glutSwapBuffers();
 
@@ -326,12 +338,12 @@ void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
 	if (button == 3)
 	{
 		if (state == GLUT_UP)
-			viewDepth_ + 0.01;
+			viewDepth_ += 0.05;
 	}
 	else if (button == 4)
 	{
 		if (state == GLUT_UP)
-			viewDepth_ - 0.01;
+			viewDepth_ -= 0.05;
 	}
 	else
 	{
@@ -491,18 +503,10 @@ void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat
 
 void HoloRenderOpenGL::drawPointCloud()
 {
-	//if (haveNewCloud_.load())
-	//{
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//std::lock_guard<std::mutex> lg(cloudMutex_);
 	const float gain = 1 / 255.0; // converting from char units to float
-
-	//glEnable(GL_TEXTURE_2D);
 
 	glEnable(GL_POINT_SMOOTH);
 	glPointSize(voxelSize_*4);
-	//float attenparams[3] = {0,0,0}; //a b c	//size ? 1 a + b ? d + c ? d 2
-	//glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION,attenparams);
 	glBegin(GL_POINTS);
 
 	HoloPoint3D *pointIdx = remoteCloud_->points.data();
@@ -512,7 +516,6 @@ void HoloRenderOpenGL::drawPointCloud()
 		if (pointIdx->z == HOLO_CLOUD_BAD_POINT)
 			continue;
 
-		//luma = (pointIdx->r + pointIdx->g + pointIdx->b) / 3 * gain;
 		glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
 		glColor3f(pointIdx->r * gain, pointIdx->g * gain, pointIdx->b * gain);
 		pointIdx++;
@@ -528,13 +531,6 @@ void HoloRenderOpenGL::drawPointCloud()
 	glTranslatef(0.1, 0, 0.9);
 	glutSolidSphere(0.05, 16, 16);
 	glPopMatrix();
-
-	//glDisable(GL_TEXTURE_2D);
-
-	//haveNewCloud_.store(false);
-
-	//glutPostRedisplay();
-	//}
 }
 
 
@@ -591,14 +587,14 @@ void HoloRenderOpenGL::updateCamera()
 	// the world's origin.
 	GLfloat eyeX = 0.222f * sin(cameraAngle_ * PI / 180.0f);
 	GLfloat eyeY = 0.345f;
-	GLfloat eyeZ = -0.222f * cos(cameraAngle_ * PI / 180.0f);
+	GLfloat eyeZ = 0.222f * cos(cameraAngle_ * PI / 180.0f);
 
 	// Use gluLookAt to calculate the new model-view matrix.
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(eyeX, eyeY, eyeZ,   // Eye
-		0.0f, 0.0f, 1.0f,   // Center  
-		0.0f, 1.0f, 1.0f);  // Up
+		0.0f, 0.0f, 0.0f,     // Center
+		0.0f, 1.0f, 0.0f);  // Up
 
 	// Grab the model-view matrix so that we can reference it later.
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix_.f);
