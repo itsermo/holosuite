@@ -327,7 +327,10 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 
 		zImage = depthImage_;
 
+
 		futureRGBA.get();
+
+
 		rgbaImage = rgbaImage_;
 
 #ifdef TRACE_LOG_ENABLED
