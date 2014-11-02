@@ -5,11 +5,14 @@
 #include <holoinput/IHoloInputDevice.hpp>
 #include <Leap.h>
 
+#include <mutex>
+#include <condition_variable>
+
 namespace holo
 {
 	namespace input
 	{
-		class HoloInputDeviceLeapSDK : IHoloInputDevice
+		class HoloInputDeviceLeapSDK : public IHoloInputDevice , public Leap::Listener
 		{
 		public:
 			HoloInputDeviceLeapSDK();
@@ -19,6 +22,27 @@ namespace holo
 			bool isInit();
 
 			bool getInputData(void * data);
+
+			void onInit(const Leap::Controller&);
+			void onConnect(const Leap::Controller&);
+			void onDisconnect(const Leap::Controller&);
+			void onExit(const Leap::Controller&);
+			void onFrame(const Leap::Controller&);
+			void onFocusGained(const Leap::Controller&);
+			void onFocusLost(const Leap::Controller&);
+			void onDeviceChange(const Leap::Controller&);
+			void onServiceConnect(const Leap::Controller&);
+			void onServiceDisconnect(const Leap::Controller&);
+
+		private:
+
+			std::condition_variable hasInitCV_;
+			std::mutex initMutex_;
+
+			std::mutex inputDataMutex_;
+
+			Leap::Controller controller_;
+
 		};
 	}
 }

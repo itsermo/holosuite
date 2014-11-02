@@ -82,6 +82,7 @@ namespace holo
 
 			void drawPointCloud();
 			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
+			void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius);
 
 			std::mutex localCloudMutex_;
 			HoloCloudPtr localCloud_;

@@ -170,7 +170,7 @@ void HoloRenderOpenGL::glutInitLoop()
 
 
 
-	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	glShadeModel(GL_FLAT); // Enable Smooth Shading
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularColor);
@@ -339,14 +339,8 @@ void HoloRenderOpenGL::display()
 		glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
 	
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		glPushMatrix();
-		glTranslatef(0.03, 0.01, -0.6);
-		glRotatef(35.0f, 0, 1, 0);
-		glRotatef(25.0f, 1, 0, 0);
-		glutSolidCube(0.07f);
-		//glutSolidSphere(0.03f, 16, 16);
-		glPopMatrix();
+
+		this->drawSphere(0, 0, -1.0, 0.035f);
 
 		glDisable(GL_LIGHTING);
 
@@ -402,8 +396,8 @@ void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
 
 void HoloRenderOpenGL::mouseMotion(int x, int y)
 {
-	if (mouseLeftButton_){ viewPhi_ -= (float)(x - mouseDownX_) / 4.0; viewTheta_ -= (float)(mouseDownY_ - y) / 4.0; } // rotate
-	if (mouseMiddleButton_){ viewDepth_ += (float)(mouseDownY_ - y) / 10.0; } // scale
+	if (mouseLeftButton_){ viewPhi_ -= (float)(x - mouseDownX_) / 10.0; viewTheta_ += (float)(mouseDownY_ - y) / 10.0; } // rotate
+	if (mouseMiddleButton_){ viewDepth_ += (float)(mouseDownY_ - y) / 100.0; } // scale
 	mouseDownX_ = x;   mouseDownY_ = y;
 	glutPostRedisplay();
 }
@@ -582,6 +576,14 @@ void HoloRenderOpenGL::drawPointCloud()
 	if (enableZSpaceRendering_)
 		glPopMatrix();
 
+}
+
+void HoloRenderOpenGL::drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius)
+{
+	glPushMatrix();
+	glTranslatef(x, y, z);
+	glutSolidSphere(radius, 16, 16);
+	glPopMatrix();
 }
 
 
