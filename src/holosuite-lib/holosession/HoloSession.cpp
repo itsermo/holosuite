@@ -742,7 +742,7 @@ void HoloSession::callbackLoop(HoloSessionCallbackType type)
 	if (audioCapture_)
 	{
 		localAudioFormat = audioCapture_->getAudioFormat();
-		remoteAudioFormat = { remoteInfo_.audioFreq, remoteInfo_.audioNumChan, remoteInfo_.audioBitDepth };
+		remoteAudioFormat = { static_cast<unsigned int>(remoteInfo_.audioFreq), static_cast<unsigned int>(remoteInfo_.audioNumChan), static_cast<unsigned int>(remoteInfo_.audioBitDepth) };
 	}
 
 	while (shouldCallback_)
