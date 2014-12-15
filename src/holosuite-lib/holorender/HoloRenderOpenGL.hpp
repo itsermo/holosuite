@@ -147,6 +147,8 @@ namespace holo
 			void matrixInverse(const float m[16], float i[16]);
 #endif
 
+			std::string displayEnv_;
+
 			log4cxx::LoggerPtr logger_;
 		};
 
