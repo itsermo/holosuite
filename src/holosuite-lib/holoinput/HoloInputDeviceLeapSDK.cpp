@@ -5,7 +5,8 @@
 using namespace holo;
 using namespace holo::input;
 
-HoloInputDeviceLeapSDK::HoloInputDeviceLeapSDK()
+HoloInputDeviceLeapSDK::HoloInputDeviceLeapSDK() :
+	isInit_(false)
 {
 
 }
@@ -21,7 +22,11 @@ bool HoloInputDeviceLeapSDK::init()
 
 	std::unique_lock<std::mutex> initLG(initMutex_);
 	
-	hasInitCV_.wait(initLG);
+	if (std::cv_status::timeout == hasInitCV_.wait_for(initLG, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+	{
+		isInit_.store(false);
+		return isInit_.load();
+	}
 
 	initLG.unlock();
 
@@ -30,33 +35,39 @@ bool HoloInputDeviceLeapSDK::init()
 
 void HoloInputDeviceLeapSDK::deinit()
 {
+	isInit_.store(false);
 	controller_.removeListener(*this);
 }
 
 bool HoloInputDeviceLeapSDK::isInit()
 {
-	return false;
+	return isInit_.load();
 }
 
 bool HoloInputDeviceLeapSDK::getInputData(void * data)
 {
+	if (isInit_)
+	{
 
-	return false;
+		return true;
+	}
+	else
+		return false;
 }
 
 void HoloInputDeviceLeapSDK::onInit(const Leap::Controller&)
 {
-
+	hasInitCV_.notify_one();
 }
 
 void HoloInputDeviceLeapSDK::onConnect(const Leap::Controller&)
 {
-
+	hasInitCV_.notify_one();
 }
 
 void HoloInputDeviceLeapSDK::onDisconnect(const Leap::Controller&)
 {
-
+	deinit();
 }
 
 void HoloInputDeviceLeapSDK::onExit(const Leap::Controller&)

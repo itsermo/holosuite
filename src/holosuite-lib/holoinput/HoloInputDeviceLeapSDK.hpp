@@ -5,6 +5,7 @@
 #include <holoinput/IHoloInputDevice.hpp>
 #include <Leap.h>
 
+#include <atomic>
 #include <mutex>
 #include <condition_variable>
 
@@ -35,6 +36,8 @@ namespace holo
 			void onServiceDisconnect(const Leap::Controller&);
 
 		private:
+
+			std::atomic<bool> isInit_;
 
 			std::condition_variable hasInitCV_;
 			std::mutex initMutex_;
