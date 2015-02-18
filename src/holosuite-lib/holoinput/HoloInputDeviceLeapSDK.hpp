@@ -22,7 +22,7 @@ namespace holo
 			void deinit();
 			bool isInit();
 
-			bool getInputData(void * data);
+			bool getInputData(InputData *& data);
 
 			void onInit(const Leap::Controller&);
 			void onConnect(const Leap::Controller&);
@@ -42,9 +42,12 @@ namespace holo
 			std::condition_variable hasInitCV_;
 			std::mutex initMutex_;
 
-			std::mutex inputDataMutex_;
-
 			Leap::Controller controller_;
+
+			InputData inputData_;
+			std::mutex inputDataMutex_;
+			std::condition_variable haveInputDataCV_;
+
 
 		};
 	}

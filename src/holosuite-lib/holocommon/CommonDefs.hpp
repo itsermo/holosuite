@@ -40,6 +40,8 @@ const float HOLO_CLOUD_BAD_POINT = std::numeric_limits<float>().quiet_NaN();
 
 namespace holo
 {
+	typedef pcl::PointXYZ HoloVec3f;
+	typedef Eigen::Matrix4f HoloMat4f;
 	typedef pcl::PointXYZRGBA HoloPoint3D;
 	typedef pcl::PointCloud<HoloPoint3D> HoloCloud;
 	typedef HoloCloud::Ptr HoloCloudPtr;
@@ -139,5 +141,42 @@ namespace holo
 			RENDER_TYPE_DSCP_MKII = 3,
 			RENDER_TYPE_DSCP_MKIV = 4
 		} RENDER_TYPE;
+	}
+
+	namespace input
+	{
+		typedef enum
+		{
+			GESTURE_TYPE_NONE = 0,
+			GESTURE_TYPE_CIRCLE = 1,
+			GESTURE_TYPE_SWAP = 2,
+			GESTURE_TYPE_KEY_TAP = 3,
+			GESTURE_TYPE_SCREEN_TAP = 4
+		} GESTURE_TYPE;
+
+		struct HoloBone
+		{
+			HoloVec3f center, direction;
+		};
+
+		struct HoloFinger
+		{
+			HoloVec3f tipPosition, direction;
+			HoloBone bones[4];
+			bool isExtended;
+		};
+
+		struct HoloHand
+		{
+			HoloFinger thumb, index, middle, ring, pinky;
+			HoloVec3f palmPosition, palmNormal;
+			float grabStrength, pinchStrength;
+			GESTURE_TYPE gesture;
+		};
+
+		struct InputData
+		{
+			HoloHand leftHand, rightHand;
+		};
 	}
 };
