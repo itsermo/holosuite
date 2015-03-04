@@ -13,7 +13,7 @@ namespace holo
 {
 	namespace input
 	{
-		class HoloInputDeviceLeapSDK : public IHoloInputDevice , public Leap::Listener
+		class HoloInputDeviceLeapSDK : public IHoloInputDevice, public Leap::Listener
 		{
 		public:
 			HoloInputDeviceLeapSDK();
@@ -47,7 +47,6 @@ namespace holo
 			InputData inputData_;
 			std::mutex inputDataMutex_;
 			std::condition_variable haveInputDataCV_;
-
 
 		};
 	}

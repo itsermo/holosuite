@@ -41,6 +41,9 @@ static const float PI = 3.1415926535897932384626433832795f;
 
 #endif
 
+#ifdef ENABLE_HOLO_ODE
+#include <ode/ode.h>
+#endif
 namespace holo
 {
 	namespace render

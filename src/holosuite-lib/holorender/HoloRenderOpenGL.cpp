@@ -66,17 +66,12 @@ bool HoloRenderOpenGL::init()
 
 void HoloRenderOpenGL::deinit()
 {
-#ifdef ENABLE_HOLO_ZSPACE
-	if (enableZSpaceRendering_)
-		zsShutdown(zSpaceContext_);
-#endif
+
 }
 
 
 void HoloRenderOpenGL::glutInitLoop()
 {
-
-
 
 #ifdef ENABLE_HOLO_ZSPACE
 
@@ -155,7 +150,6 @@ void HoloRenderOpenGL::glutInitLoop()
 	glutReshapeFunc(this->glutReshape);
 	atexit(this->glutCleanup);
 
-	GLfloat lightPosition[] = { 1, 1, 1 };
 	GLfloat lightAmbientColor[] = { 0.6, 0.3, 0.3, 1 };
 	GLfloat lightDiffuseColor[] = { 0.6, 1, 1, 1 };
 	GLfloat lightSpecularColor[] = { 1, 1, 1, 1 };
@@ -168,8 +162,6 @@ void HoloRenderOpenGL::glutInitLoop()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 
-
-
 	glShadeModel(GL_FLAT); // Enable Smooth Shading
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
@@ -179,31 +171,12 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, materialShininess);
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
+
 	//Takes care of occlusions for point cloud
 	glEnable(GL_DEPTH_TEST);
-
-	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient_); // Setup The Ambient Light
-	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse_); // Setup The Diffuse Light
-	//glLightfv(GL_LIGHT0, GL_POSITION, lightPosition_); // Position The Light
-	//glEnable(GL_COLOR_MATERIAL);
-	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-
-
-
-	 // Enables Depth Testing
-	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-	//glClearColor(0, 0, 0, 0);
-	//glMatrixMode(GL_PROJECTION);
-	//glLoadIdentity();
-	//gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.01f, 10.0f);
-	//glMatrixMode(GL_MODELVIEW);
-	//glLoadIdentity();
-	//gluLookAt(0, 0, 0, 0, 0, 1, 0, 1, 1);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -233,6 +206,11 @@ void HoloRenderOpenGL::glutInitLoop()
 #endif
 
 	glutMainLoop();
+
+#ifdef ENABLE_HOLO_ZSPACE
+	if (enableZSpaceRendering_)
+		zsShutdown(zSpaceContext_);
+#endif
 }
 
 void HoloRenderOpenGL::glCheckErrors()
@@ -342,7 +320,7 @@ void HoloRenderOpenGL::display()
 
 		this->drawSphere(0, 0, -1.0, 0.035f);
 
-		glDisable(GL_LIGHTING);
+		//glDisable(GL_LIGHTING);
 
 		glPushMatrix();
 		glRotatef(180.0f, 0, 1, 0);
@@ -357,7 +335,7 @@ void HoloRenderOpenGL::display()
 
 		glPopMatrix();
 
-		glEnable(GL_LIGHTING);
+		//glEnable(GL_LIGHTING);
 
 		glutSwapBuffers();
 
@@ -646,7 +624,7 @@ void HoloRenderOpenGL::updateCamera()
 	// the world's origin.
 	GLfloat eyeX = 0;
 	GLfloat eyeY = 0.2;
-	GLfloat eyeZ = 0.3;
+	GLfloat eyeZ = 0.4;
 
 	// Use gluLookAt to calculate the new model-view matrix.
 	glMatrixMode(GL_MODELVIEW);
@@ -680,6 +658,8 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	// stack so that we can pop them off after we're done rendering the 
 	// scene for a specified eye.  This will allow us to restore the mono 
 	// (non-stereoscopic) model-view and projection matrices.
+
+
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -696,10 +676,23 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	this->drawBackgroundGrid(4, 2, 5);
+
+	this->drawPointCloud();
+
 	glPushMatrix();
+
+
+	glEnable(GL_NORMALIZE);
 	glTranslatef(-0.15, 0.30, -0.6);
 	//glRotatef(35.0f, 0, 1, 0);
 	//glRotatef(25.0f, 1, 0, 0);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+
+
+
 	glutSolidCube(0.07f);
 	glPopMatrix();
 
@@ -707,19 +700,15 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glTranslatef(0.15, 0.30, -0.6);
 	//glRotatef(35.0f, 0, 1, 0);
 	//glRotatef(25.0f, 1, 0, 0);
-	glutSolidSphere(0.035f,16,16);
+
+	glutSolidSphere(0.035f, 16, 16);
+
+	glDisable(GL_LIGHTING);
+	glDisable(GL_LIGHT0);
+
+	glDisable(GL_NORMALIZE);
 	glPopMatrix();
 
-	//glPushMatrix();
-	//glRotatef(180.0f, 0, 1, 0);
-	//glTranslatef(0, 0, 5);
-	glDisable(GL_LIGHTING);
-
-	this->drawBackgroundGrid(4, 2, 5);
-
-	this->drawPointCloud();
-
-	glEnable(GL_LIGHTING);
 
 	//glPopMatrix();
 	////// Draw the cube.
@@ -733,6 +722,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
+
 }
 
 void HoloRenderOpenGL::setRenderTarget(ZSEye eye)
@@ -877,8 +867,6 @@ void HoloRenderOpenGL::draw()
 	// for left/right frame detection.
 	ZSError error = zsBeginStereoBufferFrame(bufferHandle_);
 
-
-	
 	// Set the application window's rendering context as the current rendering context.
 	//wglMakeCurrent(g_hDC, g_hRC);
 	std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
@@ -889,7 +877,6 @@ void HoloRenderOpenGL::draw()
 
 	haveNewRemoteCloud_.store(false);
 	cloudLock.unlock();
-
 
 	// Flush the render buffers.
 	glutSwapBuffers();

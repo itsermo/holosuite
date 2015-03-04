@@ -30,57 +30,44 @@ endforeach()
 
 SET (holosuite_BIN ${PROJECT_NAME})
 
-#ADD_LIBRARY(holosuite-lib ${LIB_SRC_FILES})
-ADD_EXECUTABLE(${holosuite_BIN} ${HOLOSUITE_SRC_FILES})
-
-#qt5_use_modules(${project_BIN} Widgets)
-
-TARGET_LINK_LIBRARIES(${holosuite_BIN} holosuite-lib ${LIBLOG4CXX_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${Boost_LIBRARIES} ${OPENNI2_LIBRARY} ${FFMPEG_LIBRARIES} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY} ${GLUT_LIBRARIES})
+IF(WIN32)
+	ADD_DEFINITIONS(-DFREEGLUT_LIB_PRAGMAS=0)
+ENDIF()
 
 IF(UNIX)
-	TARGET_LINK_LIBRARIES(${holosuite_BIN} ${GLUT_glut_LIBRARY})
+	TARGET_LINK_LIBRARIES(holosuite-lib ${GLUT_glut_LIBRARY})
 ENDIF()
 
 IF(WITH_AUDIO)
-	TARGET_LINK_LIBRARIES(${holosuite_BIN} ${OPUS_LIBRARIES} ${PORTAUDIO_LIBRARIES})
+	INCLUDE_DIRECTORIES(${OPUS_INCLUDE_DIRS})
+	INCLUDE_DIRECTORIES(${PORTAUDIO_INCLUDE_DIRS})
+	ADD_DEFINITIONS(-DENABLE_HOLO_AUDIO)
 ENDIF()
 
 IF(WITH_DSCP2)
-	TARGET_LINK_LIBRARIES(${holosuite_BIN} ${CG_LIBRARY} ${CG_GL_LIBRARY})
-	IF(UNIX)
-		TARGET_LINK_LIBRARIES(${holosuite_BIN} ${X11_LIBRARIES})
-	ENDIF()
+	INCLUDE_DIRECTORIES(${CG_INCLUDE_DIR})
+	ADD_DEFINITIONS(-DENABLE_HOLO_DSCP2)
 ENDIF()
 
 IF(WITH_ZSPACE_API)
-	TARGET_LINK_LIBRARIES(${holosuite_BIN} ${ZSPACE_API_LIBRARY})
+	INCLUDE_DIRECTORIES(${ZSPACE_API_INCLUDE_DIR})
+	ADD_DEFINITIONS(-DENABLE_HOLO_ZSPACE)
 ENDIF()
 
 IF(WITH_LEAPSDK)
-	TARGET_LINK_LIBRARIES(${holosuite_BIN} ${LEAP_LIBRARY})
+	INCLUDE_DIRECTORIES(${LEAP_INCLUDE_DIR})
+	ADD_DEFINITIONS(-DENABLE_HOLO_LEAPSDK)
 ENDIF()
 
+IF(WITH_ODE)
+	INCLUDE_DIRECTORIES(${ODE_INCLUDE_DIRS})
+	ADD_DEFINITIONS(-DENABLE_HOLO_ODE)
+ENDIF()
+
+ADD_EXECUTABLE(${holosuite_BIN} ${HOLOSUITE_SRC_FILES})
+
+TARGET_LINK_LIBRARIES(${holosuite_BIN} holosuite-lib ${LIBLOG4CXX_LIBRARIES} ${Boost_LIBRARIES})
+
 SET_TARGET_PROPERTIES(${holosuite_BIN} PROPERTIES VERSION "${APPLICATION_VERSION_MAJOR}.${APPLICATION_VERSION_MINOR}" OUTPUT_NAME ${holosuite_BIN} CLEAN_DIRECT_OUTPUT 1)
-
-# file(GLOB SHADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/holorender/shaders/*.cg
-					   # ${CMAKE_CURRENT_SOURCE_DIR}/holorender/shaders/*.cl
-# )
-
-# # Copy shader files
-# add_custom_target(copy-shader-files)
-# get_target_property(MyTargetLocation holosuite-lib LOCATION)
-# get_filename_component(MyTargetDir ${MyTargetLocation} PATH)
-
-# foreach(SHADER_FILE ${SHADER_FILES})
-  # add_custom_command(TARGET copy-shader-files PRE_BUILD
-                     # COMMAND ${CMAKE_COMMAND} -E
-                         # copy_if_different ${SHADER_FILE} ${MyTargetDir})
-  # IF(WIN32)
-    # add_custom_command(TARGET copy-shader-files PRE_BUILD
-                     # COMMAND ${CMAKE_COMMAND} -E
-                         # copy_if_different ${SHADER_FILE} ${CMAKE_BINARY_DIR}/src)
-  # ENDIF()
-# endforeach()
-# add_dependencies(holosuite-lib copy-shader-files)
 
 INSTALL(TARGETS ${holosuite_BIN} DESTINATION bin)
