@@ -40,7 +40,31 @@ const float HOLO_CLOUD_BAD_POINT = std::numeric_limits<float>().quiet_NaN();
 
 namespace holo
 {
+
+	struct PointXYZW
+	{
+		union EIGEN_ALIGN16 {
+			float data[4];
+			struct {
+				float x;
+				float y;
+				float z;
+				float w;
+			};
+		};
+
+		inline Eigen::Map<Eigen::Vector3f> getVector3fMap() { return (Eigen::Vector3f::Map(data)); }
+		inline const Eigen::Map<const Eigen::Vector3f> getVector3fMap() const { return (Eigen::Vector3f::Map(data)); }
+		inline Eigen::Map<Eigen::Vector4f, Eigen::Aligned> getVector4fMap() { return (Eigen::Vector4f::MapAligned(data)); }
+		inline const Eigen::Map<const Eigen::Vector4f, Eigen::Aligned> getVector4fMap() const { return (Eigen::Vector4f::MapAligned(data)); }
+		inline Eigen::Map<Eigen::Array3f> getArray3fMap() { return (Eigen::Array3f::Map(data)); }
+		inline const Eigen::Map<const Eigen::Array3f> getArray3fMap() const { return (Eigen::Array3f::Map(data)); }
+		inline Eigen::Map<Eigen::Array4f, Eigen::Aligned> getArray4fMap() { return (Eigen::Array4f::MapAligned(data)); }
+		inline const Eigen::Map<const Eigen::Array4f, Eigen::Aligned> getArray4fMap() const { return (Eigen::Array4f::MapAligned(data)); }
+	};
+
 	typedef pcl::PointXYZ HoloVec3f;
+	typedef PointXYZW HoloVec4f;
 	typedef Eigen::Matrix4f HoloMat4f;
 	typedef pcl::PointXYZRGBA HoloPoint3D;
 	typedef pcl::PointCloud<HoloPoint3D> HoloCloud;
@@ -141,6 +165,32 @@ namespace holo
 			RENDER_TYPE_DSCP_MKII = 3,
 			RENDER_TYPE_DSCP_MKIV = 4
 		} RENDER_TYPE;
+		
+		struct HoloObjectHeader
+		{
+			unsigned int num_vertices;
+			unsigned int num_points_per_vertex;
+			unsigned int num_color_channels;
+			unsigned int vertex_stride;
+			unsigned int color_stride;
+			unsigned int num_indecies; // points, lines, triangles, or quads? can only be { 1,2,3,4 }
+		};
+
+		struct HoloTransform
+		{
+			//w is radius squared, xyz is center
+			HoloVec4f bounding_sphere;
+
+			//axis/angle, where w is angle
+			HoloVec4f rotation;
+			HoloVec3f scale, translate;
+		};
+		
+		struct HoloObject
+		{
+			HoloObjectHeader info;
+			HoloTransform transform;
+		};
 	}
 
 	namespace input

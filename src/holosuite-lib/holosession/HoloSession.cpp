@@ -347,6 +347,22 @@ void HoloSession::netRecvLoop()
 			rgbazLock.unlock();
 			haveRemoteRGBAZCompressed_ = true;
 			haveRemoteRGBAZCompressedCV_.notify_all();
+			break;
+		}
+		case HOLO_NET_PACKET_TYPE_OBJECT_ADD:
+		{
+
+			break;
+		}
+		case HOLO_NET_PACKET_TYPE_OBJECT_DEL:
+		{
+
+			break;
+		}
+		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
+		{
+
+			break;
 		}
 		case HOLO_NET_PACKET_TYPE_UNKNOWN:
 		default:

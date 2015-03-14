@@ -52,7 +52,6 @@ namespace holo
 
 		private:
 
-
 			void popLocalPacket(boost::shared_ptr<HoloNetPacket> & packet);
 			void pushLocalPacket(boost::shared_ptr<HoloNetPacket> && packet);
 
