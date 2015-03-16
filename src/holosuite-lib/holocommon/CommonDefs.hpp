@@ -186,11 +186,6 @@ namespace holo
 			HoloVec3f scale, translate;
 		};
 		
-		struct HoloObject
-		{
-			HoloObjectHeader info;
-			HoloTransform transform;
-		};
 	}
 
 	namespace input

@@ -12,15 +12,28 @@ namespace holo
 
 		public:
 			HoloRender3DObject();
-			HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& objectPacket);
+			HoloRender3DObject(const boost::shared_ptr<holo::net::HoloNetPacket>& objectNetPacket);
 			~HoloRender3DObject();
 
-			const HoloObject& GetObjectInfo() const { return objectInfo_; }
+			const HoloObjectHeader& GetObjectInfo() const { return objectHeader_; }
 			const std::string& GetObjectName() const { return objectName_; }
+			const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacket() const;
+
+			void SetTransform(HoloTransform &transform) { objectTransform_ = transform; }
+			const HoloTransform& GetTransform() const { return objectTransform_; }
+
+			static const std::tuple<std::string, HoloTransform> GetTransformFromPacket(const boost::shared_ptr<holo::net::HoloNetPacket>& transformNetPacket);
+			static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objectTransform);
 
 		private:
 			std::string objectName_;
-			HoloObject objectInfo_;
+			HoloTransform objectTransform_;
+			HoloObjectHeader objectHeader_;
+
+			unsigned int vertSize_;
+			unsigned int normalSize_;
+			unsigned int colorSize_;
+			unsigned int stringSize_;
 
 			void * vertices_;
 			void * normals_;
