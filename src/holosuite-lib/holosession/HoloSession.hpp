@@ -8,6 +8,8 @@
 #include <holorender/IHoloRender.hpp>
 #include <holocapture/IHoloCaptureAudio.hpp>
 #include <holorender/IHoloRenderAudio.hpp>
+#include <holorender/HoloRenderObjectTracker.hpp>
+
 
 #include <memory>
 #include <string>
@@ -166,6 +168,8 @@ namespace holo
 		std::shared_ptr<holo::net::HoloNetSession> netSession_;
 		std::unique_ptr<holo::render::IHoloRender> render_;
 		std::unique_ptr<holo::render::IHoloRenderAudio> audioRender_;
+
+		holo::render::HoloRenderObjectTracker objectTracker_;
 
 		CloudCallback localCloudCallback_;
 		RGBAZCallback localRGBAZCallback_;

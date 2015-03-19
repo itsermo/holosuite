@@ -150,14 +150,19 @@ bool HoloSession::start()
 			remoteAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_AUDIO));
 	}
 
+	objectTracker_.Add3DObjectsFromFilePath(boost::filesystem::current_path().string());
+
+	for (const auto obj : objectTracker_.Get3DObjects())
+	{
+		auto packet = obj.second->CreateNetPacket();
+		auto objjjjj = holo::render::HoloRender3DObject(packet);
+		int x = 34;
+	}
+
 	isRunning_ = true;
 
 	return isRunning();
 }
-//void HoloSession::stop()
-//{
-//	stop(std::this_thread::get_id());
-//}
 
 void HoloSession::stop()
 {

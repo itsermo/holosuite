@@ -54,6 +54,7 @@ OPTION(WITH_ZSPACE_API "Enables ZSpace API for OpenGL renderer" OFF)
 OPTION(WITH_LEAPSDK "Enables Leap SDK for user input" OFF)
 OPTION(WITH_STATIC_FREEGLUT "Enables FREEGLUT_STATIC preprocessor macro" ON)
 OPTION(WITH_ODE "Enables ODE Physics Engine support" OFF)
+OPTION(WITH_ASSIMP "Enables 3D object asset import" OFF)
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)
@@ -139,6 +140,9 @@ INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
 FIND_PACKAGE(GLUT REQUIRED)
 INCLUDE_DIRECTORIES(${GLUT_INCLUDE_DIR})
 
+FIND_PACKAGE(assimp REQUIRED)
+INCLUDE_DIRECTORIES(${assimp_INCLUDE_DIRS})
+
 # Optional packages
 FIND_PACKAGE(Opus)
 FIND_PACKAGE(Portaudio 19)
@@ -169,6 +173,10 @@ ENDIF()
 
 IF(ODE_FOUND)
 	SET(WITH_ODE YES)
+ENDIF()
+
+IF(assimp_FOUND)
+	SET(WITH_ASSIMP YES)
 ENDIF()
 
 # enable trace logs for profiling and timing

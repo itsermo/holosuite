@@ -46,7 +46,6 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 	{
 		if (normals)
 		{
-
 			normalSize_ = objectHeader_.vertex_stride * objectHeader_.num_vertices;
 			normals_ = new unsigned char[normalSize_];
 			// copy normals from object file buffer
@@ -61,7 +60,7 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 		if (colors)
 		{
 
-			colorSize_ = objectHeader_.color_stride * objectHeader_.num_color_channels;
+			colorSize_ = objectHeader_.color_stride * objectHeader_.num_vertices;
 			colors_ = new unsigned char[colorSize_];
 			// copy normals from object file buffer
 			memcpy(colors_, colors, colorSize_);
@@ -84,6 +83,8 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 	objectTransform_.bounding_sphere.w = miniball3f.squared_radius();
 
 	delete[] ap;
+
+	stringSize_ = objectName_.size();
 
 	vertFuture.wait();
 	normalFuture.wait();
@@ -119,7 +120,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		// copy and convert vertices floats from network to host endianness
 		memcpy(vertices_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_), vertSize_);
 		float * realVal = (float*)vertices_;
-		for (unsigned int i = 0; i < vertSize_; i++)
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
 			*realVal = ntohf(*realVal);
 			realVal++;
@@ -135,7 +136,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		// copy and convert normal floats from network to host endianness
 		memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
 		float * realVal = (float*)normals_;
-		for (unsigned int i = 0; i < normalSize_; i++)
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
 			*realVal = ntohf(*realVal);
 			realVal++;
@@ -150,7 +151,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		// copy and convert color floats from network to host endianness
 		memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
 		float * realVal = (float*)colors_;
-		for (unsigned int i = 0; i < colorSize_; i++)
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 		{
 			*realVal = ntohf(*realVal);
 			realVal++;
@@ -172,7 +173,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	auto netPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
 
 	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_ADD;
-	netPacket->length = sizeof(objectHeader_) + 3 * sizeof(unsigned int)+vertSize_ + normalSize_ + colorSize_ + vertSize_ + objectName_.size();
+	netPacket->length = sizeof(objectHeader_) + 4 * sizeof(unsigned int)+vertSize_ + normalSize_ + colorSize_ + vertSize_ + stringSize_;
 	netPacket->value.resize(netPacket->length);
 
 	// convert info to network byte-type, and copy to value buffer
@@ -206,7 +207,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 
 		// copy and convert vertices floats to network endianness
 		float * realVal = (float*)vertices_;
-		for (unsigned int i = 0; i < vertSize_; i++)
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
 			*vp = htonf(*realVal);
 			vp++;
@@ -228,7 +229,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 
 		// copy and convert normal floats to network endianness
 		float * realVal = (float*)normals;
-		for (unsigned int i = 0; i < normalSize_; i++)
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
 			*np = htonf(*realVal);
 			np++;
@@ -245,11 +246,11 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 		[&]()
 	{
 		unsigned char * colors = new unsigned char[colorSize_];
-		float * cp = (float*)colors;
+		float *cp = (float*)colors;
 
 		// copy and convert color floats from host to network endianness
-		float * realVal = (float*)colors_;
-		for (unsigned int i = 0; i < colorSize_; i++)
+		float *realVal = (float*)colors_;
+		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 		{
 			*cp = htonf(*realVal);
 			cp++;

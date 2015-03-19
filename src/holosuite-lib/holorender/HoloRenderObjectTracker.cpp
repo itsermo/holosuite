@@ -4,6 +4,7 @@
 #include <assimp/scene.h>           
 #include <assimp/postprocess.h>
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 #endif
 
 using namespace holo;
@@ -60,7 +61,15 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 			if (objectScene->mMeshes[m]->HasVertexColors(0))
 			{
 				LOG4CXX_INFO(logger_, meshID << " has vertex colors")
-				auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(meshID, objectScene->mMeshes[m]->mFaces[0].mNumIndices, objectScene->mMeshes[m]->mNumVertices, (float*)objectScene->mMeshes[m]->mVertices, (float*)objectScene->mMeshes[m]->mNormals, (float*)objectScene->mMeshes[m]->mColors[0]));
+				
+				auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
+				meshID,
+				objectScene->mMeshes[m]->mFaces[0].mNumIndices,
+				objectScene->mMeshes[m]->mNumVertices,
+				(float*)objectScene->mMeshes[m]->mVertices,
+				(float*)objectScene->mMeshes[m]->mNormals,
+				(float*)objectScene->mMeshes[m]->mColors[0]));
+
 				std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
 
 				objectMap_[meshID] = meshObject;
@@ -68,6 +77,18 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 			else
 			{
 				LOG4CXX_WARN(logger_, meshID << " does not have vertex colors--it may look dull")
+			
+				auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
+				meshID,
+				objectScene->mMeshes[m]->mFaces[0].mNumIndices,
+				objectScene->mMeshes[m]->mNumVertices,
+				(float*)objectScene->mMeshes[m]->mVertices,
+				(float*)objectScene->mMeshes[m]->mNormals));
+
+				std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
+
+				objectMap_[meshID] = meshObject;
+
 			}
 
 		}
@@ -94,12 +115,17 @@ void HoloRenderObjectTracker::Add3DObjectsFromFilePath(const std::string filePat
 	std::string supportedExtStr;
 	assetImporter_.GetExtensionList(supportedExtStr);
 
-	boost::char_separator<char> sep(",");
+	std::list<std::string> extensionList;
+	boost::replace_all(supportedExtStr, "*", "");
+
+	boost::char_separator<char> sep(";");
 	boost::tokenizer<boost::char_separator<char>> tokens(supportedExtStr, sep);
 
-	for (const auto&t : tokens)
+	for (auto&t : tokens)
 	{
-
+		std::string ext = t;
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		extensionList.push_back(ext);
 	}
 
 	if (boost::filesystem::exists(modelsPath) && boost::filesystem::is_directory(modelsPath))
@@ -108,11 +134,14 @@ void HoloRenderObjectTracker::Add3DObjectsFromFilePath(const std::string filePat
 		{
 			if (boost::filesystem::is_regular_file(dir_iter->status()))
 			{
-				//for (const auto&t : extList)
-				//{
-				//	if (dir_iter->path().extension().string() == t.toLower().toStdString())
-				//		ui->inputFileComboBox->addItem(QString::fromStdString(dir_iter->path().filename().string()));
-				//}
+				for (auto &ext : extensionList)
+				{
+					std::string fileExt = dir_iter->path().extension().string();
+					std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(), ::tolower);
+
+					if (fileExt == ext)
+						Add3DObject(dir_iter->path().string());
+				}
 			}
 		}
 	}
