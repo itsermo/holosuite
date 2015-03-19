@@ -12,6 +12,7 @@ namespace holo
 
 		public:
 			HoloRender3DObject();
+			HoloRender3DObject(const std::string objectName, unsigned int numIndecies, unsigned int numVertices, float *vertices, float * normals = nullptr, float *colors = nullptr, unsigned int numVertexDimensions = 3, unsigned int numColorChannels = 4);
 			HoloRender3DObject(const boost::shared_ptr<holo::net::HoloNetPacket>& objectNetPacket);
 			~HoloRender3DObject();
 

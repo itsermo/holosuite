@@ -1,11 +1,16 @@
 #pragma once
 
+#include <boost/filesystem.hpp>
 #include <holocommon/CommonDefs.hpp>
 #include <holorender/HoloRender3DObject.hpp>
 #include <thread>
 #include <mutex>
 #include <map>
 #include <list>
+
+#ifdef ENABLE_HOLO_ASSIMP
+#include <assimp/Importer.hpp>
+#endif
 
 namespace holo
 {
@@ -17,45 +22,25 @@ namespace holo
 			HoloRenderObjectTracker();
 			~HoloRenderObjectTracker();
 
-			void Add3DObject(const boost::shared_ptr<HoloRender3DObject> & object)
-			{
-				std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
-				objectMap_[object->GetObjectName()] = object;
-			}
+			void Add3DObject(const std::string & fileName);
+			void Add3DObjectsFromFilePath(const std::string filePath);
+			void Add3DObject(const boost::shared_ptr<HoloRender3DObject> & object);
+			void Update3DObjectTransform(const std::tuple<std::string, HoloTransform> & objectState);
+			void Remove3DObject(const std::string & objectName);
 
-			void Update3DObjectTransform(const std::tuple<std::string, HoloTransform> & objectState)
-			{
-				std::string objName;
-				HoloTransform objTransform;
-				std::tie(objName, objTransform) = objectState;
+			const std::map<const std::string, boost::shared_ptr<HoloRender3DObject>> Get3DObjects();
 
-				std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
-				auto obj = objectMap_[objName];
-				obj->SetTransform(objTransform);
-			}
-
-			void Remove3DObject(const std::string & objectName)
-			{
-				std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
-				objectMap_.erase(objectName);
-			}
-
-			const std::map<const std::string, boost::shared_ptr<HoloRender3DObject>> Get3DObjects()
-			{
-				std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
-				return objectMap_;
-			}
-
-			boost::shared_ptr<holo::net::HoloNetPacket> Create3DObjectsStatePacket()
-			{
-				std::list<boost::shared_ptr<holo::net::HoloNetPacket>> packetList;
-				std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
-
-			}
+			std::list<boost::shared_ptr<holo::net::HoloNetPacket>> Create3DObjectsStatePacketList();
 
 		private:
 			std::mutex objectMapMutex_;
 			std::map<const std::string,boost::shared_ptr<HoloRender3DObject>> objectMap_;
+			log4cxx::LoggerPtr logger_;
+
+#ifdef ENABLE_HOLO_ASSIMP
+			Assimp::Importer assetImporter_;
+#endif
+
 
 		};
 	}

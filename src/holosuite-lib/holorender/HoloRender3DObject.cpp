@@ -1,17 +1,13 @@
 #include "HoloRender3DObject.hpp"
 #include <boost/asio.hpp>
 #include <future>
+#include "Miniball.hpp"
 
 using namespace holo;
 using namespace holo::net;
 using namespace holo::render;
 
-HoloRender3DObject::HoloRender3DObject()
-{
-
-}
-
-HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& objectPacket) :
+HoloRender3DObject::HoloRender3DObject() :
 	objectName_(),
 	objectHeader_(),
 	objectTransform_(),
@@ -20,6 +16,82 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	colorSize_(0),
 	stringSize_(0)
 {
+
+}
+
+HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned int numIndecies, unsigned int numVertices, float *vertices, float * normals, float *colors, unsigned int numVertexDimensions, unsigned int numColorChannels) : HoloRender3DObject()
+{
+	objectName_ = objectName;
+	objectHeader_.num_indecies = numIndecies;
+	objectHeader_.num_vertices = numVertices;
+	objectHeader_.num_color_channels = numColorChannels;
+	objectHeader_.num_points_per_vertex = numVertexDimensions;
+	objectHeader_.vertex_stride = objectHeader_.num_points_per_vertex * sizeof(float);
+	objectHeader_.color_stride = objectHeader_.num_color_channels * sizeof(float);
+
+	// Launch vert/normal/color processing simultaneously
+	std::future<void> vertFuture =
+		std::async(std::launch::async,
+		[&]()
+	{
+		vertSize_ = objectHeader_.vertex_stride * objectHeader_.num_vertices;
+		vertices_ = new unsigned char[vertSize_];
+		// copy and vertices floats from object file buffer
+		memcpy(vertices_, vertices, vertSize_);
+	});
+
+	std::future<void> normalFuture =
+		std::async(std::launch::async,
+		[&]()
+	{
+		if (normals)
+		{
+
+			normalSize_ = objectHeader_.vertex_stride * objectHeader_.num_vertices;
+			normals_ = new unsigned char[normalSize_];
+			// copy normals from object file buffer
+			memcpy(normals_, normals, normalSize_);
+		}
+	});
+
+	std::future<void> colorFuture =
+		std::async(std::launch::async,
+		[&]()
+	{
+		if (colors)
+		{
+
+			colorSize_ = objectHeader_.color_stride * objectHeader_.num_color_channels;
+			colors_ = new unsigned char[colorSize_];
+			// copy normals from object file buffer
+			memcpy(colors_, colors, colorSize_);
+		}
+	});
+
+	//Use miniball algorithm to get the bounding sphere of the object quickly
+	float **ap = new float*[objectHeader_.num_vertices];
+	float * pv = vertices;
+	for (int i = 0; i < objectHeader_.num_vertices; ++i) {
+		ap[i] = pv;
+		pv += objectHeader_.num_points_per_vertex;
+	}
+
+	// miniball uses a quick method of determining the bounding sphere of all the vertices
+	auto miniball3f = Miniball::Miniball<Miniball::CoordAccessor<float**, float*>>(3, (float**)ap, (float**)(ap + numVertices));
+	objectTransform_.bounding_sphere.x = miniball3f.center()[0];
+	objectTransform_.bounding_sphere.y = miniball3f.center()[1];
+	objectTransform_.bounding_sphere.z = miniball3f.center()[2];
+	objectTransform_.bounding_sphere.w = miniball3f.squared_radius();
+
+	delete[] ap;
+
+	vertFuture.wait();
+	normalFuture.wait();
+	colorFuture.wait();
+}
+
+HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& objectPacket) : HoloRender3DObject()
+{
 	memcpy(&objectHeader_, objectPacket->value.data(), sizeof(objectHeader_));
 	objectHeader_.num_vertices = ntohl(objectHeader_.num_vertices);
 	objectHeader_.num_points_per_vertex = ntohl(objectHeader_.num_points_per_vertex);
@@ -27,7 +99,6 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	objectHeader_.vertex_stride = ntohl(objectHeader_.vertex_stride);
 	objectHeader_.color_stride = ntohl(objectHeader_.color_stride);
 	objectHeader_.num_indecies = ntohl(objectHeader_.num_indecies);
-
 
 	memcpy(&vertSize_, objectPacket->value.data() + sizeof(objectHeader_), sizeof(vertSize_));
 	memcpy(&normalSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(vertSize_), sizeof(normalSize_));

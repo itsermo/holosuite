@@ -284,10 +284,10 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, boost:
 	localInfo.captureHOV = htonl(static_cast<u_long>(localInfo.captureHOV));
 	localInfo.captureVOV = htonl(static_cast<u_long>(localInfo.captureVOV));
 	localInfo.videoCodecType = htonl(localInfo.videoCodecType);
-	localInfo.audioCodecType = ntohl(localInfo.audioCodecType);
-	localInfo.audioBitDepth = ntohl(localInfo.audioBitDepth);
-	localInfo.audioNumChan = ntohl(localInfo.audioNumChan);
-	localInfo.audioFreq = ntohl(localInfo.audioFreq);
+	localInfo.audioCodecType = htonl(localInfo.audioCodecType);
+	localInfo.audioBitDepth = htonl(localInfo.audioBitDepth);
+	localInfo.audioNumChan = htonl(localInfo.audioNumChan);
+	localInfo.audioFreq = htonl(localInfo.audioFreq);
 
 	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
 
