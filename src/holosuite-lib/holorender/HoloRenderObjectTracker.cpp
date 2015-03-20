@@ -105,7 +105,7 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 }
 
 
-void HoloRenderObjectTracker::Add3DObjectsFromFilePath(const std::string filePath)
+void HoloRenderObjectTracker::Populate3DObjects(const std::string filePath)
 {
 #ifdef ENABLE_HOLO_ASSIMP
 

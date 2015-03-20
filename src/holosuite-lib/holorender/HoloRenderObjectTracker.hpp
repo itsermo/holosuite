@@ -23,7 +23,7 @@ namespace holo
 			~HoloRenderObjectTracker();
 
 			void Add3DObject(const std::string & fileName);
-			void Add3DObjectsFromFilePath(const std::string filePath);
+			void Populate3DObjects(const std::string filePath);
 			void Add3DObject(const boost::shared_ptr<HoloRender3DObject> & object);
 			void Update3DObjectTransform(const std::tuple<std::string, HoloTransform> & objectState);
 			void Remove3DObject(const std::string & objectName);
