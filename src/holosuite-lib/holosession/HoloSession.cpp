@@ -155,7 +155,14 @@ bool HoloSession::start()
 	for (const auto obj : objectTracker_.Get3DObjects())
 	{
 		auto packet = obj.second->CreateNetPacket();
-		auto objjjjj = holo::render::HoloRender3DObject(packet);
+		auto objdecode = holo::render::HoloRender3DObject(packet);
+
+		HoloVec4f threeFloat;
+		HoloVec4f threeFloatDec;
+
+		memcpy(&threeFloat, obj.second->GetColorBuffer(), sizeof(threeFloat));
+		memcpy(&threeFloatDec, objdecode.GetColorBuffer(), sizeof(threeFloatDec));
+
 		int x = 34;
 	}
 

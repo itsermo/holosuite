@@ -25,6 +25,9 @@ namespace holo
 
 			static const std::tuple<std::string, HoloTransform> GetTransformFromPacket(const boost::shared_ptr<holo::net::HoloNetPacket>& transformNetPacket);
 			static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objectTransform);
+			const float* GetVertexBuffer() const { return (float*)vertices_; }
+			const float* GetNormalBuffer() const { return (float*)normals_; }
+			const float* GetColorBuffer() const { return (float*)colors_; }
 
 		private:
 			std::string objectName_;

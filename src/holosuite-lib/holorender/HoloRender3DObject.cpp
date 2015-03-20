@@ -122,7 +122,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)vertices_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
-			*realVal = ntohf(*realVal);
+			*realVal = ntohf(*(unsigned int*)realVal);
 			realVal++;
 		}
 	});
@@ -138,7 +138,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)normals_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
-			*realVal = ntohf(*realVal);
+			*realVal = ntohf(*(unsigned int*)realVal);
 			realVal++;
 		}
 	});
@@ -153,7 +153,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)colors_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 		{
-			*realVal = ntohf(*realVal);
+			*realVal = ntohf(*(unsigned int*)realVal);
 			realVal++;
 		}
 	});
@@ -203,7 +203,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 		[&]()
 	{
 		unsigned char *vertices = new unsigned char[vertSize_];
-		float *vp = (float*)vertices;
+		unsigned int *vp = (unsigned int*)vertices;
 
 		// copy and convert vertices floats to network endianness
 		float * realVal = (float*)vertices_;
@@ -225,10 +225,10 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 		[&]()
 	{
 		unsigned char * normals = new unsigned char[normalSize_];
-		float * np = (float*)normals;
+		unsigned int * np = (unsigned int*)normals;
 
 		// copy and convert normal floats to network endianness
-		float * realVal = (float*)normals;
+		float * realVal = (float*)normals_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
 			*np = htonf(*realVal);
@@ -246,7 +246,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 		[&]()
 	{
 		unsigned char * colors = new unsigned char[colorSize_];
-		float *cp = (float*)colors;
+		unsigned int *cp = (unsigned int*)colors;
 
 		// copy and convert color floats from host to network endianness
 		float *realVal = (float*)colors_;
