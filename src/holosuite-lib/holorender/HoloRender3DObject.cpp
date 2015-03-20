@@ -16,7 +16,10 @@ HoloRender3DObject::HoloRender3DObject() :
 	colorSize_(0),
 	stringSize_(0)
 {
-
+	objectTransform_.bounding_sphere = {};
+	objectTransform_.rotation = {};
+	objectTransform_.scale = {};
+	objectTransform_.translate = {};
 }
 
 HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned int numIndecies, unsigned int numVertices, float *vertices, float * normals, float *colors, unsigned int numVertexDimensions, unsigned int numColorChannels) : HoloRender3DObject()
@@ -101,10 +104,30 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	objectHeader_.color_stride = ntohl(objectHeader_.color_stride);
 	objectHeader_.num_indecies = ntohl(objectHeader_.num_indecies);
 
-	memcpy(&vertSize_, objectPacket->value.data() + sizeof(objectHeader_), sizeof(vertSize_));
-	memcpy(&normalSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(vertSize_), sizeof(normalSize_));
-	memcpy(&colorSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(vertSize_) + sizeof(normalSize_), sizeof(colorSize_));
-	memcpy(&stringSize_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(stringSize_), sizeof(stringSize_));
+	memcpy(&objectTransform_, objectPacket->value.data() + sizeof(objectHeader_), sizeof(objectTransform_));
+
+	objectTransform_.translate.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.x));
+	objectTransform_.translate.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.y));
+	objectTransform_.translate.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.z));
+
+	objectTransform_.rotation.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.x));
+	objectTransform_.rotation.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.y));
+	objectTransform_.rotation.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.z));
+	objectTransform_.rotation.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.w));
+
+	objectTransform_.scale.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.x));
+	objectTransform_.scale.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.y));
+	objectTransform_.scale.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.z));
+
+	objectTransform_.bounding_sphere.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.x));
+	objectTransform_.bounding_sphere.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.y));
+	objectTransform_.bounding_sphere.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.z));
+	objectTransform_.bounding_sphere.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.w));
+
+	memcpy(&vertSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_), sizeof(vertSize_));
+	memcpy(&normalSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_)+sizeof(vertSize_), sizeof(normalSize_));
+	memcpy(&colorSize_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_), sizeof(colorSize_));
+	memcpy(&stringSize_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(stringSize_), sizeof(stringSize_));
 
 	vertSize_ = ntohl(vertSize_);
 	normalSize_ = ntohl(normalSize_);
@@ -118,7 +141,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	{
 		vertices_ = new unsigned char[vertSize_];
 		// copy and convert vertices floats from network to host endianness
-		memcpy(vertices_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_), vertSize_);
+		memcpy(vertices_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_), vertSize_);
 		float * realVal = (float*)vertices_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
@@ -134,7 +157,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	{
 		normals_ = new unsigned char[normalSize_];
 		// copy and convert normal floats from network to host endianness
-		memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
+		memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
 		float * realVal = (float*)normals_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
@@ -149,7 +172,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	{
 		colors_ = new unsigned char[colorSize_];
 		// copy and convert color floats from network to host endianness
-		memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
+		memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
 		float * realVal = (float*)colors_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 		{
@@ -160,7 +183,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 
 	// create the name string
 	objectName_.resize(stringSize_);
-	memcpy((void*)objectName_.data(), objectPacket->value.data() + sizeof(objectHeader_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_ + colorSize_, stringSize_);
+	memcpy((void*)objectName_.data(), objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_ + colorSize_, stringSize_);
 
 	// Wait for them to be finished
 	vertFuture.wait();
@@ -186,16 +209,58 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	objHeader.num_indecies = htonl(objHeader.num_indecies);
 	memcpy(netPacket->value.data(), &objHeader, sizeof(objHeader));
 
+	auto objectTransform = objectTransform_;
+	
+	unsigned int x, y, z, w = 0;
+
+	x = htonf(objectTransform.translate.x);
+	y = htonf(objectTransform.translate.y);
+	z = htonf(objectTransform.translate.z);
+
+	objectTransform.translate.x = reinterpret_cast<float&>(x);
+	objectTransform.translate.y = reinterpret_cast<float&>(y);
+	objectTransform.translate.z = reinterpret_cast<float&>(z);
+
+	x = htonf(objectTransform.rotation.x);
+	y = htonf(objectTransform.rotation.y);
+	z = htonf(objectTransform.rotation.z);
+	w = htonf(objectTransform.rotation.w);
+
+	objectTransform.rotation.x = reinterpret_cast<float&>(x);
+	objectTransform.rotation.y = reinterpret_cast<float&>(y);
+	objectTransform.rotation.z = reinterpret_cast<float&>(z);
+	objectTransform.rotation.w = reinterpret_cast<float&>(w);
+
+	x = htonf(objectTransform.scale.x);
+	y = htonf(objectTransform.scale.y);
+	z = htonf(objectTransform.scale.z);
+
+	objectTransform.scale.x = reinterpret_cast<float&>(x);
+	objectTransform.scale.y = reinterpret_cast<float&>(y);
+	objectTransform.scale.z = reinterpret_cast<float&>(z);
+	
+	x = htonf(objectTransform.bounding_sphere.x);
+	y = htonf(objectTransform.bounding_sphere.y);
+	z = htonf(objectTransform.bounding_sphere.z);
+	w = htonf(objectTransform.bounding_sphere.w);
+
+	objectTransform.bounding_sphere.x = reinterpret_cast<float&>(x);
+	objectTransform.bounding_sphere.y = reinterpret_cast<float&>(y);
+	objectTransform.bounding_sphere.z = reinterpret_cast<float&>(z);
+	objectTransform.bounding_sphere.w = reinterpret_cast<float&>(w);
+
+	memcpy(netPacket->value.data() + sizeof(objHeader), &objectTransform, sizeof(objectTransform));
+
 	// convert size to network byte endianness, and copy to value buffer
 	auto vertSize = htonl(vertSize_);
 	auto normalSize = htonl(normalSize_);
 	auto colorSize = htonl(colorSize_);
 	auto stringSize = htonl(stringSize_);
 
-	memcpy(netPacket->value.data() + sizeof(objHeader), &vertSize, sizeof(vertSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize), &normalSize, sizeof(normalSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize), &colorSize, sizeof(colorSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize), &stringSize, sizeof(stringSize));
+	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform), &vertSize, sizeof(vertSize));
+	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize), &normalSize, sizeof(normalSize));
+	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize), &colorSize, sizeof(colorSize));
+	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize), &stringSize, sizeof(stringSize));
 
 	// Launch vert/normal/color processing simultaneously
 	std::future<void> vertFuture =
@@ -214,7 +279,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 			realVal++;
 		}
 
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize), vertices, vertSize_);
+		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize), vertices, vertSize_);
 
 		delete[] vertices;
 	});
@@ -236,7 +301,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 			realVal++;
 		}
 
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
+		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
 
 		delete[] normals;
 	});
@@ -257,12 +322,12 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 			realVal++;
 		}
 
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, normalSize_);
+		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, normalSize_);
 
 		delete[] colors;
 	});
 
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_ + colorSize_, objectName_.data(), objectName_.size());
+	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_ + colorSize_, objectName_.data(), objectName_.size());
 
 	// Wait for them to be finished
 	vertFuture.wait();
@@ -280,23 +345,23 @@ const std::tuple<std::string, HoloTransform> HoloRender3DObject::GetTransformFro
 
 	memcpy(&objectTransform, transformNetPacket->value.data(), sizeof(objectTransform));
 
-	objectTransform.translate.x = ntohf(objectTransform.translate.x);
-	objectTransform.translate.y = ntohf(objectTransform.translate.y);
-	objectTransform.translate.z = ntohf(objectTransform.translate.z);
+	objectTransform.translate.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform.translate.x));
+	objectTransform.translate.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform.translate.y));
+	objectTransform.translate.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform.translate.z));
 
-	objectTransform.rotation.x = ntohf(objectTransform.rotation.x);
-	objectTransform.rotation.y = ntohf(objectTransform.rotation.y);
-	objectTransform.rotation.z = ntohf(objectTransform.rotation.z);
-	objectTransform.rotation.w = ntohf(objectTransform.rotation.w);
+	objectTransform.rotation.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform.rotation.x));
+	objectTransform.rotation.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform.rotation.y));
+	objectTransform.rotation.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform.rotation.z));
+	objectTransform.rotation.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform.rotation.w));
 
-	objectTransform.scale.x = ntohf(objectTransform.scale.x);
-	objectTransform.scale.y = ntohf(objectTransform.scale.y);
-	objectTransform.scale.z = ntohf(objectTransform.scale.z);
+	objectTransform.scale.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform.scale.x));
+	objectTransform.scale.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform.scale.y));
+	objectTransform.scale.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform.scale.z));
 
-	objectTransform.bounding_sphere.x = ntohf(objectTransform.bounding_sphere.x);
-	objectTransform.bounding_sphere.y = ntohf(objectTransform.bounding_sphere.y);
-	objectTransform.bounding_sphere.z = ntohf(objectTransform.bounding_sphere.z);
-	objectTransform.bounding_sphere.w = ntohf(objectTransform.bounding_sphere.w);
+	objectTransform.bounding_sphere.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.x));
+	objectTransform.bounding_sphere.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.y));
+	objectTransform.bounding_sphere.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.z));
+	objectTransform.bounding_sphere.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.w));
 
 	unsigned int stringSize = 0;
 	memcpy(&stringSize, transformNetPacket->value.data() + sizeof(objectTransform), sizeof(stringSize));
@@ -313,23 +378,43 @@ static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTran
 
 	std::tie(objectName, objectTransform) = objInfo;
 
-	objectTransform.translate.x = ntohf(objectTransform.translate.x);
-	objectTransform.translate.y = ntohf(objectTransform.translate.y);
-	objectTransform.translate.z = ntohf(objectTransform.translate.z);
+	unsigned int x, y, z, w = 0;
 
-	objectTransform.rotation.x = ntohf(objectTransform.rotation.x);
-	objectTransform.rotation.y = ntohf(objectTransform.rotation.y);
-	objectTransform.rotation.z = ntohf(objectTransform.rotation.z);
-	objectTransform.rotation.w = ntohf(objectTransform.rotation.w);
+	x = htonf(objectTransform.translate.x);
+	y = htonf(objectTransform.translate.y);
+	z = htonf(objectTransform.translate.z);
 
-	objectTransform.scale.x = ntohf(objectTransform.scale.x);
-	objectTransform.scale.y = ntohf(objectTransform.scale.y);
-	objectTransform.scale.z = ntohf(objectTransform.scale.z);
+	objectTransform.translate.x = reinterpret_cast<float&>(x);
+	objectTransform.translate.y = reinterpret_cast<float&>(y);
+	objectTransform.translate.z = reinterpret_cast<float&>(z);
 
-	objectTransform.bounding_sphere.x = ntohf(objectTransform.bounding_sphere.x);
-	objectTransform.bounding_sphere.y = ntohf(objectTransform.bounding_sphere.y);
-	objectTransform.bounding_sphere.z = ntohf(objectTransform.bounding_sphere.z);
-	objectTransform.bounding_sphere.w = ntohf(objectTransform.bounding_sphere.w);
+	x = htonf(objectTransform.rotation.x);
+	y = htonf(objectTransform.rotation.y);
+	z = htonf(objectTransform.rotation.z);
+	w = htonf(objectTransform.rotation.w);
+
+	objectTransform.rotation.x = reinterpret_cast<float&>(x);
+	objectTransform.rotation.y = reinterpret_cast<float&>(y);
+	objectTransform.rotation.z = reinterpret_cast<float&>(z);
+	objectTransform.rotation.w = reinterpret_cast<float&>(w);
+
+	x = htonf(objectTransform.scale.x);
+	y = htonf(objectTransform.scale.y);
+	z = htonf(objectTransform.scale.z);
+
+	objectTransform.scale.x = reinterpret_cast<float&>(x);
+	objectTransform.scale.y = reinterpret_cast<float&>(y);
+	objectTransform.scale.z = reinterpret_cast<float&>(z);
+
+	x = htonf(objectTransform.bounding_sphere.x);
+	y = htonf(objectTransform.bounding_sphere.y);
+	z = htonf(objectTransform.bounding_sphere.z);
+	w = htonf(objectTransform.bounding_sphere.w);
+
+	objectTransform.bounding_sphere.x = reinterpret_cast<float&>(x);
+	objectTransform.bounding_sphere.y = reinterpret_cast<float&>(y);
+	objectTransform.bounding_sphere.z = reinterpret_cast<float&>(z);
+	objectTransform.bounding_sphere.w = reinterpret_cast<float&>(w);
 
 	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_UPDATE;
 	netPacket->length = sizeof(objectTransform)+objectName.size();
