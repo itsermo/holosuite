@@ -6,6 +6,7 @@
 #include <log4cxx/basicconfigurator.h>
 
 #include <holocapture/HoloCaptureGenerator.hpp>
+#include <holoinput/HoloInputDeviceGenerator.hpp>
 #include <holorender/HoloRenderGenerator.hpp>
 #include <holocodec/HoloCodecGenerator.hpp>
 #include <holonet/HoloNetClient.hpp>
@@ -16,9 +17,7 @@
 #include <functional>
 #include <thread>
 
-
 log4cxx::LoggerPtr logger_main(log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite"));
-
 
 int main(int argc, char *argv[])
 {
@@ -42,6 +41,7 @@ int main(int argc, char *argv[])
 	holo::codec::CODEC_TYPE videoCodecType;
 	holo::render::RENDER_TYPE renderType;
 
+	holo::input::INPUT_DEVICE_TYPE inputDeviceType = holo::input::INPUT_DEVICE_TYPE_NONE;
 	holo::capture::CAPTURE_AUDIO_TYPE audioCaptureType = holo::capture::CAPTURE_AUDIO_TYPE_NONE;
 	holo::codec::CODEC_TYPE audioCodecType = holo::codec::CODEC_TYPE_NONE;
 
@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 	std::unique_ptr<holo::capture::IHoloCapture> videoCapture = nullptr;
 	std::unique_ptr<holo::capture::IHoloCaptureAudio> audioCapture = nullptr;
 	std::unique_ptr<holo::render::IHoloRenderAudio> audioRenderer = nullptr;
+	std::unique_ptr<holo::input::IHoloInputDevice> inputDevice = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> encoderCloud = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> decoderCloud = nullptr;
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> encoderRGBAZ = nullptr;
@@ -121,6 +122,15 @@ int main(int argc, char *argv[])
 			 ("capture-fps", boost::program_options::value<float>()->default_value(HOLO_CAPTURE_DEFAULT_Z_FPS),
 			 "(optional) sets the capture rate")
 		;
+
+#ifdef ENABLE_HOLO_LEAPSDK
+	boost::program_options::options_description input_device_options("Audio input source");
+	input_device_options.add_options()
+		("input-device,n",
+		boost::program_options::value<std::string>()->default_value("none"),
+		"selects the interaction input method. valid setting is [none,leapsdk]")
+		;
+#endif
 
 #ifdef ENABLE_HOLO_AUDIO
 	// audio input options
@@ -201,6 +211,10 @@ int main(int argc, char *argv[])
 
 #ifdef ENABLE_HOLO_AUDIO
 	cmdline_options.add(audio_input_options).add(audio_codec_options).add(audio_output_options);
+#endif
+
+#ifdef ENABLE_HOLO_LEAPSDK
+	cmdline_options.add(input_device_options);
 #endif
 
 	boost::program_options::variables_map vm;
@@ -498,6 +512,14 @@ int main(int argc, char *argv[])
 
 	localInfo.videoCodecType = videoCodecType;
 
+#ifdef ENABLE_HOLO_LEAPSDK
+	if (vm.count("input-device"))
+	{
+		if (vm["input-device"].as<std::string>().compare("leapsdk") == 0)
+			inputDeviceType = holo::input::INPUT_DEVICE_TYPE_LEAPSDK;
+	}
+#endif
+
 #ifdef ENABLE_HOLO_AUDIO
 
 	if (vm.count("audio-input"))
@@ -744,6 +766,20 @@ int main(int argc, char *argv[])
 				h264Args.height = captureInfo.zHeight;
 			}
 
+			switch (inputDeviceType)
+			{
+			case holo::input::INPUT_DEVICE_TYPE_NONE:
+				inputDevice = nullptr;
+				break;
+#ifdef ENABLE_HOLO_LEAPSDK
+			case holo::input::INPUT_DEVICE_TYPE_LEAPSDK:
+				inputDevice = holo::input::HoloInputDeviceGenerator::fromLeapSDK();
+				break;
+#endif
+			default:
+				break;
+			}
+
 			switch (audioCaptureType)
 			{
 			case holo::capture::CAPTURE_AUDIO_TYPE_NONE:
@@ -757,7 +793,6 @@ int main(int argc, char *argv[])
 			default:
 				break;
 			}
-
 
 			if (audioCapture)
 			{
@@ -1003,6 +1038,7 @@ int main(int argc, char *argv[])
 				directSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					std::move(videoCapture),
 					std::move(audioCapture),
+					std::move(inputDevice),
 					nullptr,
 					nullptr,
 					nullptr,
@@ -1022,6 +1058,7 @@ int main(int argc, char *argv[])
 				serverSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(videoCapture) : nullptr,
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(audioCapture) : nullptr,
+					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(inputDevice) : nullptr,
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderRGBAZ) : nullptr,
 					std::move(decoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_SERVER ? std::move(encoderCloud) : nullptr,
@@ -1041,6 +1078,7 @@ int main(int argc, char *argv[])
 				clientSession = std::unique_ptr<holo::HoloSession>(new holo::HoloSession(
 					std::move(videoCapture),
 					std::move(audioCapture),
+					std::move(inputDevice),
 					std::move(encoderRGBAZ),
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(decoderRGBAZ) : nullptr,
 					std::move(encoderCloud),

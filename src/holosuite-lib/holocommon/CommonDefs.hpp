@@ -120,6 +120,15 @@ namespace holo
 		};
 	}
 
+	namespace input
+	{
+		typedef enum
+		{
+			INPUT_DEVICE_TYPE_NONE = -1,
+			INPUT_DEVICE_TYPE_LEAPSDK = 0
+		} INPUT_DEVICE_TYPE;
+	}
+
 	namespace codec
 	{
 

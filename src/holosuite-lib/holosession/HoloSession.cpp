@@ -18,6 +18,7 @@ HoloSession::HoloSession()
 
 HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
 	std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
+	std::unique_ptr<holo::input::IHoloInputDevice> && inputDevice,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && encoderCloud,
@@ -47,6 +48,7 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 
 	capture_ = std::move(capture);
 	audioCapture_ = std::move(audioCapture);
+	inputDevice_ = std::move(inputDevice);
 	rgbazDecoder_ = std::move(decoderRGBAZ);
 	rgbazEncoder_ = std::move(encoderRGBAZ);
 	cloudDecoder_ = std::move(decoderCloud);
@@ -64,6 +66,13 @@ bool HoloSession::start()
 {
 	LOG4CXX_INFO(logger_, "Starting session threads...");
 
+	std::future<void> objectTrackerFuture =
+		std::async(std::launch::async,
+		[&]()
+	{
+		objectTracker_->Populate3DObjects(boost::filesystem::current_path().string());
+	});
+
 	haveLocalCloud_ = false;
 	haveLocalRGBAZ_ = false;
 	haveRemoteCloud_ = false;
@@ -78,8 +87,6 @@ bool HoloSession::start()
 	remoteCloud_->is_dense = false;
 	remoteCloud_->sensor_origin_.setZero();
 	remoteCloud_->sensor_orientation_.setIdentity();
-
-	//remoteAudioCompressed_ = boost::shared_ptr<std::vector<unsigned char>>(new std::vector<unsigned char>());
 
 	//create convert cache for remote cloud so we can reproject to real-world coordinates
 	worldConvertCache_.xzFactor = tan((remoteInfo_.captureHOV * M_PI / 180.0f) / 2) * 2;
@@ -150,21 +157,7 @@ bool HoloSession::start()
 			remoteAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_AUDIO));
 	}
 
-	objectTracker_.Add3DObjectsFromFilePath(boost::filesystem::current_path().string());
-
-	for (const auto obj : objectTracker_.Get3DObjects())
-	{
-		auto packet = obj.second->CreateNetPacket();
-		auto objdecode = holo::render::HoloRender3DObject(packet);
-
-		HoloVec4f threeFloat;
-		HoloVec4f threeFloatDec;
-
-		memcpy(&threeFloat, obj.second->GetColorBuffer(), sizeof(threeFloat));
-		memcpy(&threeFloatDec, objdecode.GetColorBuffer(), sizeof(threeFloatDec));
-
-		int x = 34;
-	}
+	objectTrackerFuture.wait();
 
 	isRunning_ = true;
 
@@ -293,6 +286,26 @@ HoloSession::~HoloSession()
 	LOG4CXX_DEBUG(logger_, "Destroying HoloSession object...");
 	//stop();
 	LOG4CXX_DEBUG(logger_, "Destroyed HoloSession object");
+}
+
+void HoloSession::objectTrackerLoop()
+{
+	while (shouldTrackObjects_)
+	{
+		std::unique_lock<std::mutex> ulObjectTracker(remoteObjectDataMutex_);
+		if (!haveRemoteObjectData_)
+		{
+			if (std::cv_status::timeout == haveRemoteCloudCompressedCV_.wait_for(ulObjectTracker, std::chrono::milliseconds(HOLO_SESSION_CV_WAIT_TIMEOUT_MS)))
+				continue;
+		}
+
+		for (const auto t : remoteObjectStateData_)
+			objectTracker_->Update3DObjectTransform(t);
+
+		remoteObjectStateData_.clear();
+
+		ulObjectTracker.unlock();
+	}
 }
 
 void HoloSession::netRecvLoop()

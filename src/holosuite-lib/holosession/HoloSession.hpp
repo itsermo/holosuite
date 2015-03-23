@@ -8,6 +8,7 @@
 #include <holorender/IHoloRender.hpp>
 #include <holocapture/IHoloCaptureAudio.hpp>
 #include <holorender/IHoloRenderAudio.hpp>
+#include <holoinput/IHoloInputDevice.hpp>
 #include <holorender/HoloRenderObjectTracker.hpp>
 
 
@@ -50,6 +51,7 @@ namespace holo
 		HoloSession();
 		HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture,
 			std::unique_ptr<holo::capture::IHoloCaptureAudio> && audioCapture,
+			std::unique_ptr<holo::input::IHoloInputDevice> && inputDevice,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && encoderRGBAZ,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloRGBAZMat>> && decoderRGBAZ,
 			std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && encoderCloud,
@@ -114,6 +116,8 @@ namespace holo
 
 		std::thread netRecvThread_;
 
+		std::thread objectTrackerThread_;
+
 		std::thread localCloudCallbackThread_;
 		std::thread remoteCloudCallbackThread_;
 
@@ -135,6 +139,9 @@ namespace holo
 		std::mutex remoteAudioMutex_;
 		std::mutex remoteAudioCompressedMutex_;
 		
+		std::mutex remoteObjectDataMutex_;
+		std::mutex localObjectDataMutex_;
+
 		std::mutex stoppingMutex_;
 
 		std::condition_variable haveLocalCloudCV_;
@@ -146,19 +153,23 @@ namespace holo
 		std::condition_variable haveRemoteAudioCompressedCV_;
 		std::condition_variable haveRemoteRGBAZCV_;
 		std::condition_variable haveRemoteRGBAZCompressedCV_;
+		std::condition_variable haveRemoteObjectDataCV_;
 
 		std::atomic<bool> haveLocalCloud_;
 		std::atomic<bool> haveLocalAudio_;
 		std::atomic<bool> haveLocalRGBAZ_;
+		std::atomic<bool> haveLocalRemoteObjectData_;
 		std::atomic<bool> haveRemoteCloud_;
 		std::atomic<bool> haveRemoteCloudCompressed_;
 		std::atomic<bool> haveRemoteAudio_;
 		std::atomic<bool> haveRemoteAudioCompressed_;
 		std::atomic<bool> haveRemoteRGBAZ_;
 		std::atomic<bool> haveRemoteRGBAZCompressed_;
+		std::atomic<bool> haveRemoteObjectData_;
 
 		std::unique_ptr<holo::capture::IHoloCapture> capture_;
 		std::unique_ptr<holo::capture::IHoloCaptureAudio> audioCapture_;
+		std::unique_ptr<holo::input::IHoloInputDevice> inputDevice_;
 		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudEncoder_;
 		std::unique_ptr<holo::codec::IHoloCodec<HoloCloud>> cloudDecoder_;
 		std::unique_ptr<holo::codec::IHoloCodec<HoloRGBAZMat>> rgbazEncoder_;
@@ -168,8 +179,10 @@ namespace holo
 		std::shared_ptr<holo::net::HoloNetSession> netSession_;
 		std::unique_ptr<holo::render::IHoloRender> render_;
 		std::unique_ptr<holo::render::IHoloRenderAudio> audioRender_;
+		std::unique_ptr<holo::render::HoloRenderObjectTracker> objectTracker_;
 
-		holo::render::HoloRenderObjectTracker objectTracker_;
+		std::list<std::tuple<std::string, holo::render::HoloTransform>> remoteObjectStateData_;
+		std::list<std::tuple<std::string, holo::render::HoloTransform>> localObjectStateData_;
 
 		CloudCallback localCloudCallback_;
 		RGBAZCallback localRGBAZCallback_;
@@ -195,6 +208,8 @@ namespace holo
 
 		std::atomic<bool> shouldCallback_;
 
+		std::atomic<bool> shouldTrackObjects_;
+
 		std::atomic<bool> isRunning_;
 
 		void captureLoop();
@@ -210,6 +225,8 @@ namespace holo
 		void renderAudioLoop();
 
 		void netRecvLoop();
+		
+		void objectTrackerLoop();
 
 		void callbackLoop(HoloSessionCallbackType type);
 
