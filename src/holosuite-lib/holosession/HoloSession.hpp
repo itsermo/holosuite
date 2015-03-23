@@ -104,6 +104,7 @@ namespace holo
 
 		std::thread captureThread_;
 		std::thread captureAudioThread_;
+		std::thread interactionThread_;
 
 		std::thread encodeThread_;
 		std::thread encodeAudioThread_;
@@ -142,18 +143,23 @@ namespace holo
 		std::mutex remoteObjectDataMutex_;
 		std::mutex localObjectDataMutex_;
 
+		std::mutex localInteractionDataMutex_;
+		std::mutex remoteInteractionDataMutex_;
+
 		std::mutex stoppingMutex_;
 
 		std::condition_variable haveLocalCloudCV_;
 		std::condition_variable haveLocalRGBAZCV_;
 		std::condition_variable haveLocalAudioCV_;
 		std::condition_variable haveRemoteCloudCV_;
+		std::condition_variable haveLocalInteractionDataCV_;
 		std::condition_variable haveRemoteCloudCompressedCV_;
 		std::condition_variable haveRemoteAudioCV_;
 		std::condition_variable haveRemoteAudioCompressedCV_;
 		std::condition_variable haveRemoteRGBAZCV_;
 		std::condition_variable haveRemoteRGBAZCompressedCV_;
 		std::condition_variable haveRemoteObjectDataCV_;
+		std::condition_variable haveRemoteInteractionDataCV_;
 
 		std::atomic<bool> haveLocalCloud_;
 		std::atomic<bool> haveLocalAudio_;
@@ -166,6 +172,8 @@ namespace holo
 		std::atomic<bool> haveRemoteRGBAZ_;
 		std::atomic<bool> haveRemoteRGBAZCompressed_;
 		std::atomic<bool> haveRemoteObjectData_;
+		std::atomic<bool> haveLocalInteractionData_;
+		std::atomic<bool> haveRemoteInteractionData_;
 
 		std::unique_ptr<holo::capture::IHoloCapture> capture_;
 		std::unique_ptr<holo::capture::IHoloCaptureAudio> audioCapture_;
@@ -179,10 +187,13 @@ namespace holo
 		std::shared_ptr<holo::net::HoloNetSession> netSession_;
 		std::unique_ptr<holo::render::IHoloRender> render_;
 		std::unique_ptr<holo::render::IHoloRenderAudio> audioRender_;
-		std::unique_ptr<holo::render::HoloRenderObjectTracker> objectTracker_;
+		boost::shared_ptr<holo::render::HoloRenderObjectTracker> objectTracker_;
 
 		std::list<std::tuple<std::string, holo::render::HoloTransform>> remoteObjectStateData_;
 		std::list<std::tuple<std::string, holo::render::HoloTransform>> localObjectStateData_;
+
+		boost::shared_ptr<holo::input::HoloInputData> localInteractionData_;
+		boost::shared_ptr<holo::input::HoloInputData> remoteInteractionData_;
 
 		CloudCallback localCloudCallback_;
 		RGBAZCallback localRGBAZCallback_;
@@ -194,6 +205,7 @@ namespace holo
 
 		std::atomic<bool> shouldCapture_;
 		std::atomic<bool> shouldCaptureAudio_;
+		std::atomic<bool> shouldInteract_;
 
 		std::atomic<bool> shouldEncode_;
 		std::atomic<bool> shouldEncodeAudio_;
@@ -214,6 +226,7 @@ namespace holo
 
 		void captureLoop();
 		void captureAudioLoop();
+		void interactionLoop();
 
 		void decodeLoop();
 		void decodeAudioLoop();
@@ -227,6 +240,7 @@ namespace holo
 		void netRecvLoop();
 		
 		void objectTrackerLoop();
+		void sendAllObjects();
 
 		void callbackLoop(HoloSessionCallbackType type);
 

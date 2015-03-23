@@ -22,7 +22,7 @@ namespace holo
 			void deinit();
 			bool isInit();
 
-			bool getInputData(InputData *& data);
+			bool getInputData(boost::shared_ptr<HoloInputData> &data);
 
 			void onInit(const Leap::Controller&);
 			void onConnect(const Leap::Controller&);
@@ -44,7 +44,7 @@ namespace holo
 
 			Leap::Controller controller_;
 
-			InputData inputData_;
+			HoloInputData inputData_;
 			std::mutex inputDataMutex_;
 			std::condition_variable haveInputDataCV_;
 

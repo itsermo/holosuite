@@ -228,7 +228,7 @@ namespace holo
 			GESTURE_TYPE gesture;
 		};
 
-		struct InputData
+		struct HoloInputData
 		{
 			HoloHand leftHand, rightHand;
 		};

@@ -46,7 +46,7 @@ bool HoloInputDeviceLeapSDK::isInit()
 	return isInit_.load();
 }
 
-bool HoloInputDeviceLeapSDK::getInputData(InputData *& data)
+bool HoloInputDeviceLeapSDK::getInputData(boost::shared_ptr<HoloInputData> &data)
 {
 	if (isInit_)
 	{

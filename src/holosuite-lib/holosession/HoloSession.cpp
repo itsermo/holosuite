@@ -65,8 +65,11 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 bool HoloSession::start()
 {
 	LOG4CXX_INFO(logger_, "Starting session threads...");
+	std::future<void> objectTrackerFuture;
+	
+	objectTracker_ = boost::shared_ptr<holo::render::HoloRenderObjectTracker>(new holo::render::HoloRenderObjectTracker);
 
-	std::future<void> objectTrackerFuture =
+	objectTrackerFuture =
 		std::async(std::launch::async,
 		[&]()
 	{
@@ -117,6 +120,9 @@ bool HoloSession::start()
 	if (shouldCapture_)
 		captureThread_ = std::thread(&HoloSession::captureLoop, this);
 
+	if (shouldTrackObjects_)
+		objectTrackerThread_ = std::thread(&HoloSession::objectTrackerLoop, this);
+
 	if (shouldEncode_)
 		encodeThread_ = std::thread(&HoloSession::encodeLoop, this);
 
@@ -157,7 +163,11 @@ bool HoloSession::start()
 			remoteAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_AUDIO));
 	}
 
-	objectTrackerFuture.wait();
+	if (capture_)
+	{
+		objectTrackerFuture.wait();
+		sendAllObjects();
+	}
 
 	isRunning_ = true;
 
@@ -179,6 +189,12 @@ void HoloSession::stop()
 		{
 			shouldCapture_ = false;
 			captureThread_.join();
+		}
+
+		if (shouldTrackObjects_)
+		{
+			shouldTrackObjects_ = false;
+			objectTrackerThread_.join();
 		}
 
 		if (shouldRecv_)
@@ -376,21 +392,27 @@ void HoloSession::netRecvLoop()
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_ADD:
 		{
-
+			auto obj = boost::shared_ptr<holo::render::HoloRender3DObject>(new holo::render::HoloRender3DObject(recvPacket));
+			objectTracker_->Add3DObject(obj);
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_DEL:
 		{
-
+			throw std::exception("Not yet implemented.");
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
 		{
-
+			std::unique_lock<std::mutex> objUpdateLock(remoteObjectDataMutex_);
+			remoteObjectStateData_.push_back(holo::render::HoloRender3DObject::GetTransformFromPacket(recvPacket));
+			objUpdateLock.unlock();
+			haveRemoteObjectData_ = true;
+			haveRemoteObjectDataCV_.notify_all();
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_UNKNOWN:
 		default:
+			LOG4CXX_ERROR(logger_, "Unknown network packet type received")
 			break;
 		}
 	}
@@ -439,6 +461,18 @@ void HoloSession::captureLoop()
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+}
+
+void HoloSession::interactionLoop()
+{
+	while (shouldInteract_)
+	{
+		std::unique_lock<std::mutex> liLock(localInteractionDataMutex_);
+		inputDevice_->getInputData(localInteractionData_);
+		haveLocalInteractionData_ = true;
+		haveLocalInteractionDataCV_.notify_all();
+		liLock.unlock();
 	}
 }
 
@@ -725,6 +759,15 @@ void HoloSession::renderAudioLoop()
 	}
 }
 
+void HoloSession::sendAllObjects()
+{
+	for (auto obj : objectTracker_->Get3DObjects())
+	{
+		auto packet = obj.second->CreateNetPacket();
+		netSession_->sendPacket(std::move(packet));
+	}
+}
+
 //callbacks
 void HoloSession::setLocalCloudCallback(CloudCallback cloudCallback)
 {
@@ -854,3 +897,4 @@ void HoloSession::callbackLoop(HoloSessionCallbackType type)
 		}
 	}
 }
+
