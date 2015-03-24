@@ -322,7 +322,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 			realVal++;
 		}
 
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, normalSize_);
+		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, colorSize_);
 
 		delete[] colors;
 	});

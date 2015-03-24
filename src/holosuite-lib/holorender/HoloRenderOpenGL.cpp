@@ -318,7 +318,7 @@ void HoloRenderOpenGL::display()
 	
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		this->drawSphere(0, 0, -1.0, 0.035f);
+		//this->drawSphere(0, 0, -1.0, 0.035f);
 
 		//glDisable(GL_LIGHTING);
 
@@ -564,10 +564,16 @@ void HoloRenderOpenGL::drawObjects()
 		for (auto obj : objectTracker_->Get3DObjects())
 		{
 			auto info = obj.second->GetObjectInfo();
+			auto transform = obj.second->GetTransform();
+
+			const float scaleFactor = 1.0f / sqrt(transform.bounding_sphere.w);
+
+			glPushMatrix();
+			
+			glScalef(scaleFactor*0.02f, scaleFactor*0.02f, scaleFactor*0.02f);
+			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
 			glBegin(GL_TRIANGLES);
-
-			glColor4f(1.0f, 1.0f, 1.0f, 0.0f);
 
 			float * vp = (float*)obj.second->GetVertexBuffer();
 			float * cp = (float*)obj.second->GetColorBuffer();
@@ -581,6 +587,8 @@ void HoloRenderOpenGL::drawObjects()
 			}
 
 			glEnd();
+
+			glPopMatrix();
 		}
 	}
 }
