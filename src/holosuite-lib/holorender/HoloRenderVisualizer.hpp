@@ -2,6 +2,8 @@
 
 #include "../holocommon/CommonDefs.hpp"
 #include "IHoloRender.hpp"
+#include "HoloRenderObjectTracker.hpp"
+
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/surface/organized_fast_mesh.h>
 #include <thread>
@@ -22,12 +24,22 @@ namespace holo
 			HoloRenderVisualizer();
 			HoloRenderVisualizer(int voxelSize, bool enableMeshContruction);
 			~HoloRenderVisualizer();
-			virtual bool init();
-			virtual void deinit();
+			bool init();
+			void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
-			virtual void updateRemotePointCloud(HoloCloudPtr && pointCloud);
-			virtual void updateLocalPointCloud(HoloCloudPtr && pointCloud);
-			virtual void* getContext();
+			void updateRemotePointCloud(HoloCloudPtr && pointCloud);
+			void updateLocalPointCloud(HoloCloudPtr && pointCloud);
+			void* getContext();
+
+			void addObjectTracker(boost::shared_ptr<HoloRenderObjectTracker> & objectTracker)
+			{
+				objectTracker_ = objectTracker;
+			}
+
+			void removeObjectTracker()
+			{
+				objectTracker_.reset();
+			}
 		
 		private:
 
@@ -69,6 +81,8 @@ namespace holo
 			bool enableMeshConstruction_;
 
 			bool renderLocalPointCloud_;
+
+			boost::shared_ptr<HoloRenderObjectTracker> objectTracker_;
 
 			log4cxx::LoggerPtr logger_;
 		};

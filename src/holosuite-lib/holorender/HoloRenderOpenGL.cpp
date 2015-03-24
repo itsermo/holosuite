@@ -329,6 +329,7 @@ void HoloRenderOpenGL::display()
 		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
 
 		this->drawPointCloud();
+		this->drawObjects();
 
 		haveNewRemoteCloud_.store(false);
 		cloudLock.unlock();
@@ -554,6 +555,34 @@ void HoloRenderOpenGL::drawPointCloud()
 	if (enableZSpaceRendering_)
 		glPopMatrix();
 
+}
+
+void HoloRenderOpenGL::drawObjects()
+{
+	if (objectTracker_)
+	{
+		for (auto obj : objectTracker_->Get3DObjects())
+		{
+			auto info = obj.second->GetObjectInfo();
+
+			glBegin(GL_TRIANGLES);
+
+			glColor4f(1.0f, 1.0f, 1.0f, 0.0f);
+
+			float * vp = (float*)obj.second->GetVertexBuffer();
+			float * cp = (float*)obj.second->GetColorBuffer();
+			float * np = (float*)obj.second->GetNormalBuffer();
+
+			for (int i = 0; i < info.num_vertices; i++, vp+=3, np+=3, cp+=4)
+			{
+				glVertex3f(*vp, *(vp+1), *(vp+2));
+				glNormal3f(*np, *(np + 1), *(np + 2));
+				glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp+3));
+			}
+
+			glEnd();
+		}
+	}
 }
 
 void HoloRenderOpenGL::drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius)
