@@ -166,7 +166,8 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)vertices_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
-			*realVal = ntohf(*(unsigned int*)realVal);
+			unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
+			*realVal = reinterpret_cast<float&>(netVal);
 			realVal++;
 		}
 	});
@@ -182,7 +183,8 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)normals_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
-			*realVal = ntohf(*(unsigned int*)realVal);
+			unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
+			*realVal = reinterpret_cast<float&>(netVal);
 			realVal++;
 		}
 	});
@@ -197,7 +199,8 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		float * realVal = (float*)colors_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 		{
-			*realVal = ntohf(*(unsigned int*)realVal);
+			unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
+			*realVal = reinterpret_cast<float&>(netVal);
 			realVal++;
 		}
 	});
