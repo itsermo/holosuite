@@ -1,6 +1,7 @@
 #pragma once
 #ifdef ENABLE_HOLO_DSCP2
 #include "IHoloRender.hpp"
+#include "HoloRenderObjectTracker.hpp"
 
 #include <log4cxx/log4cxx.h>
 //need this for GL.h macro definitions
@@ -61,7 +62,6 @@
 #include <atomic>
 #include <string>
 #include <condition_variable>
-
 namespace holo
 {
 	namespace render
@@ -79,6 +79,16 @@ namespace holo
 			void updateRemotePointCloud(HoloCloudPtr && pointCloud);
 			void updateLocalPointCloud(HoloCloudPtr && pointCloud);
 			void* getContext() { return nullptr; }
+
+			void addObjectTracker(boost::shared_ptr<HoloRenderObjectTracker> & objectTracker)
+			{
+				objectTracker_ = objectTracker;
+			}
+
+			void removeObjectTracker()
+			{
+				objectTracker_.reset();
+			}
 
 			void display(void);
 			void idle(void);
@@ -227,6 +237,8 @@ namespace holo
 
 			std::string displayEnv_;
 			//cv::Mat localFrameImg_;
+
+			boost::shared_ptr<HoloRenderObjectTracker> objectTracker_;
 
 			log4cxx::LoggerPtr logger_;
 		};

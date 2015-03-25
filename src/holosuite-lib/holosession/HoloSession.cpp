@@ -619,6 +619,9 @@ void HoloSession::renderLoop()
 {
 	while (shouldRender_)
 	{
+		if (objectTracker_)
+			render_->addObjectTracker(objectTracker_);
+
 		if (rgbazDecoder_)
 		{
 			std::unique_lock<std::mutex> ulRemoteRGBAZData(remoteRGBAZMutex_);

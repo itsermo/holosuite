@@ -2,6 +2,8 @@
 
 #include "../holocommon/CommonDefs.hpp"
 #include "IHoloRender.hpp"
+#include "HoloRenderObjectTracker.hpp"
+
 #include <opencv2/opencv.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -61,6 +63,16 @@ namespace holo
 			void updateRemotePointCloud(HoloCloudPtr && pointCloud);
 			void* getContext();
 
+			void addObjectTracker(boost::shared_ptr<HoloRenderObjectTracker> & objectTracker)
+			{
+				objectTracker_ = objectTracker;
+			}
+
+			void removeObjectTracker()
+			{
+				objectTracker_.reset();
+			}
+
 			void display(void);
 			void idle(void);
 			void keyboard(unsigned char c, int x, int y);
@@ -84,6 +96,7 @@ namespace holo
 			void glCheckErrors();
 
 			void drawPointCloud();
+			void drawObjects();
 			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
 			void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius);
 
@@ -119,6 +132,8 @@ namespace holo
 			int prevWindowX_, prevWindowY_;
 
 			float viewPhi_, viewTheta_, viewDepth_;
+
+			boost::shared_ptr<HoloRenderObjectTracker> objectTracker_;
 
 #ifdef ENABLE_HOLO_ZSPACE
 			ZSContext   zSpaceContext_ = NULL;
