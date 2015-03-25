@@ -136,7 +136,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 			return false;
 		}
 
-		encodeInFrame_ = avcodec_alloc_frame();
+		encodeInFrame_ = av_frame_alloc();
 		encodeInFrame_->format = args_.pixelFormat;
 		encodeInFrame_->width = encoderCtx_->width;
 		encodeInFrame_->height = encoderCtx_->height;
@@ -184,7 +184,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 			return false;
 		}
 
-		decodeOutFrame_ = avcodec_alloc_frame();
+		decodeOutFrame_ = av_frame_alloc();
 
 		swScaleDecodeCtx_ = sws_getContext(args_.width, args_.height, AV_PIX_FMT_YUV420P, args_.width, args_.height, AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 		if (!swScaleDecodeCtx_)
@@ -224,7 +224,7 @@ void HoloCodecH264::deinit()
 					av_freep(&encodeInFrame_->data[0]);
 
 				LOG4CXX_DEBUG(logger_, "Freeing encoder frame object");
-				avcodec_free_frame(&encodeInFrame_);
+				av_frame_free(&encodeInFrame_);
 			}
 
 			if (encoderCtx_)
@@ -255,7 +255,7 @@ void HoloCodecH264::deinit()
 			if (decodeOutFrame_)
 			{
 				LOG4CXX_DEBUG(logger_, "Freeing decoder frame object");
-				avcodec_free_frame(&decodeOutFrame_);
+				av_frame_free(&decodeOutFrame_);
 			}
 
 			if (decoderCtx_)

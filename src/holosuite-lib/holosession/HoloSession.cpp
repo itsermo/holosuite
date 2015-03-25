@@ -163,7 +163,7 @@ bool HoloSession::start()
 			remoteAudioCallbackThread_ = std::thread(std::bind(&HoloSession::callbackLoop, this, HOLO_SESSION_CALLBACK_REMOTE_AUDIO));
 	}
 
-	if (capture_)
+	if (capture_ && netSession_)
 	{
 		objectTrackerFuture.wait();
 		sendAllObjects();
