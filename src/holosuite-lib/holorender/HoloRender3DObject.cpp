@@ -2,6 +2,7 @@
 #include <boost/asio.hpp>
 #include <future>
 #include "Miniball.hpp"
+#include <boost/asio.hpp>
 
 using namespace holo;
 using namespace holo::net;

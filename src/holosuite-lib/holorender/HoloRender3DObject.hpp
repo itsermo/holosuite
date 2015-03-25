@@ -39,9 +39,9 @@ namespace holo
 			unsigned int colorSize_;
 			unsigned int stringSize_;
 
-			void * vertices_;
-			void * normals_;
-			void * colors_;
+			unsigned char* vertices_;
+			unsigned char* normals_;
+			unsigned char* colors_;
 
 		};
 		

@@ -398,7 +398,7 @@ void HoloSession::netRecvLoop()
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_DEL:
 		{
-			throw std::exception("Not yet implemented.");
+			throw std::exception();
 			break;
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
