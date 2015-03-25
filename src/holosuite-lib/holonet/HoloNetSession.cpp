@@ -55,9 +55,9 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, boost
 		boost::system::error_code error;
 
 		int dataLength = packet->length;
-
-		packet->type = htonl(packet->type);
-		packet->length = htonl(packet->length);
+	
+		packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
+		packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
 
 		boost::asio::write(*socket, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 		if (error)
@@ -67,8 +67,8 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, boost
 		if (error)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
-		packet->type = ntohl(packet->type);
-		packet->length = ntohl(packet->length);
+		packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
+		packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
 
 }
 
@@ -85,8 +85,8 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, boost
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
 
-		packet->type = ntohl(typeLength[0]);
-		packet->length = ntohl(typeLength[1]);
+		packet->type = boost::asio::detail::socket_ops::network_to_host_long(typeLength[0]);
+		packet->length = boost::asio::detail::socket_ops::network_to_host_long(typeLength[1]);
 
 		packet->value = std::vector<uint8_t>(packet->length);
 
@@ -221,8 +221,8 @@ void HoloNetSession::sendLoop()
 		//{
 		//	int dataLength = packet->length;
 
-		//	packet->type = htonl(packet->type);
-		//	packet->length = htonl(packet->length);
+		//	packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
+		//	packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
 
 		//	boost::asio::write(*socket_, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 		//	if (error)
@@ -253,8 +253,8 @@ void HoloNetSession::sendLoop()
 //			throw boost::system::system_error(boost::asio::error::interrupted);
 //
 //
-//		packet->type = ntohl(typeLength[0]);
-//		packet->length = ntohl(typeLength[1]);
+//		packet->type = boost::asio::detail::socket_ops::network_to_host_long(typeLength[0]);
+//		packet->length = boost::asio::detail::socket_ops::network_to_host_long(typeLength[1]);
 //
 //		packet->value = std::vector<uint8_t>(packet->length);
 //
@@ -276,18 +276,18 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, boost:
 	packet->length = sizeof(HoloNetProtocolHandshake);
 	packet->value = std::vector<uint8_t>(sizeof(HoloNetProtocolHandshake));
 
-	localInfo.magicNumber = htonl(HOLO_NET_MAGIC_NUMBER);
-	localInfo.protocolVersion = htonl(HOLO_NET_CURRENT_PROTOCOL_VERSION);
-	localInfo.rgbazWidth = htonl(localInfo.rgbazWidth);
-	localInfo.rgbazHeight = htonl(localInfo.rgbazHeight);
-	localInfo.captureFPS = htonl(static_cast<u_long>(localInfo.captureFPS));
-	localInfo.captureHOV = htonl(static_cast<u_long>(localInfo.captureHOV));
-	localInfo.captureVOV = htonl(static_cast<u_long>(localInfo.captureVOV));
-	localInfo.videoCodecType = htonl(localInfo.videoCodecType);
-	localInfo.audioCodecType = htonl(localInfo.audioCodecType);
-	localInfo.audioBitDepth = htonl(localInfo.audioBitDepth);
-	localInfo.audioNumChan = htonl(localInfo.audioNumChan);
-	localInfo.audioFreq = htonl(localInfo.audioFreq);
+	localInfo.magicNumber = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_MAGIC_NUMBER);
+	localInfo.protocolVersion = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_CURRENT_PROTOCOL_VERSION);
+	localInfo.rgbazWidth = boost::asio::detail::socket_ops::host_to_network_long(localInfo.rgbazWidth);
+	localInfo.rgbazHeight = boost::asio::detail::socket_ops::host_to_network_long(localInfo.rgbazHeight);
+	localInfo.captureFPS = boost::asio::detail::socket_ops::host_to_network_long(static_cast<u_long>(localInfo.captureFPS));
+	localInfo.captureHOV = boost::asio::detail::socket_ops::host_to_network_long(static_cast<u_long>(localInfo.captureHOV));
+	localInfo.captureVOV = boost::asio::detail::socket_ops::host_to_network_long(static_cast<u_long>(localInfo.captureVOV));
+	localInfo.videoCodecType = boost::asio::detail::socket_ops::host_to_network_long(localInfo.videoCodecType);
+	localInfo.audioCodecType = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioCodecType);
+	localInfo.audioBitDepth = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioBitDepth);
+	localInfo.audioNumChan = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioNumChan);
+	localInfo.audioFreq = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioFreq);
 
 	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
 
@@ -300,18 +300,18 @@ HoloNetProtocolHandshake HoloNetSession::GetHandshakeFromPacket(boost::shared_pt
 
 	memcpy(&hs, packet->value.data(), sizeof(hs));
 
-	hs.magicNumber = ntohl(hs.magicNumber);
-	hs.protocolVersion = ntohl(hs.protocolVersion);
-	hs.rgbazWidth = ntohl(hs.rgbazWidth);
-	hs.rgbazHeight = ntohl(hs.rgbazHeight);
-	hs.captureFPS = static_cast<float>(ntohl(hs.captureFPS));
-	hs.captureHOV = static_cast<float>(ntohl(hs.captureHOV));
-	hs.captureVOV = static_cast<float>(ntohl(hs.captureVOV));
-	hs.videoCodecType = ntohl(hs.videoCodecType);
-	hs.audioCodecType = ntohl(hs.audioCodecType);
-	hs.audioBitDepth = ntohl(hs.audioBitDepth);
-	hs.audioNumChan = ntohl(hs.audioNumChan);
-	hs.audioFreq = ntohl(hs.audioFreq);
+	hs.magicNumber = boost::asio::detail::socket_ops::network_to_host_long(hs.magicNumber);
+	hs.protocolVersion = boost::asio::detail::socket_ops::network_to_host_long(hs.protocolVersion);
+	hs.rgbazWidth = boost::asio::detail::socket_ops::network_to_host_long(hs.rgbazWidth);
+	hs.rgbazHeight = boost::asio::detail::socket_ops::network_to_host_long(hs.rgbazHeight);
+	hs.captureFPS = static_cast<float>(boost::asio::detail::socket_ops::network_to_host_long(hs.captureFPS));
+	hs.captureHOV = static_cast<float>(boost::asio::detail::socket_ops::network_to_host_long(hs.captureHOV));
+	hs.captureVOV = static_cast<float>(boost::asio::detail::socket_ops::network_to_host_long(hs.captureVOV));
+	hs.videoCodecType = boost::asio::detail::socket_ops::network_to_host_long(hs.videoCodecType);
+	hs.audioCodecType = boost::asio::detail::socket_ops::network_to_host_long(hs.audioCodecType);
+	hs.audioBitDepth = boost::asio::detail::socket_ops::network_to_host_long(hs.audioBitDepth);
+	hs.audioNumChan = boost::asio::detail::socket_ops::network_to_host_long(hs.audioNumChan);
+	hs.audioFreq = boost::asio::detail::socket_ops::network_to_host_long(hs.audioFreq);
 	return hs;
 }
 
