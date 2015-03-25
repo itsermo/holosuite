@@ -107,23 +107,43 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 
 	memcpy(&objectTransform_, objectPacket->value.data() + sizeof(objectHeader_), sizeof(objectTransform_));
 
-	objectTransform_.translate.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.x));
-	objectTransform_.translate.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.y));
-	objectTransform_.translate.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.translate.z));
+	unsigned int x, y, z, w = 0;
 
-	objectTransform_.rotation.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.x));
-	objectTransform_.rotation.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.y));
-	objectTransform_.rotation.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.z));
-	objectTransform_.rotation.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.rotation.w));
+	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.translate.x));
+	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.translate.y));
+	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.translate.z));
 
-	objectTransform_.scale.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.x));
-	objectTransform_.scale.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.y));
-	objectTransform_.scale.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.scale.z));
+	objectTransform_.translate.x = reinterpret_cast<float&>(x);
+	objectTransform_.translate.y = reinterpret_cast<float&>(y);
+	objectTransform_.translate.z = reinterpret_cast<float&>(z);
 
-	objectTransform_.bounding_sphere.x = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.x));
-	objectTransform_.bounding_sphere.y = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.y));
-	objectTransform_.bounding_sphere.z = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.z));
-	objectTransform_.bounding_sphere.w = ntohf(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.w));
+	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.rotation.x));
+	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.rotation.y));
+	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.rotation.z));
+	w = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.rotation.w));
+
+	objectTransform_.rotation.x = reinterpret_cast<float&>(x);
+	objectTransform_.rotation.y = reinterpret_cast<float&>(y);
+	objectTransform_.rotation.z = reinterpret_cast<float&>(z);
+	objectTransform_.rotation.w = reinterpret_cast<float&>(w);
+
+	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.scale.x));
+	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.scale.y));
+	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.scale.z));
+
+	objectTransform_.scale.x = reinterpret_cast<float&>(x);
+	objectTransform_.scale.y = reinterpret_cast<float&>(y);
+	objectTransform_.scale.z = reinterpret_cast<float&>(z);
+
+	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.x));
+	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.y));
+	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.z));
+	w = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform_.bounding_sphere.w));
+
+	objectTransform_.bounding_sphere.x = reinterpret_cast<float&>(x);
+	objectTransform_.bounding_sphere.y = reinterpret_cast<float&>(y);
+	objectTransform_.bounding_sphere.z = reinterpret_cast<float&>(z);
+	objectTransform_.bounding_sphere.w = reinterpret_cast<float&>(w);
 
 	memcpy(&vertSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_), sizeof(vertSize_));
 	memcpy(&normalSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_)+sizeof(vertSize_), sizeof(normalSize_));
