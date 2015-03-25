@@ -410,11 +410,14 @@ const std::tuple<std::string, HoloTransform> HoloRender3DObject::GetTransformFro
 	unsigned int stringSize = 0;
 	memcpy(&stringSize, transformNetPacket->value.data() + sizeof(objectTransform), sizeof(stringSize));
 	stringSize = boost::asio::detail::socket_ops::network_to_host_long(stringSize);
+	
+	objectName.resize(stringSize);
+	memcpy((void*)objectName.data(), transformNetPacket->value.data() + sizeof(objectTransform)+sizeof(stringSize), stringSize);
 
 	return std::make_tuple(objectName, objectTransform);
 }
 
-static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objInfo)
+const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objInfo)
 {
 	auto netPacket = boost::shared_ptr<holo::net::HoloNetPacket>(new holo::net::HoloNetPacket);
 	std::string objectName;
@@ -460,11 +463,11 @@ static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTran
 	objectTransform.bounding_sphere.z = reinterpret_cast<float&>(z);
 	objectTransform.bounding_sphere.w = reinterpret_cast<float&>(w);
 
-	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_UPDATE;
-	netPacket->length = sizeof(objectTransform)+objectName.size();
-	netPacket->value.resize(netPacket->length);
-
 	unsigned int stringSize = boost::asio::detail::socket_ops::network_to_host_long(objectName.size());
+
+	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_UPDATE;
+	netPacket->length = sizeof(objectTransform)+sizeof(stringSize)+objectName.size();
+	netPacket->value.resize(netPacket->length);
 
 	memcpy(netPacket->value.data(), &objectTransform, sizeof(objectTransform));
 	memcpy(netPacket->value.data() + sizeof(objectTransform), &stringSize, sizeof(stringSize));

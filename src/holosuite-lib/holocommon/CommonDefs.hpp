@@ -231,6 +231,7 @@ namespace holo
 		struct HoloInputData
 		{
 			HoloHand leftHand, rightHand;
+			bool haveLeftHand, haveRightHand;
 		};
 	}
 };

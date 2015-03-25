@@ -571,7 +571,7 @@ void HoloRenderOpenGL::drawObjects()
 			glPushMatrix();
 			
 			glScalef(scaleFactor*0.02f, scaleFactor*0.02f, scaleFactor*0.02f);
-			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
+			glTranslatef(-transform.bounding_sphere.x + transform.translate.x, -transform.bounding_sphere.y + transform.translate.y, -transform.bounding_sphere.z + transform.translate.z);
 
 			glBegin(GL_TRIANGLES);
 
@@ -718,20 +718,27 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	this->drawPointCloud();
 
 	glPushMatrix();
-
-
-	glEnable(GL_NORMALIZE);
-	glTranslatef(-0.15, 0.30, -0.6);
-	//glRotatef(35.0f, 0, 1, 0);
-	//glRotatef(25.0f, 1, 0, 0);
+	glTranslatef(-0.15, 0.0f, -0.4f);
+	this->drawObjects();
+	glPopMatrix();
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
+	//glPushMatrix();
 
 
-	glutSolidCube(0.07f);
-	glPopMatrix();
+	//glEnable(GL_NORMALIZE);
+	//glTranslatef(-0.15, 0.30, -0.6);
+	////glRotatef(35.0f, 0, 1, 0);
+	////glRotatef(25.0f, 1, 0, 0);
+
+
+
+
+
+	//glutSolidCube(0.07f);
+	//glPopMatrix();
 
 	glPushMatrix();
 	glTranslatef(0.15, 0.30, -0.6);

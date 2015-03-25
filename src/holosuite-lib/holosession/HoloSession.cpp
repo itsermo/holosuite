@@ -103,6 +103,8 @@ bool HoloSession::start()
 
 	shouldCapture_ = capture_ ? true : false;
 	shouldRender_ = render_ ? true : false;
+	shouldInteract_ = inputDevice_ ? true : false;
+
 
 	shouldEncode_ = rgbazEncoder_ || cloudEncoder_ ? true : false;
 	shouldDecode_ = rgbazDecoder_ || cloudDecoder_ ? true : false;
@@ -120,8 +122,8 @@ bool HoloSession::start()
 	if (shouldCapture_)
 		captureThread_ = std::thread(&HoloSession::captureLoop, this);
 
-	if (shouldTrackObjects_)
-		objectTrackerThread_ = std::thread(&HoloSession::objectTrackerLoop, this);
+	if (shouldInteract_)
+		interactionThread_ = std::thread(&HoloSession::interactionLoop, this);
 
 	if (shouldEncode_)
 		encodeThread_ = std::thread(&HoloSession::encodeLoop, this);
@@ -169,6 +171,11 @@ bool HoloSession::start()
 		sendAllObjects();
 	}
 
+	shouldTrackObjects_ = true;
+
+	if (shouldTrackObjects_)
+		objectTrackerThread_ = std::thread(&HoloSession::objectTrackerLoop, this);
+
 	isRunning_ = true;
 
 	return isRunning();
@@ -189,6 +196,12 @@ void HoloSession::stop()
 		{
 			shouldCapture_ = false;
 			captureThread_.join();
+		}
+
+		if (shouldInteract_)
+		{
+			shouldInteract_ = false;
+			interactionThread_.join();
 		}
 
 		if (shouldTrackObjects_)
@@ -466,14 +479,46 @@ void HoloSession::captureLoop()
 
 void HoloSession::interactionLoop()
 {
+	localInteractionData_ = boost::shared_ptr<holo::input::HoloInputData>(new holo::input::HoloInputData());
+
 	while (shouldInteract_)
 	{
+		boost::shared_ptr<holo::input::HoloInputData> localInteractionData;
 		std::unique_lock<std::mutex> liLock(localInteractionDataMutex_);
-		inputDevice_->getInputData(localInteractionData_);
-		haveLocalInteractionData_ = true;
-		haveLocalInteractionDataCV_.notify_all();
+		inputDevice_->getInputData(localInteractionData);
+		if (localInteractionData)
+		{
+			*localInteractionData_ = *localInteractionData;
+			haveLocalInteractionData_ = true;
+			haveLocalInteractionDataCV_.notify_all();
+		}
+
+		if (localInteractionData->haveRightHand)
+		{
+			if (localInteractionData->rightHand.pinchStrength > 0.5f)
+			{
+				for (auto obj : objectTracker_->Get3DObjects())
+				{
+					auto trans = obj.second->GetTransform();
+					trans.translate.x = localInteractionData->rightHand.palmPosition.x/1000;
+					trans.translate.y = localInteractionData->rightHand.palmPosition.y/1000+0.3;
+					trans.translate.z = -localInteractionData->rightHand.palmPosition.z/100-0.6;
+					obj.second->SetTransform(trans);
+
+					if (netSession_)
+					{
+						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+						netSession_->sendPacketAsync(std::move(packet));
+					}
+					
+				}
+			}
+		}
+
 		liLock.unlock();
 	}
+
+	localInteractionData_.reset();
 }
 
 void HoloSession::decodeLoop()
