@@ -764,7 +764,7 @@ void HoloSession::sendAllObjects()
 	for (auto obj : objectTracker_->Get3DObjects())
 	{
 		auto packet = obj.second->CreateNetPacket();
-		netSession_->sendPacket(std::move(packet));
+		netSession_->sendPacketAsync(std::move(packet));
 	}
 }
 

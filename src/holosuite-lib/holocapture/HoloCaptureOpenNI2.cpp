@@ -468,7 +468,7 @@ bool HoloCaptureOpenNI2::initOpenNI2()
 		if (rc != Status::STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "OpenNI2 library could not initialize. Error status: " << rc)
-			throw;
+			return false;
 		}
 		else
 		{
