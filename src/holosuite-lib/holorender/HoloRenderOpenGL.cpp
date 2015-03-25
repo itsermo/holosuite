@@ -526,7 +526,7 @@ void HoloRenderOpenGL::drawPointCloud()
 	if (enableZSpaceRendering_)
 	{
 		glPushMatrix();
-		glTranslatef(-0.13, 0.05, -0.05);
+		glTranslatef(-0.13, 0.05, -0.06);
 		//glRotatef(30.0f, 1, 0, 0);
 	}
 
@@ -661,7 +661,7 @@ void HoloRenderOpenGL::updateCamera()
 	// the world's origin.
 	GLfloat eyeX = 0;
 	GLfloat eyeY = 0.2;
-	GLfloat eyeZ = 0.4;
+	GLfloat eyeZ = 0.28f;
 
 	// Use gluLookAt to calculate the new model-view matrix.
 	glMatrixMode(GL_MODELVIEW);
@@ -718,7 +718,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	this->drawPointCloud();
 
 	glPushMatrix();
-	glTranslatef(-0.15, 0.0f, -0.4f);
+	glTranslatef(0.027, 0.064f, -0.14f);
 	this->drawObjects();
 	glPopMatrix();
 
@@ -741,7 +741,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	//glPopMatrix();
 
 	glPushMatrix();
-	glTranslatef(0.15, 0.30, -0.6);
+	glTranslatef(-0.15, 0.30, -0.6);
 	//glRotatef(35.0f, 0, 1, 0);
 	//glRotatef(25.0f, 1, 0, 0);
 

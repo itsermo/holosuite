@@ -780,6 +780,15 @@ int main(int argc, char *argv[])
 				break;
 			}
 
+			if (inputDevice)
+			{
+				if (!inputDevice->init())
+				{
+					LOG4CXX_FATAL(logger_main, "Could not open the interaction input device.  Exiting holosuite...");
+					return -1;
+				}
+			}
+
 			switch (audioCaptureType)
 			{
 			case holo::capture::CAPTURE_AUDIO_TYPE_NONE:

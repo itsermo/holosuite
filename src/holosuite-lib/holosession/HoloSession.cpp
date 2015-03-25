@@ -500,9 +500,9 @@ void HoloSession::interactionLoop()
 				for (auto obj : objectTracker_->Get3DObjects())
 				{
 					auto trans = obj.second->GetTransform();
-					trans.translate.x = localInteractionData->rightHand.palmPosition.x/1000;
-					trans.translate.y = localInteractionData->rightHand.palmPosition.y/1000+0.3;
-					trans.translate.z = -localInteractionData->rightHand.palmPosition.z/100-0.6;
+					trans.translate.x = localInteractionData->rightHand.palmPosition.x/1000-0.16;
+					trans.translate.y = localInteractionData->rightHand.palmPosition.y/1000-0.22;
+					trans.translate.z = localInteractionData->rightHand.palmPosition.z/1000+0.05;
 					obj.second->SetTransform(trans);
 
 					if (netSession_)
