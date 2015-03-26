@@ -480,6 +480,9 @@ void HoloSession::captureLoop()
 void HoloSession::interactionLoop()
 {
 	localInteractionData_ = boost::shared_ptr<holo::input::HoloInputData>(new holo::input::HoloInputData());
+	bool firstRightPinch = true;
+
+	HoloVec3f rightHandOffset = {};
 
 	while (shouldInteract_)
 	{
@@ -495,14 +498,25 @@ void HoloSession::interactionLoop()
 
 		if (localInteractionData->haveRightHand)
 		{
-			if (localInteractionData->rightHand.pinchStrength > 0.5f)
+			if (localInteractionData->rightHand.pinchStrength > 0.6f)
 			{
 				for (auto obj : objectTracker_->Get3DObjects())
 				{
+					if (firstRightPinch)
+					{
+						rightHandOffset = localInteractionData->rightHand.palmPosition;
+						firstRightPinch = false;
+					}
+
 					auto trans = obj.second->GetTransform();
-					trans.translate.x = localInteractionData->rightHand.palmPosition.x/1000-0.16;
-					trans.translate.y = localInteractionData->rightHand.palmPosition.y/1000-0.22;
-					trans.translate.z = localInteractionData->rightHand.palmPosition.z/1000+0.05;
+					trans.translate.x = (localInteractionData->rightHand.palmPosition.x - rightHandOffset.x) / 1000;
+					trans.translate.y = (localInteractionData->rightHand.palmPosition.y - rightHandOffset.y) / 1000;
+					trans.translate.z = (localInteractionData->rightHand.palmPosition.z - rightHandOffset.z) / 1000;
+
+					trans.rotation.x = localInteractionData->rightHand.palmNormal.x;
+					trans.rotation.y = localInteractionData->rightHand.palmNormal.y;
+					trans.rotation.z = localInteractionData->rightHand.palmNormal.z;
+
 					obj.second->SetTransform(trans);
 
 					if (netSession_)
@@ -510,8 +524,13 @@ void HoloSession::interactionLoop()
 						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
 						netSession_->sendPacketAsync(std::move(packet));
 					}
-					
+
 				}
+			}
+			else
+			{
+				firstRightPinch = true;
+				rightHandOffset = {};
 			}
 		}
 

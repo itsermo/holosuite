@@ -224,6 +224,7 @@ namespace holo
 		{
 			HoloFinger thumb, index, middle, ring, pinky;
 			HoloVec3f palmPosition, palmNormal;
+			float palmOrientation[16];
 			float grabStrength, pinchStrength;
 			GESTURE_TYPE gesture;
 		};

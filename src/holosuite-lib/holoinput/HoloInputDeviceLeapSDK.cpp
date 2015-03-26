@@ -120,13 +120,15 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 		const Vector normal = hand.palmNormal();
 		const Vector position = hand.palmPosition();
 
-		holoHand->palmNormal.x = normal.x;
-		holoHand->palmNormal.y = normal.y;
-		holoHand->palmNormal.z = normal.z;
+		holoHand->palmNormal.x = normal.pitch();
+		holoHand->palmNormal.y = normal.roll();
+		holoHand->palmNormal.z = normal.yaw();
 
 		holoHand->palmPosition.x = position.x;
 		holoHand->palmPosition.y = position.y;
 		holoHand->palmPosition.z = position.z;
+		
+		hand.basis().toArray4x4(holoHand->palmOrientation);
 
 		holoHand->grabStrength = hand.grabStrength();
 		holoHand->pinchStrength = hand.pinchStrength();

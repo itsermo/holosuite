@@ -329,7 +329,14 @@ void HoloRenderOpenGL::display()
 		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
 
 		this->drawPointCloud();
+
+		glPushMatrix();
+		glScalef(0.07f, 0.07f, 0.07f);
+
+		//glTranslatef(0.027, 0.064f, -0.14f);
+		glTranslatef(-0.15, 0, -0.6);
 		this->drawObjects();
+		glPopMatrix();
 
 		haveNewRemoteCloud_.store(false);
 		cloudLock.unlock();
@@ -570,7 +577,7 @@ void HoloRenderOpenGL::drawObjects()
 
 			glPushMatrix();
 			
-			glScalef(scaleFactor*0.02f, scaleFactor*0.02f, scaleFactor*0.02f);
+			glScalef(scaleFactor, scaleFactor, scaleFactor);
 			glTranslatef(-transform.bounding_sphere.x + transform.translate.x, -transform.bounding_sphere.y + transform.translate.y, -transform.bounding_sphere.z + transform.translate.z);
 
 			glBegin(GL_TRIANGLES);
@@ -718,7 +725,10 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	this->drawPointCloud();
 
 	glPushMatrix();
-	glTranslatef(0.027, 0.064f, -0.14f);
+	//glTranslatef(0.027, 0.064f, -0.14f);
+	glTranslatef(0.05, 0.20, -0.45);
+	glScalef(0.07f, 0.07f, 0.07f);
+
 	this->drawObjects();
 	glPopMatrix();
 
