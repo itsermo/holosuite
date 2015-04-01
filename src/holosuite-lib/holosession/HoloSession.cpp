@@ -502,16 +502,20 @@ void HoloSession::interactionLoop()
 			{
 				for (auto obj : objectTracker_->Get3DObjects())
 				{
+					auto trans = obj.second->GetTransform();
+
 					if (firstRightPinch)
 					{
 						rightHandOffset = localInteractionData->rightHand.palmPosition;
+						rightHandOffset.x -= trans.translate.x;
+						rightHandOffset.y -= trans.translate.y;
+						rightHandOffset.z -= trans.translate.z;
 						firstRightPinch = false;
 					}
 
-					auto trans = obj.second->GetTransform();
-					trans.translate.x = (localInteractionData->rightHand.palmPosition.x - rightHandOffset.x) / 1000;
-					trans.translate.y = (localInteractionData->rightHand.palmPosition.y - rightHandOffset.y) / 1000;
-					trans.translate.z = (localInteractionData->rightHand.palmPosition.z - rightHandOffset.z) / 1000;
+					trans.translate.x = (localInteractionData->rightHand.palmPosition.x - rightHandOffset.x);
+					trans.translate.y = (localInteractionData->rightHand.palmPosition.y - rightHandOffset.y);
+					trans.translate.z = (localInteractionData->rightHand.palmPosition.z - rightHandOffset.z);
 
 					trans.rotation.x = localInteractionData->rightHand.palmNormal.x;
 					trans.rotation.y = localInteractionData->rightHand.palmNormal.y;
@@ -524,6 +528,9 @@ void HoloSession::interactionLoop()
 						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
 						netSession_->sendPacketAsync(std::move(packet));
 					}
+
+					if (localInteractionData->rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
+						trans.translate.z = -trans.translate.z;
 
 				}
 			}

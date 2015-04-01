@@ -334,7 +334,7 @@ void HoloRenderOpenGL::display()
 		glScalef(0.07f, 0.07f, 0.07f);
 
 		//glTranslatef(0.027, 0.064f, -0.14f);
-		glTranslatef(-0.15, 0, -0.6);
+		//glTranslatef(-0.15, 5.564, -0.6);
 		this->drawObjects();
 		glPopMatrix();
 
@@ -575,10 +575,13 @@ void HoloRenderOpenGL::drawObjects()
 
 			const float scaleFactor = 1.0f / sqrt(transform.bounding_sphere.w);
 
+			glMatrixMode(GL_MODELVIEW);
 			glPushMatrix();
-			
-			glScalef(scaleFactor, scaleFactor, scaleFactor);
-			glTranslatef(-transform.bounding_sphere.x + transform.translate.x, -transform.bounding_sphere.y + transform.translate.y, -transform.bounding_sphere.z + transform.translate.z);
+
+			glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
+			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
+			glRotatef(-transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
+			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
 			glBegin(GL_TRIANGLES);
 
@@ -724,31 +727,22 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 
 	this->drawPointCloud();
 
-	glPushMatrix();
-	//glTranslatef(0.027, 0.064f, -0.14f);
-	glTranslatef(0.05, 0.20, -0.45);
-	glScalef(0.07f, 0.07f, 0.07f);
-
-	this->drawObjects();
-	glPopMatrix();
-
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);
 
 	//glPushMatrix();
-
-
-	//glEnable(GL_NORMALIZE);
-	//glTranslatef(-0.15, 0.30, -0.6);
-	////glRotatef(35.0f, 0, 1, 0);
-	////glRotatef(25.0f, 1, 0, 0);
+	//glTranslatef(0.027, 0.064f, -0.14f);
+	glTranslatef(0.13, 0.30, -0.60);
+	//glScalef(0.07f, 0.07f, 0.07f);
 
 
 
+	this->drawObjects();
 
 
-	//glutSolidCube(0.07f);
-	//glPopMatrix();
+
+
 
 	glPushMatrix();
 	glTranslatef(-0.15, 0.30, -0.6);
@@ -763,13 +757,6 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glDisable(GL_NORMALIZE);
 	glPopMatrix();
 
-
-	//glPopMatrix();
-	////// Draw the cube.
-	////drawCube();
-
-	////// Draw the stylus.
-	////drawStylus();
 
 	// Restore the mono (non-stereoscopic) model-view and projection matrices.
 	glMatrixMode(GL_PROJECTION);

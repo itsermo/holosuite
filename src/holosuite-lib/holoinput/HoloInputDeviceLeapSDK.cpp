@@ -22,6 +22,7 @@ HoloInputDeviceLeapSDK::~HoloInputDeviceLeapSDK()
 
 bool HoloInputDeviceLeapSDK::init()
 {
+	controller_.enableGesture(Leap::Gesture::Type::TYPE_SCREEN_TAP);
 	controller_.addListener(*this);
 
 	std::unique_lock<std::mutex> initLG(initMutex_);
@@ -102,7 +103,7 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 
 	inputData_ = {};
 	inputData_.leftHand = {};
-	inputData_.rightHand = {};
+	//inputData_.rightHand = {};
 
 	const Frame frame = controller.frame();
 	HandList hands = frame.hands();
@@ -124,9 +125,9 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 		holoHand->palmNormal.y = normal.roll();
 		holoHand->palmNormal.z = normal.yaw();
 
-		holoHand->palmPosition.x = position.x;
-		holoHand->palmPosition.y = position.y;
-		holoHand->palmPosition.z = position.z;
+		holoHand->palmPosition.x = position.x * 0.001f;
+		holoHand->palmPosition.y = position.y * 0.001f;
+		holoHand->palmPosition.z = position.z * 0.001f;
 		
 		hand.basis().toArray4x4(holoHand->palmOrientation);
 
@@ -165,16 +166,52 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 				Bone::Type boneType = static_cast<Bone::Type>(b);
 				Bone bone = finger.bone(boneType);
 
-				holoFinger->bones[b].center.x = bone.center().x;
-				holoFinger->bones[b].center.y = bone.center().y;
-				holoFinger->bones[b].center.z = bone.center().z;
+				holoFinger->bones[b].center.x = bone.center().x * 0.001f;
+				holoFinger->bones[b].center.y = bone.center().y * 0.001f;
+				holoFinger->bones[b].center.z = bone.center().z * 0.001f;
 
-				holoFinger->bones[b].direction.x = bone.direction().x;
-				holoFinger->bones[b].direction.y = bone.direction().y;
-				holoFinger->bones[b].direction.z = bone.direction().z;
+				holoFinger->bones[b].direction.x = bone.direction().x * 0.001f;
+				holoFinger->bones[b].direction.y = bone.direction().y * 0.001f;
+				holoFinger->bones[b].direction.z = bone.direction().z * 0.001f;
 			}
 		}
+
 	}
+
+	// Get gestures
+	const GestureList gestures = frame.gestures();
+	for (int g = 0; g < gestures.count(); ++g) {
+		Gesture gesture = gestures[g];
+
+		HoloHand *holoHand = gesture.hands()[0].isLeft() ? &inputData_.leftHand : &inputData_.rightHand;
+
+		switch (gesture.type()) {
+		case Gesture::TYPE_CIRCLE:
+		{
+			holoHand->gesture = holo::input::GESTURE_TYPE_CIRCLE;
+			break;
+		}
+		case Gesture::TYPE_SWIPE:
+		{
+			holoHand->gesture = holo::input::GESTURE_TYPE_SWIPE;
+			break;
+		}
+		case Gesture::TYPE_KEY_TAP:
+		{
+			holoHand->gesture = holo::input::GESTURE_TYPE_KEY_TAP;
+			break;
+		}
+		case Gesture::TYPE_SCREEN_TAP:
+		{
+			holoHand->gesture = holo::input::GESTURE_TYPE_SCREEN_TAP;
+			break;
+		}
+		default:
+			std::cout << std::string(2, ' ') << "Unknown gesture type." << std::endl;
+			break;
+		}
+	}
+
 
 	inputDataLock.unlock();
 	haveInputDataCV_.notify_all();
