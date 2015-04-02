@@ -731,23 +731,12 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);
 
-	//glPushMatrix();
-	//glTranslatef(0.027, 0.064f, -0.14f);
 	glTranslatef(0.13, 0.30, -0.60);
-	//glScalef(0.07f, 0.07f, 0.07f);
-
-
 
 	this->drawObjects();
 
-
-
-
-
 	glPushMatrix();
 	glTranslatef(-0.15, 0.30, -0.6);
-	//glRotatef(35.0f, 0, 1, 0);
-	//glRotatef(25.0f, 1, 0, 0);
 
 	glutSolidSphere(0.035f, 16, 16);
 

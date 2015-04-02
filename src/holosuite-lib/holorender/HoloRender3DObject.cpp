@@ -15,7 +15,8 @@ HoloRender3DObject::HoloRender3DObject() :
 	vertSize_(0),
 	normalSize_(0),
 	colorSize_(0),
-	stringSize_(0)
+	stringSize_(0),
+	amOwner_(true)
 {
 	objectTransform_.bounding_sphere = {};
 	objectTransform_.rotation = {};
@@ -97,6 +98,8 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 
 HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& objectPacket) : HoloRender3DObject()
 {
+	amOwner_ = false;
+
 	memcpy(&objectHeader_, objectPacket->value.data(), sizeof(objectHeader_));
 	objectHeader_.num_vertices = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_vertices);
 	objectHeader_.num_points_per_vertex = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_points_per_vertex);
@@ -237,36 +240,36 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	
 	unsigned int x, y, z, w = 0;
 
-	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.translate.x));
-	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.translate.y));
-	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.translate.z));
+	x = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.translate.x));
+	y = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.translate.y));
+	z = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.translate.z));
 
 	objectTransform.translate.x = reinterpret_cast<float&>(x);
 	objectTransform.translate.y = reinterpret_cast<float&>(y);
 	objectTransform.translate.z = reinterpret_cast<float&>(z);
 
-	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.x));
-	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.y));
-	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.z));
-	w = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.w));
+	x = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.x));
+	y = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.y));
+	z = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.z));
+	w = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.rotation.w));
 
 	objectTransform.rotation.x = reinterpret_cast<float&>(x);
 	objectTransform.rotation.y = reinterpret_cast<float&>(y);
 	objectTransform.rotation.z = reinterpret_cast<float&>(z);
 	objectTransform.rotation.w = reinterpret_cast<float&>(w);
 
-	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.scale.x));
-	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.scale.y));
-	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.scale.z));
+	x = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.scale.x));
+	y = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.scale.y));
+	z = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.scale.z));
 
 	objectTransform.scale.x = reinterpret_cast<float&>(x);
 	objectTransform.scale.y = reinterpret_cast<float&>(y);
 	objectTransform.scale.z = reinterpret_cast<float&>(z);
 
-	x = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.x));
-	y = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.y));
-	z = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.z));
-	w = boost::asio::detail::socket_ops::network_to_host_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.w));
+	x = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.x));
+	y = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.y));
+	z = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.z));
+	w = boost::asio::detail::socket_ops::host_to_network_long(reinterpret_cast<unsigned int&>(objectTransform.bounding_sphere.w));
 
 	objectTransform.bounding_sphere.x = reinterpret_cast<float&>(x);
 	objectTransform.bounding_sphere.y = reinterpret_cast<float&>(y);
@@ -475,6 +478,45 @@ const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::CreateNetP
 
 	return netPacket;
 }
+
+const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::ToggleOwnerAndGetOwnerChangePacket()
+{
+	auto ownerChangePacket = boost::shared_ptr<holo::net::HoloNetPacket>(new HoloNetPacket);
+	ownerChangePacket->type = holo::net::HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER;
+	ownerChangePacket->length = sizeof(int)+stringSize_;
+	ownerChangePacket->value.resize(ownerChangePacket->length);
+
+	unsigned int amOwnerInt = static_cast<unsigned int>(amOwner_.load());
+	amOwnerInt = boost::asio::detail::socket_ops::host_to_network_long(amOwnerInt);
+	unsigned int stringSize = boost::asio::detail::socket_ops::host_to_network_long(stringSize_);
+
+	memcpy(ownerChangePacket->value.data(), &amOwnerInt, sizeof(amOwnerInt));
+	memcpy(ownerChangePacket->value.data() + sizeof(amOwnerInt), &stringSize, sizeof(stringSize));
+	memcpy(ownerChangePacket->value.data() + sizeof(amOwnerInt)+sizeof(stringSize), objectName_.data(), stringSize_);
+
+	amOwner_.store(!amOwner_.load());
+
+	return ownerChangePacket;
+}
+
+const std::tuple<std::string, bool> HoloRender3DObject::GetChangeOwnerInfoFromPacket(const boost::shared_ptr<holo::net::HoloNetPacket>& changeOwnerPacket)
+{
+	unsigned int amOwnerInt = 2;
+	unsigned int stringSize = 0;
+	std::string objectName;
+
+	memcpy(&amOwnerInt, changeOwnerPacket->value.data(), sizeof(amOwnerInt));
+	memcpy(&stringSize, changeOwnerPacket->value.data() + sizeof(amOwnerInt), sizeof(stringSize));
+
+	stringSize = boost::asio::detail::socket_ops::network_to_host_long(stringSize);
+
+	objectName.resize(stringSize);
+	
+	memcpy((void*)objectName.data(), changeOwnerPacket->value.data() + sizeof(amOwnerInt)+sizeof(stringSize), stringSize);
+
+	return std::make_tuple(objectName, amOwnerInt);
+}
+
 
 HoloRender3DObject::~HoloRender3DObject()
 {

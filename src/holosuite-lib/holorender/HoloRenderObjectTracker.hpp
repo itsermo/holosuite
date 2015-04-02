@@ -27,6 +27,7 @@ namespace holo
 			void Add3DObject(const boost::shared_ptr<HoloRender3DObject> & object);
 			void Update3DObjectTransform(const std::tuple<std::string, HoloTransform> & objectState);
 			void Remove3DObject(const std::string & objectName);
+			void SetObjectOwner(const std::string & objectName, const bool amOwner);
 
 			const std::map<const std::string, boost::shared_ptr<HoloRender3DObject>> Get3DObjects();
 

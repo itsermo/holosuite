@@ -414,6 +414,13 @@ void HoloSession::netRecvLoop()
 			throw std::exception();
 			break;
 		}
+		case HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER:
+		{
+			std::string objectName;
+			bool amOwner;
+			std::tie(objectName, amOwner) = holo::render::HoloRender3DObject::GetChangeOwnerInfoFromPacket(recvPacket);
+			objectTracker_->SetObjectOwner(objectName, amOwner);
+		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
 		{
 			std::unique_lock<std::mutex> objUpdateLock(remoteObjectDataMutex_);

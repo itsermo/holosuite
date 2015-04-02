@@ -2,6 +2,7 @@
 
 #include <holocommon/CommonDefs.hpp>
 #include <holonet/HoloNet.hpp>
+#include <atomic>
 
 namespace holo
 {
@@ -23,6 +24,11 @@ namespace holo
 			void SetTransform(HoloTransform &transform) { objectTransform_ = transform; }
 			const HoloTransform& GetTransform() const { return objectTransform_; }
 
+			bool GetAmOwner() { return amOwner_.load(); }
+			void SetAmOwner(bool amOwner) { amOwner_.store(amOwner); }
+			const boost::shared_ptr<holo::net::HoloNetPacket> ToggleOwnerAndGetOwnerChangePacket();
+			static const std::tuple<std::string, bool> GetChangeOwnerInfoFromPacket(const boost::shared_ptr<holo::net::HoloNetPacket>& changeOwnerPacket);
+
 			static const std::tuple<std::string, HoloTransform> GetTransformFromPacket(const boost::shared_ptr<holo::net::HoloNetPacket>& transformNetPacket);
 			static const boost::shared_ptr<holo::net::HoloNetPacket> CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objectTransform);
 			const float* GetVertexBuffer() const { return (float*)vertices_; }
@@ -43,6 +49,7 @@ namespace holo
 			unsigned char* normals_;
 			unsigned char* colors_;
 
+			std::atomic<bool> amOwner_;
 		};
 		
 	}

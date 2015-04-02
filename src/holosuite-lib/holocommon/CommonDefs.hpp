@@ -193,6 +193,8 @@ namespace holo
 			//axis/angle, where w is angle
 			HoloVec4f rotation;
 			HoloVec3f scale, translate;
+
+			unsigned int amOwner;
 		};
 		
 	}

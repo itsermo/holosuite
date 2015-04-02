@@ -104,6 +104,18 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 
 }
 
+void HoloRenderObjectTracker::SetObjectOwner(const std::string & objectName, bool amOwner)
+{
+	std::lock_guard<std::mutex> objectMapLock(objectMapMutex_);
+	auto obj = objectMap_[objectName];
+
+	if (obj)
+	{
+		if (amOwner != obj->GetAmOwner())
+			obj->SetAmOwner(amOwner);
+	}
+
+}
 
 void HoloRenderObjectTracker::Populate3DObjects(const std::string filePath)
 {
