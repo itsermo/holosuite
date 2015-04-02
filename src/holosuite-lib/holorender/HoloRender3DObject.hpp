@@ -35,6 +35,18 @@ namespace holo
 			const float* GetNormalBuffer() const { return (float*)normals_; }
 			const float* GetColorBuffer() const { return (float*)colors_; }
 
+			void SetHasGLBuffers(bool hasGlBuffers) { hasGLBuffers_ = hasGlBuffers; }
+			bool GetHasGLBuffers() const { return hasGLBuffers_; }
+
+			void SetGLVertexBufID(unsigned int glVertexBufID) { glVertexBufID_ = glVertexBufID; }
+			unsigned int GetGLVertexBufID() const { return glVertexBufID_; }
+
+			void SetGLNormalBufID(unsigned int glNormalBufID) { glNormalBufID_ = glNormalBufID; }
+			unsigned int GetGLNormalBufID() const { return glNormalBufID_; }
+
+			void SetGLColorBufID(unsigned int glColorBufID) { glColorBufID_ = glColorBufID; }
+			unsigned int GetGLColorBufID() const { return glColorBufID_; }
+
 		private:
 			std::string objectName_;
 			HoloTransform objectTransform_;
@@ -49,6 +61,8 @@ namespace holo
 			unsigned char* normals_;
 			unsigned char* colors_;
 
+			unsigned int glVertexBufID_, glNormalBufID_, glColorBufID_;
+			bool hasGLBuffers_;
 			std::atomic<bool> amOwner_;
 		};
 		

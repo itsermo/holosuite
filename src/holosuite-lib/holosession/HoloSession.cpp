@@ -105,7 +105,6 @@ bool HoloSession::start()
 	shouldRender_ = render_ ? true : false;
 	shouldInteract_ = inputDevice_ ? true : false;
 
-
 	shouldEncode_ = rgbazEncoder_ || cloudEncoder_ ? true : false;
 	shouldDecode_ = rgbazDecoder_ || cloudDecoder_ ? true : false;
 
@@ -486,72 +485,82 @@ void HoloSession::captureLoop()
 
 void HoloSession::interactionLoop()
 {
-	localInteractionData_ = boost::shared_ptr<holo::input::HoloInputData>(new holo::input::HoloInputData());
+
 	bool firstRightPinch = true;
 
 	HoloVec3f rightHandOffset = {};
 
 	while (shouldInteract_)
 	{
-		boost::shared_ptr<holo::input::HoloInputData> localInteractionData;
+		std::list<holo::input::HoloInputData> localInteractionData;
 		std::unique_lock<std::mutex> liLock(localInteractionDataMutex_);
-		inputDevice_->getInputData(localInteractionData);
-		if (localInteractionData)
+		if (inputDevice_->getInputData(localInteractionData))
 		{
-			*localInteractionData_ = *localInteractionData;
+			localInteractionData_ = localInteractionData;
 			haveLocalInteractionData_ = true;
 			haveLocalInteractionDataCV_.notify_all();
 		}
 
-		if (localInteractionData->haveRightHand)
+		liLock.unlock();
+
+		for (auto interactionSample : localInteractionData)
 		{
-			if (localInteractionData->rightHand.pinchStrength > 0.6f)
+			if (interactionSample.haveRightHand)
 			{
-				for (auto obj : objectTracker_->Get3DObjects())
+				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
+					for (auto obj : objectTracker_->Get3DObjects())
+					{
+						LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
+						obj.second->SetAmOwner(!obj.second->GetAmOwner());
+					}
+
+				if (interactionSample.rightHand.pinchStrength > 0.6f)
 				{
-					auto trans = obj.second->GetTransform();
-
-					if (firstRightPinch)
+					for (auto obj : objectTracker_->Get3DObjects())
 					{
-						rightHandOffset = localInteractionData->rightHand.palmPosition;
-						rightHandOffset.x -= trans.translate.x;
-						rightHandOffset.y -= trans.translate.y;
-						rightHandOffset.z -= trans.translate.z;
-						firstRightPinch = false;
+						if (obj.second->GetAmOwner())
+						{
+
+							auto trans = obj.second->GetTransform();
+
+							if (firstRightPinch)
+							{
+								rightHandOffset = interactionSample.rightHand.palmPosition;
+								rightHandOffset.x -= trans.translate.x;
+								rightHandOffset.y -= trans.translate.y;
+								rightHandOffset.z -= trans.translate.z;
+								firstRightPinch = false;
+							}
+
+							trans.translate.x = (interactionSample.rightHand.palmPosition.x - rightHandOffset.x);
+							trans.translate.y = (interactionSample.rightHand.palmPosition.y - rightHandOffset.y);
+							trans.translate.z = (interactionSample.rightHand.palmPosition.z - rightHandOffset.z);
+
+							trans.rotation.x = interactionSample.rightHand.palmNormal.x;
+							trans.rotation.y = interactionSample.rightHand.palmNormal.y;
+							trans.rotation.z = interactionSample.rightHand.palmNormal.z;
+
+							obj.second->SetTransform(trans);
+
+							if (netSession_)
+							{
+								auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+								netSession_->sendPacketAsync(std::move(packet));
+							}
+						}
 					}
-
-					trans.translate.x = (localInteractionData->rightHand.palmPosition.x - rightHandOffset.x);
-					trans.translate.y = (localInteractionData->rightHand.palmPosition.y - rightHandOffset.y);
-					trans.translate.z = (localInteractionData->rightHand.palmPosition.z - rightHandOffset.z);
-
-					trans.rotation.x = localInteractionData->rightHand.palmNormal.x;
-					trans.rotation.y = localInteractionData->rightHand.palmNormal.y;
-					trans.rotation.z = localInteractionData->rightHand.palmNormal.z;
-
-					obj.second->SetTransform(trans);
-
-					if (netSession_)
-					{
-						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
-						netSession_->sendPacketAsync(std::move(packet));
-					}
-
-					if (localInteractionData->rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
-						trans.translate.z = -trans.translate.z;
-
 				}
-			}
-			else
-			{
-				firstRightPinch = true;
-				rightHandOffset = {};
+				else
+				{
+					firstRightPinch = true;
+					rightHandOffset = {};
+				}
 			}
 		}
 
-		liLock.unlock();
-	}
 
-	localInteractionData_.reset();
+
+	}
 }
 
 void HoloSession::decodeLoop()

@@ -10,9 +10,7 @@ HoloInputDeviceLeapSDK::HoloInputDeviceLeapSDK() :
 	isInit_(false),
 	inputData_()
 {
-	inputData_ = {};
-	inputData_.leftHand = {};
-	inputData_.rightHand = {};
+
 }
 
 HoloInputDeviceLeapSDK::~HoloInputDeviceLeapSDK()
@@ -51,7 +49,7 @@ bool HoloInputDeviceLeapSDK::isInit()
 	return isInit_.load();
 }
 
-bool HoloInputDeviceLeapSDK::getInputData(boost::shared_ptr<HoloInputData> &data)
+bool HoloInputDeviceLeapSDK::getInputData(std::list<HoloInputData> &data)
 {
 	if (isInit_)
 	{
@@ -60,19 +58,17 @@ bool HoloInputDeviceLeapSDK::getInputData(boost::shared_ptr<HoloInputData> &data
 		{
 			if (!isInit_)
 			{
-				data = nullptr;
 				return false;
 			}
 		}
 		
-		data = boost::shared_ptr<HoloInputData>(new HoloInputData());
-		*data = inputData_;
+		data = inputData_;
+		inputData_.clear();
 
 		return true;
 	}
 	else
 	{
-		data = nullptr;
 		return false;
 	}
 }
@@ -99,10 +95,9 @@ void HoloInputDeviceLeapSDK::onExit(const Leap::Controller& controller)
 
 void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 {
-	std::unique_lock<std::mutex> inputDataLock(inputDataMutex_);
 
-	inputData_ = {};
-	inputData_.leftHand = {};
+	HoloInputData inputData = {};
+	inputData.leftHand = {};
 	//inputData_.rightHand = {};
 
 	const Frame frame = controller.frame();
@@ -110,12 +105,12 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 	for (HandList::const_iterator hl = hands.begin(); hl != hands.end(); ++hl) {
 		// Get the first hand
 		const Hand hand = *hl;
-		HoloHand *holoHand = hand.isLeft() ? &inputData_.leftHand : &inputData_.rightHand;
+		HoloHand *holoHand = hand.isLeft() ? &inputData.leftHand : &inputData.rightHand;
 
 		if (hand.isLeft())
-			inputData_.haveLeftHand = true;
+			inputData.haveLeftHand = true;
 		else
-			inputData_.haveRightHand = true;
+			inputData.haveRightHand = true;
 
 		// Get the hand's normal vector and direction
 		const Vector normal = hand.palmNormal();
@@ -183,7 +178,12 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 	for (int g = 0; g < gestures.count(); ++g) {
 		Gesture gesture = gestures[g];
 
-		HoloHand *holoHand = gesture.hands()[0].isLeft() ? &inputData_.leftHand : &inputData_.rightHand;
+		HoloHand *holoHand = gesture.hands()[0].isLeft() ? &inputData.leftHand : &inputData.rightHand;
+
+		if (gesture.hands()[0].isLeft())
+			inputData.haveLeftHand = true;
+		else
+			inputData.haveRightHand = true;
 
 		switch (gesture.type()) {
 		case Gesture::TYPE_CIRCLE:
@@ -212,7 +212,13 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 		}
 	}
 
+	std::unique_lock<std::mutex> inputDataLock(inputDataMutex_);
 
+	//don't overflow buffer
+	if (inputData_.size() > 120)
+		inputData_.clear();
+
+	inputData_.push_back(inputData);
 	inputDataLock.unlock();
 	haveInputDataCV_.notify_all();
 }

@@ -12,9 +12,10 @@
 #include <Windows.h>
 #endif
 
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 
 #include <thread>
 #include <mutex>
@@ -166,6 +167,10 @@ namespace holo
 #endif
 
 			std::string displayEnv_;
+
+			GLuint cloudGLVertBuffer_;
+			GLuint cloudGLColorBuffer_;
+			bool haveCloudGLBuffers_;
 
 			log4cxx::LoggerPtr logger_;
 		};

@@ -34,7 +34,10 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	prevWindowWidth_(0),
 	prevWindowHeight_(0),
 	prevWindowX_(0),
-	prevWindowY_(0)
+	prevWindowY_(0),
+	haveCloudGLBuffers_(false),
+	cloudGLVertBuffer_(0),
+	cloudGLColorBuffer_(0)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
@@ -129,6 +132,8 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	// Initialize GLUT window and callbacks
 	glutInit(&fakeargc, const_cast<char**>(fakeargv));
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	glutInitContextVersion(3, 1);
 	glutInitWindowSize(windowWidth_, windowHeight_);
 
 	if (enableZSpaceRendering_)
@@ -152,7 +157,7 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	GLfloat lightAmbientColor[] = { 0.6, 0.3, 0.3, 1 };
 	GLfloat lightDiffuseColor[] = { 0.6, 1, 1, 1 };
-	GLfloat lightSpecularColor[] = { 1, 1, 1, 1 };
+	GLfloat lightSpecularColor[] = { 0.2, 0.2, 0.2, 1 };
 	GLfloat lightGlobalAmbient[] = { 0.2, 0.2, 0.2, 1 };
 
 	GLfloat materialSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -177,6 +182,8 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	//Takes care of occlusions for point cloud
 	glEnable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -204,6 +211,8 @@ void HoloRenderOpenGL::glutInitLoop()
 	glutFullScreen();
 	isFullScreen_ = true;
 #endif
+
+	glewInit();
 
 	glutMainLoop();
 
@@ -344,13 +353,14 @@ void HoloRenderOpenGL::display()
 		glPopMatrix();
 
 		//glEnable(GL_LIGHTING);
+		glFinish();
 
 		glutSwapBuffers();
 
 #ifdef ENABLE_HOLO_ZSPACE
 	}
 #endif
-
+	//std::this_thread::sleep_for(std::chrono::milliseconds(13));
 }
 
 void HoloRenderOpenGL::cleanup()
@@ -539,6 +549,7 @@ void HoloRenderOpenGL::drawPointCloud()
 
 	const float gain = 1 / 255.0; // converting from char units to float
 
+	glDisable(GL_BLEND);
 	glEnable(GL_POINT_SMOOTH);
 	glPointSize(voxelSize_*4);
 	glBegin(GL_POINTS);
@@ -558,6 +569,7 @@ void HoloRenderOpenGL::drawPointCloud()
 	glEnd();
 
 	glDisable(GL_POINT_SMOOTH);
+	glEnable(GL_BLEND);
 
 	if (enableZSpaceRendering_)
 		glPopMatrix();
@@ -568,7 +580,8 @@ void HoloRenderOpenGL::drawObjects()
 {
 	if (objectTracker_)
 	{
-		for (auto obj : objectTracker_->Get3DObjects())
+		auto myObjects = objectTracker_->Get3DObjects();
+		for (auto obj : myObjects)
 		{
 			auto info = obj.second->GetObjectInfo();
 			auto transform = obj.second->GetTransform();
@@ -583,20 +596,116 @@ void HoloRenderOpenGL::drawObjects()
 			glRotatef(-transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
-			glBegin(GL_TRIANGLES);
+			//if (!obj.second->GetHasGLBuffers())
+			//{
+			//	GLuint vertBuf = 0;
+			//	GLuint normalBuf = 0;
+			//	GLuint colorBuf = 0;
+			//	glGenBuffers(1, &vertBuf);
 
-			float * vp = (float*)obj.second->GetVertexBuffer();
-			float * cp = (float*)obj.second->GetColorBuffer();
-			float * np = (float*)obj.second->GetNormalBuffer();
+			//	if (obj.second->GetNormalBuffer())
+			//		glGenBuffers(1, &normalBuf);
 
-			for (int i = 0; i < info.num_vertices; i++, vp+=3, np+=3, cp+=4)
-			{
-				glVertex3f(*vp, *(vp+1), *(vp+2));
-				glNormal3f(*np, *(np + 1), *(np + 2));
-				glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp+3));
-			}
+			//	if (obj.second->GetColorBuffer())
+			//		glGenBuffers(1, &colorBuf);
 
-			glEnd();
+			//	glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
+			//	glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STATIC_DRAW);
+			//	if (obj.second->GetNormalBuffer())
+			//	{
+			//		glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
+			//		glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STATIC_DRAW);
+			//	}
+
+			//	if (obj.second->GetColorBuffer())
+			//	{
+			//		glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
+			//		glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STATIC_DRAW);
+			//	}
+
+			//	obj.second->SetGLVertexBufID(vertBuf);
+			//	obj.second->SetGLNormalBufID(normalBuf);
+			//	obj.second->SetGLColorBufID(colorBuf);
+			//	obj.second->SetHasGLBuffers(true);
+			//}
+
+			//if (obj.second->GetHasGLBuffers())
+			//{
+
+				//glEnable(GL_COLOR_MATERIAL);
+				//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+				//glEnable(GL_NORMALIZE);
+
+				//glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLVertexBufID());
+				//glEnableClientState(GL_VERTEX_ARRAY);
+				//glVertexPointer(info.num_points_per_vertex, GL_FLOAT, info.vertex_stride, 0);
+
+				//if (obj.second->GetColorBuffer())
+				//{
+				//	glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLColorBufID());
+				//	glEnableClientState(GL_COLOR_ARRAY);
+				//	glColorPointer(info.num_color_channels, GL_FLOAT, info.color_stride, 0);
+				//}
+				//else
+				//	glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+
+				//if (obj.second->GetNormalBuffer())
+				//{
+				//	glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLNormalBufID());
+				//	glEnableClientState(GL_NORMAL_ARRAY);
+				//	glNormalPointer(GL_FLOAT, info.vertex_stride, 0);
+				//}
+
+				//GLenum faceMode = 0;
+				//switch (info.num_indecies)
+				//{
+				//case 1: faceMode = GL_POINTS; break;
+				//case 2: faceMode = GL_LINES; break;
+				//case 3: faceMode = GL_TRIANGLES; break;
+				//case 4: faceMode = GL_QUADS; break;
+				//default: faceMode = GL_POLYGON; break;
+				//}
+
+				//glDrawArrays(faceMode, 0, info.num_vertices);
+				//glDisableClientState(GL_VERTEX_ARRAY);
+				//glDisableClientState(GL_NORMAL_ARRAY);
+				//glDisableClientState(GL_COLOR_ARRAY);
+				//glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+				//glDisable(GL_NORMALIZE);
+				//glDisable(GL_COLOR_MATERIAL);
+
+			//}
+			//else
+			//{
+				glEnable(GL_NORMALIZE);
+
+				auto amOwner = obj.second->GetAmOwner();
+
+				glEnable(GL_COLOR_MATERIAL);
+				glBegin(GL_TRIANGLES);
+
+				float * vp = (float*)obj.second->GetVertexBuffer();
+				float * cp = (float*)obj.second->GetColorBuffer();
+				float * np = (float*)obj.second->GetNormalBuffer();
+
+				for (int i = 0; i < info.num_vertices; i++, vp+=3, np+=3, cp+=4)
+				{
+					glVertex3f(*vp, *(vp+1), *(vp+2));
+					glNormal3f(*np, *(np + 1), *(np + 2));
+					if (amOwner)
+						glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp+3));
+					else
+						glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+				}
+
+				glEnd();
+				glDisable(GL_NORMALIZE);
+
+				if (amOwner)
+					glDisable(GL_COLOR_MATERIAL);
+
+			//}
 
 			glPopMatrix();
 		}
@@ -720,7 +829,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	setRenderTarget(eye);
 
 	// Clear the scene - color and depth buffers.
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	this->drawBackgroundGrid(4, 2, 5);
@@ -739,6 +848,8 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glTranslatef(-0.15, 0.30, -0.6);
 
 	glutSolidSphere(0.035f, 16, 16);
+
+	
 
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);

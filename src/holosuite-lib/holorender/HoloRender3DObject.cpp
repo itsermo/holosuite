@@ -16,7 +16,8 @@ HoloRender3DObject::HoloRender3DObject() :
 	normalSize_(0),
 	colorSize_(0),
 	stringSize_(0),
-	amOwner_(true)
+	amOwner_(true),
+	hasGLBuffers_(false)
 {
 	objectTransform_.bounding_sphere = {};
 	objectTransform_.rotation = {};

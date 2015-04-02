@@ -192,8 +192,8 @@ namespace holo
 		std::list<std::tuple<std::string, holo::render::HoloTransform>> remoteObjectStateData_;
 		std::list<std::tuple<std::string, holo::render::HoloTransform>> localObjectStateData_;
 
-		boost::shared_ptr<holo::input::HoloInputData> localInteractionData_;
-		boost::shared_ptr<holo::input::HoloInputData> remoteInteractionData_;
+		std::list<holo::input::HoloInputData> localInteractionData_;
+		std::list<holo::input::HoloInputData> remoteInteractionData_;
 
 		CloudCallback localCloudCallback_;
 		RGBAZCallback localRGBAZCallback_;
