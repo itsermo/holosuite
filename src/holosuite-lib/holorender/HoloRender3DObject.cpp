@@ -484,7 +484,7 @@ const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::ToggleOwne
 {
 	auto ownerChangePacket = boost::shared_ptr<holo::net::HoloNetPacket>(new HoloNetPacket);
 	ownerChangePacket->type = holo::net::HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER;
-	ownerChangePacket->length = sizeof(int)+stringSize_;
+	ownerChangePacket->length = 2*sizeof(unsigned int)+stringSize_;
 	ownerChangePacket->value.resize(ownerChangePacket->length);
 
 	unsigned int amOwnerInt = static_cast<unsigned int>(amOwner_.load());

@@ -419,6 +419,7 @@ void HoloSession::netRecvLoop()
 			bool amOwner;
 			std::tie(objectName, amOwner) = holo::render::HoloRender3DObject::GetChangeOwnerInfoFromPacket(recvPacket);
 			objectTracker_->SetObjectOwner(objectName, amOwner);
+			break;
 		}
 		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
 		{
@@ -510,8 +511,12 @@ void HoloSession::interactionLoop()
 				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
 					for (auto obj : objectTracker_->Get3DObjects())
 					{
-						LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
-						obj.second->SetAmOwner(!obj.second->GetAmOwner());
+						//LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
+						if (netSession_)
+						{
+							auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
+							netSession_->sendPacketAsync(std::move(changeOwnerPacket));
+						}
 					}
 
 				if (interactionSample.rightHand.pinchStrength > 0.6f)
