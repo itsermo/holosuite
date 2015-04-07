@@ -490,6 +490,7 @@ void HoloSession::interactionLoop()
 	bool firstRightPinch = true;
 
 	HoloVec3f rightHandOffset = {};
+	HoloVec3f rightHandRotationOffset = {};
 
 	while (shouldInteract_)
 	{
@@ -534,6 +535,9 @@ void HoloSession::interactionLoop()
 								rightHandOffset.x -= trans.translate.x;
 								rightHandOffset.y -= trans.translate.y;
 								rightHandOffset.z -= trans.translate.z;
+								rightHandRotationOffset.x = trans.rotation.x;
+								rightHandRotationOffset.y = trans.rotation.y;
+								rightHandRotationOffset.z = trans.rotation.z;
 								firstRightPinch = false;
 							}
 
@@ -541,9 +545,9 @@ void HoloSession::interactionLoop()
 							trans.translate.y = (interactionSample.rightHand.palmPosition.y - rightHandOffset.y);
 							trans.translate.z = (interactionSample.rightHand.palmPosition.z - rightHandOffset.z);
 
-							trans.rotation.x = interactionSample.rightHand.palmNormal.x;
-							trans.rotation.y = interactionSample.rightHand.palmNormal.y;
-							trans.rotation.z = interactionSample.rightHand.palmNormal.z;
+							trans.rotation.x = interactionSample.rightHand.palmNormal.x + rightHandRotationOffset.x;
+							trans.rotation.y = interactionSample.rightHand.palmNormal.y + rightHandRotationOffset.y;
+							trans.rotation.z = interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.z;
 
 							obj.second->SetTransform(trans);
 
@@ -559,6 +563,7 @@ void HoloSession::interactionLoop()
 				{
 					firstRightPinch = true;
 					rightHandOffset = {};
+					rightHandRotationOffset = {};
 				}
 			}
 		}
