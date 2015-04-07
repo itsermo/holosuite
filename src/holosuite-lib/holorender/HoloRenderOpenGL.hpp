@@ -167,9 +167,8 @@ namespace holo
 
 			std::string displayEnv_;
 
-			GLuint cloudGLVertBuffer_;
-			GLuint cloudGLColorBuffer_;
-			bool haveCloudGLBuffers_;
+			GLuint cloudGLBuffer_;
+			bool haveCloudGLBuffer_;
 
 			log4cxx::LoggerPtr logger_;
 		};

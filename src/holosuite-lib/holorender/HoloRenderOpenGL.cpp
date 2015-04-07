@@ -35,9 +35,8 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	prevWindowHeight_(0),
 	prevWindowX_(0),
 	prevWindowY_(0),
-	haveCloudGLBuffers_(false),
-	cloudGLVertBuffer_(0),
-	cloudGLColorBuffer_(0)
+	haveCloudGLBuffer_(false),
+	cloudGLBuffer_(0)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
@@ -547,19 +546,19 @@ void HoloRenderOpenGL::drawPointCloud()
 		//glRotatef(30.0f, 1, 0, 0);
 	}
 
-	if (!haveCloudGLBuffers_)
-	{
-		glGenBuffers(1, &cloudGLVertBuffer_);
-		haveCloudGLBuffers_ = true;
-	}
+	//if (!haveCloudGLBuffer_)
+	//{
+	//	glGenBuffers(1, &cloudGLVertBuffer_);
+	//	haveCloudGLBuffer_ = true;
+	//}
 	
 	glDisable(GL_BLEND);
 	glEnable(GL_POINT_SMOOTH);
 	glPointSize(voxelSize_ * 4);
 
-	if (haveCloudGLBuffers_)
+	if (haveCloudGLBuffer_)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, cloudGLVertBuffer_);
+		glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer_);
 		glBufferData(GL_ARRAY_BUFFER, remoteCloud_->points.size() * sizeof(HoloPoint3D), remoteCloud_->points.data(), GL_STREAM_DRAW);
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
@@ -621,38 +620,38 @@ void HoloRenderOpenGL::drawObjects()
 			glRotatef(-transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
-			if (!obj.second->GetHasGLBuffers())
-			{
-				GLuint vertBuf = 0;
-				GLuint normalBuf = 0;
-				GLuint colorBuf = 0;
-				glGenBuffers(1, &vertBuf);
+			//if (!obj.second->GetHasGLBuffers())
+			//{
+			//	GLuint vertBuf = 0;
+			//	GLuint normalBuf = 0;
+			//	GLuint colorBuf = 0;
+			//	glGenBuffers(1, &vertBuf);
 
-				if (obj.second->GetNormalBuffer())
-					glGenBuffers(1, &normalBuf);
+			//	if (obj.second->GetNormalBuffer())
+			//		glGenBuffers(1, &normalBuf);
 
-				if (obj.second->GetColorBuffer())
-					glGenBuffers(1, &colorBuf);
+			//	if (obj.second->GetColorBuffer())
+			//		glGenBuffers(1, &colorBuf);
 
-				glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
-				glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
-				if (obj.second->GetNormalBuffer())
-				{
-					glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
-					glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
-				}
+			//	glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
+			//	glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
+			//	if (obj.second->GetNormalBuffer())
+			//	{
+			//		glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
+			//		glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
+			//	}
 
-				if (obj.second->GetColorBuffer())
-				{
-					glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
-					glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
-				}
+			//	if (obj.second->GetColorBuffer())
+			//	{
+			//		glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
+			//		glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
+			//	}
 
-				obj.second->SetGLVertexBufID(vertBuf);
-				obj.second->SetGLNormalBufID(normalBuf);
-				obj.second->SetGLColorBufID(colorBuf);
-				obj.second->SetHasGLBuffers(true);
-			}
+			//	obj.second->SetGLVertexBufID(vertBuf);
+			//	obj.second->SetGLNormalBufID(normalBuf);
+			//	obj.second->SetGLColorBufID(colorBuf);
+			//	obj.second->SetHasGLBuffers(true);
+			//}
 
 			if (obj.second->GetHasGLBuffers())
 			{
