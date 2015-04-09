@@ -192,7 +192,7 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 			break;
 		}
 		case Gesture::TYPE_SWIPE:
-		{
+		{	
 			holoHand->gesture = holo::input::GESTURE_TYPE_SWIPE;
 			break;
 		}

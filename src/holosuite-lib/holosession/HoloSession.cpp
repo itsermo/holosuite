@@ -509,14 +509,28 @@ void HoloSession::interactionLoop()
 		{
 			if (interactionSample.haveRightHand)
 			{
-				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
+
+				if (interactionSample.rightHand.gesture != holo::input::GESTURE_TYPE_NONE)
 					for (auto obj : objectTracker_->Get3DObjects())
 					{
+						auto trans = obj.second->GetTransform();
+
 						//LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
 						if (netSession_)
 						{
+
 							auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
+
+							if (obj.second->GetAmOwner())
+								trans.translate.z = -0.1f;
+							else
+								trans.translate.z = 0.05f;
+
+							auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+							netSession_->sendPacketAsync(std::move(packet));
 							netSession_->sendPacketAsync(std::move(changeOwnerPacket));
+
+							obj.second->SetTransform(trans);
 						}
 					}
 
@@ -526,7 +540,6 @@ void HoloSession::interactionLoop()
 					{
 						if (obj.second->GetAmOwner())
 						{
-
 							auto trans = obj.second->GetTransform();
 
 							if (firstRightPinch)
@@ -567,9 +580,6 @@ void HoloSession::interactionLoop()
 				}
 			}
 		}
-
-
-
 	}
 }
 

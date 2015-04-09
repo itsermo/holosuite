@@ -146,6 +146,8 @@ void HoloRenderVisualizer::run()
 				mesh_->cloud = cloud2;
 
 				visualizer_->addPolygonMesh(*mesh_, "holomesh");
+				visualizer_->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_SHADING, pcl::visualization::PCL_VISUALIZER_SHADING_PHONG, "holomesh");
+
 			}
 			else
 			{

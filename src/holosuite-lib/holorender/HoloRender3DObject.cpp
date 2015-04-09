@@ -17,7 +17,8 @@ HoloRender3DObject::HoloRender3DObject() :
 	colorSize_(0),
 	stringSize_(0),
 	amOwner_(true),
-	hasGLBuffers_(false)
+	hasGLBuffers_(false),
+	isLocal_(true)
 {
 	objectTransform_.bounding_sphere = {};
 	objectTransform_.rotation = {};
@@ -27,6 +28,8 @@ HoloRender3DObject::HoloRender3DObject() :
 
 HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned int numIndecies, unsigned int numVertices, float *vertices, float * normals, float *colors, unsigned int numVertexDimensions, unsigned int numColorChannels) : HoloRender3DObject()
 {
+	isLocal_ = true;
+
 	objectName_ = objectName;
 	objectHeader_.num_indecies = numIndecies;
 	objectHeader_.num_vertices = numVertices;
@@ -100,6 +103,7 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& objectPacket) : HoloRender3DObject()
 {
 	amOwner_ = false;
+	isLocal_ = false;
 
 	memcpy(&objectHeader_, objectPacket->value.data(), sizeof(objectHeader_));
 	objectHeader_.num_vertices = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_vertices);
@@ -517,7 +521,6 @@ const std::tuple<std::string, bool> HoloRender3DObject::GetChangeOwnerInfoFromPa
 
 	return std::make_tuple(objectName, amOwnerInt);
 }
-
 
 HoloRender3DObject::~HoloRender3DObject()
 {

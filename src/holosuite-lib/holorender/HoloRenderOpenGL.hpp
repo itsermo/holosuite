@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <pcl/surface/organized_fast_mesh.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -114,7 +115,9 @@ namespace holo
 			bool firstInit_;
 
 			std::mutex hasInitMutex_;
+			std::mutex hasQuitMutex_;
 			std::condition_variable hasInitCV_;
+			std::condition_variable hasQuitCV_;
 
 			bool enableZSpaceRendering_;
 			float voxelSize_;
@@ -169,6 +172,13 @@ namespace holo
 
 			GLuint cloudGLBuffer_;
 			bool haveCloudGLBuffer_;
+			bool enableMeshConstruction_;
+
+			pcl::OrganizedFastMesh<HoloPoint3D> organizedFastMesh_;
+			boost::shared_ptr<std::vector<pcl::Vertices>> organizedFastMeshVertices_;
+			pcl::PolygonMesh::Ptr mesh_;
+
+			std::atomic<bool> shouldRun_;
 
 			log4cxx::LoggerPtr logger_;
 		};

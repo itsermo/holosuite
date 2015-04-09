@@ -3,6 +3,8 @@
 using namespace holo;
 using namespace holo::render;
 
+std::atomic<bool> gShouldRun_;
+
 HoloRenderOpenGL::HoloRenderOpenGL() : HoloRenderOpenGL(HOLO_RENDER_OPENGL_ENABLE_ZSPACE_RENDERING, HOLO_RENDER_OPENGL_DEFAULT_VOXEL_SIZE)
 {
 
@@ -36,7 +38,8 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	prevWindowX_(0),
 	prevWindowY_(0),
 	haveCloudGLBuffer_(false),
-	cloudGLBuffer_(0)
+	cloudGLBuffer_(0),
+	enableMeshConstruction_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
@@ -58,17 +61,28 @@ bool HoloRenderOpenGL::init()
 	localCloud_ = HoloCloudPtr(new HoloCloud);
 	remoteCloud_ = HoloCloudPtr(new HoloCloud);
 
+	if (enableMeshConstruction_)
+	{
+		organizedFastMesh_.setTrianglePixelSize(1);
+		organizedFastMesh_.setTriangulationType(pcl::OrganizedFastMesh<HoloPoint3D>::TRIANGLE_ADAPTIVE_CUT);
+	}
+
+	gShouldRun_ = true;
 	glutInitThread_ = std::thread(&HoloRenderOpenGL::glutInitLoop, this);
 
 	std::unique_lock<std::mutex> lg(hasInitMutex_);
 	hasInitCV_.wait(lg);
+
+
 
 	return isInit_;
 }
 
 void HoloRenderOpenGL::deinit()
 {
-
+	gShouldRun_ = false;
+	std::unique_lock<std::mutex> lg(hasQuitMutex_);
+	hasQuitCV_.wait(lg);
 }
 
 
@@ -213,12 +227,20 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glewInit();
 
+	if (enableMeshConstruction_)
+	{
+		mesh_ = pcl::PolygonMeshPtr(new pcl::PolygonMesh());
+		organizedFastMeshVertices_ = boost::shared_ptr<std::vector<pcl::Vertices>>(new std::vector<pcl::Vertices>);
+	}
+
 	glutMainLoop();
 
 #ifdef ENABLE_HOLO_ZSPACE
 	if (enableZSpaceRendering_)
 		zsShutdown(zSpaceContext_);
 #endif
+
+	hasQuitCV_.notify_all();
 }
 
 void HoloRenderOpenGL::glCheckErrors()
@@ -240,7 +262,10 @@ void HoloRenderOpenGL::reshape(int width, int height)
 
 void HoloRenderOpenGL::idle()
 {
-	glutPostRedisplay();
+	if (gShouldRun_)
+		glutPostRedisplay();
+	else
+		glutLeaveMainLoop();
 }
 
 void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
@@ -280,7 +305,7 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 
 	case 27: /* Esc key */
 		// ShutDown();
-		exit(0);
+		gShouldRun_ = false;
 		break;
 	}
 
@@ -343,6 +368,7 @@ void HoloRenderOpenGL::display()
 
 		//glTranslatef(0.027, 0.064f, -0.14f);
 		//glTranslatef(-0.15, 5.564, -0.6);
+
 		this->drawObjects();
 		glPopMatrix();
 
@@ -364,7 +390,7 @@ void HoloRenderOpenGL::display()
 
 void HoloRenderOpenGL::cleanup()
 {
-	deinit();
+	//deinit();
 }
 
 void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
@@ -404,27 +430,32 @@ void HoloRenderOpenGL::glutReshape(int width, int height)
 
 void HoloRenderOpenGL::glutDisplay(void)
 {
-	gCurrentOpenGLInstance->display();
+	if (gShouldRun_)
+		gCurrentOpenGLInstance->display();
 }
 
 void HoloRenderOpenGL::glutIdle(void)
 {
-	gCurrentOpenGLInstance->idle();
+	if (gShouldRun_)
+		gCurrentOpenGLInstance->idle();
 }
 
 void HoloRenderOpenGL::glutKeyboard(unsigned char c, int x, int y)
 {
-	gCurrentOpenGLInstance->keyboard(c, x, y);
+	if (gShouldRun_)
+		gCurrentOpenGLInstance->keyboard(c, x, y);
 }
 
 void HoloRenderOpenGL::glutMouse(int button, int state, int x, int y) 
 {
-	gCurrentOpenGLInstance->mouse(button, state, x, y);
+	if (gShouldRun_)
+		gCurrentOpenGLInstance->mouse(button, state, x, y);
 }
 
 void HoloRenderOpenGL::glutMouseMotion(int x, int y)
 {
-	gCurrentOpenGLInstance->mouseMotion(x, y);
+	if (gShouldRun_)
+		gCurrentOpenGLInstance->mouseMotion(x, y);
 }
 
 void HoloRenderOpenGL::glutCleanup(void)
@@ -542,7 +573,7 @@ void HoloRenderOpenGL::drawPointCloud()
 	if (enableZSpaceRendering_)
 	{
 		glPushMatrix();
-		glTranslatef(-0.13, 0.05, -0.06);
+		glTranslatef(0.1, 0.05, -0.09);
 		//glRotatef(30.0f, 1, 0, 0);
 	}
 
@@ -551,47 +582,76 @@ void HoloRenderOpenGL::drawPointCloud()
 	//	glGenBuffers(1, &cloudGLVertBuffer_);
 	//	haveCloudGLBuffer_ = true;
 	//}
-	
+
 	glDisable(GL_BLEND);
-	glEnable(GL_POINT_SMOOTH);
-	glPointSize(voxelSize_ * 4);
 
-	if (haveCloudGLBuffer_)
+	if (enableMeshConstruction_)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer_);
-		glBufferData(GL_ARRAY_BUFFER, remoteCloud_->points.size() * sizeof(HoloPoint3D), remoteCloud_->points.data(), GL_STREAM_DRAW);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
+		if (remoteCloud_->size() > 0)
+		{
+			organizedFastMesh_.setInputCloud(remoteCloud_);
+			organizedFastMesh_.reconstruct(*organizedFastMeshVertices_);
 
-		glVertexPointer(3, GL_FLOAT, sizeof(HoloPoint3D), 0);
-		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(HoloPoint3D), (void*)(sizeof(float)*4));
+			glBegin(GL_TRIANGLES);
 
-		glDrawArrays(GL_POINTS, 0, remoteCloud_->points.size());
+			for (int v = 0; v < organizedFastMeshVertices_->size(); v++)
+			{
+				float x = (*organizedFastMeshVertices_)[v].vertices[0];
+				float y = (*organizedFastMeshVertices_)[v].vertices[1];
+				float z = (*organizedFastMeshVertices_)[v].vertices[2];
 
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glColor4f(1.f, 1.f, 1.f, 1.f);
+				glVertex3f(x, y, z);
+			}
+
+			glEnd();
+		}
+
 	}
 	else
 	{
-		glBegin(GL_POINTS);
 
-		const float gain = 1 / 255.0; // converting from char units to float
-		HoloPoint3D *pointIdx = remoteCloud_->points.data();
-		float luma = 0.0f;
-		for (int i = 0; i < remoteCloud_->size(); i++)
+		glEnable(GL_POINT_SMOOTH);
+		glPointSize(voxelSize_ * 4);
+
+		if (haveCloudGLBuffer_)
 		{
-			if (pointIdx->z == HOLO_CLOUD_BAD_POINT)
-				continue;
+			glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer_);
+			glBufferData(GL_ARRAY_BUFFER, remoteCloud_->points.size() * sizeof(HoloPoint3D), remoteCloud_->points.data(), GL_STREAM_DRAW);
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_COLOR_ARRAY);
 
-			glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
-			glColor3f(pointIdx->b * gain, pointIdx->g * gain, pointIdx->r * gain);
-			pointIdx++;
+			glVertexPointer(3, GL_FLOAT, sizeof(HoloPoint3D), 0);
+			glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(HoloPoint3D), (void*)(sizeof(float)* 4));
+
+			glDrawArrays(GL_POINTS, 0, remoteCloud_->points.size());
+
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_COLOR_ARRAY);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
 		}
+		else
+		{
+			glBegin(GL_POINTS);
 
-		glEnd();
+			const float gain = 1 / 255.0; // converting from char units to float
+			HoloPoint3D *pointIdx = remoteCloud_->points.data();
+			float luma = 0.0f;
+			for (int i = 0; i < remoteCloud_->size(); i++)
+			{
+				if (pointIdx->z == HOLO_CLOUD_BAD_POINT)
+					continue;
+
+				glVertex4f(-pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
+				glColor3f(pointIdx->b * gain, pointIdx->g * gain, pointIdx->r * gain);
+				pointIdx++;
+			}
+
+			glEnd();
+		}
+		glDisable(GL_POINT_SMOOTH);
 	}
-	glDisable(GL_POINT_SMOOTH);
+
 	glEnable(GL_BLEND);
 
 	if (enableZSpaceRendering_)
@@ -609,15 +669,26 @@ void HoloRenderOpenGL::drawObjects()
 			auto info = obj.second->GetObjectInfo();
 			auto transform = obj.second->GetTransform();
 			auto amOwner = obj.second->GetAmOwner();
+			auto isLocal = obj.second->GetIsLocal();
 
 			const float scaleFactor = 1.0f / sqrt(transform.bounding_sphere.w);
 
 			glMatrixMode(GL_MODELVIEW);
 			glPushMatrix();
 
-			glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
-			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
-			glRotatef(-transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
+			//if (isLocal)
+			//	glTranslatef(-0.15, 0.f, 0.f);
+			//else
+			//	glTranslatef(0.15, 0.f, 0.f);
+			
+			if (amOwner)
+				glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
+			else
+				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
+
+			
+			glScalef(isLocal ? scaleFactor*0.1f : -scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
+			glRotatef(isLocal ? -transform.rotation.z * 180.0f / M_PI : transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
 			//if (!obj.second->GetHasGLBuffers())
@@ -844,8 +915,6 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	// stack so that we can pop them off after we're done rendering the 
 	// scene for a specified eye.  This will allow us to restore the mono 
 	// (non-stereoscopic) model-view and projection matrices.
-
-
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -870,7 +939,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);
 
-	glTranslatef(0.13, 0.30, -0.60);
+	glTranslatef(0.0, 0.30, -0.60);
 
 	this->drawObjects();
 
@@ -879,14 +948,11 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 
 	glutSolidSphere(0.035f, 16, 16);
 
-	
-
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
 
 	glDisable(GL_NORMALIZE);
 	glPopMatrix();
-
 
 	// Restore the mono (non-stereoscopic) model-view and projection matrices.
 	glMatrixMode(GL_PROJECTION);

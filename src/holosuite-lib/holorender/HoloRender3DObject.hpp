@@ -24,6 +24,8 @@ namespace holo
 			void SetTransform(HoloTransform &transform) { objectTransform_ = transform; }
 			const HoloTransform& GetTransform() const { return objectTransform_; }
 
+			const bool GetIsLocal() const { return isLocal_; }
+
 			bool GetAmOwner() { return amOwner_.load(); }
 			void SetAmOwner(bool amOwner) { amOwner_.store(amOwner); }
 			const boost::shared_ptr<holo::net::HoloNetPacket> ToggleOwnerAndGetOwnerChangePacket();
@@ -64,6 +66,7 @@ namespace holo
 			unsigned int glVertexBufID_, glNormalBufID_, glColorBufID_;
 			bool hasGLBuffers_;
 			std::atomic<bool> amOwner_;
+			bool isLocal_;
 		};
 		
 	}
