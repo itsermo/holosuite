@@ -28,6 +28,7 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 	unsigned int aiFlags = 0;
 	aiFlags |= aiProcess_GenSmoothNormals;
 	aiFlags |= aiProcess_Triangulate;
+	aiFlags |= aiProcess_FixInfacingNormals;
 
 	LOG4CXX_INFO(logger_, "Loading 3D object file \'" << fileName << "\'...")
 	auto objectScene = assetImporter_.ReadFile(fileName, aiFlags);

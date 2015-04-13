@@ -37,7 +37,7 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 
 			depthVal = static_cast<float>(*depthPix) * 0.001f;
 
-			point->x = (.5f - static_cast<float>(j) / worldConvertCache.resolutionY) * depthVal * worldConvertCache.yzFactor;
+			point->x = -(.5f - static_cast<float>(j) / worldConvertCache.resolutionY) * depthVal * worldConvertCache.yzFactor;
 			point->y = -(static_cast<float>(i) / worldConvertCache.resolutionX - .5f) * depthVal * worldConvertCache.xzFactor;
 			point->z = depthVal;
 

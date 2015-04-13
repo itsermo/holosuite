@@ -60,6 +60,8 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 			// copy normals from object file buffer
 			memcpy(normals_, normals, normalSize_);
 		}
+		else
+			normals_ = nullptr;
 	});
 
 	std::future<void> colorFuture =
@@ -68,12 +70,13 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 	{
 		if (colors)
 		{
-
 			colorSize_ = objectHeader_.color_stride * objectHeader_.num_vertices;
 			colors_ = new unsigned char[colorSize_];
 			// copy normals from object file buffer
 			memcpy(colors_, colors, colorSize_);
 		}
+		else
+			colors_ = nullptr;
 	});
 
 	//Use miniball algorithm to get the bounding sphere of the object quickly

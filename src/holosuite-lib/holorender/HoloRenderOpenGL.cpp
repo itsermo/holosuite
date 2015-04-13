@@ -31,7 +31,7 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	windowHeight_(768),
 	viewPhi_(0.0f),
 	viewTheta_(0.0f),
-	viewDepth_(0.0f),
+	viewDepth_(0.2f),
 	isFullScreen_(false),
 	prevWindowWidth_(0),
 	prevWindowHeight_(0),
@@ -50,8 +50,9 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 HoloRenderOpenGL::~HoloRenderOpenGL()
 {
 	LOG4CXX_DEBUG(logger_, "Destroying HoloRenderOpenGL object...");
-	cleanup();
+	deinit();
 	LOG4CXX_DEBUG(logger_, "Done destroying HoloRenderOpenGL object");
+	gCurrentOpenGLInstance = nullptr;
 }
 
 bool HoloRenderOpenGL::init()
@@ -80,9 +81,9 @@ bool HoloRenderOpenGL::init()
 
 void HoloRenderOpenGL::deinit()
 {
-	gShouldRun_ = false;
-	std::unique_lock<std::mutex> lg(hasQuitMutex_);
-	hasQuitCV_.wait(lg);
+	glutLeaveMainLoop();
+	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	glutInitThread_.join();
 }
 
 
@@ -180,7 +181,7 @@ void HoloRenderOpenGL::glutInitLoop()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 
-	glShadeModel(GL_FLAT); // Enable Smooth Shading
+	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularColor);
@@ -233,11 +234,17 @@ void HoloRenderOpenGL::glutInitLoop()
 		organizedFastMeshVertices_ = boost::shared_ptr<std::vector<pcl::Vertices>>(new std::vector<pcl::Vertices>);
 	}
 
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+
 	glutMainLoop();
 
 #ifdef ENABLE_HOLO_ZSPACE
 	if (enableZSpaceRendering_)
+	{
+		zsDestroyViewport(viewportHandle_);
+		zsDestroyStereoBuffer(bufferHandle_);
 		zsShutdown(zSpaceContext_);
+	}
 #endif
 
 	hasQuitCV_.notify_all();
@@ -304,8 +311,8 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 		break;
 
 	case 27: /* Esc key */
-		// ShutDown();
-		gShouldRun_ = false;
+		glutLeaveMainLoop();
+		//gShouldRun_ = false;
 		break;
 	}
 
@@ -320,71 +327,89 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 
 void HoloRenderOpenGL::display()
 {
-	if (firstInit_)
+	if (gShouldRun_)
 	{
-		firstInit_ = false;
-		isInit_ = true;
-		hasInitCV_.notify_all();
-	}
+		if (firstInit_)
+		{
+			firstInit_ = false;
+			isInit_ = true;
+			hasInitCV_.notify_all();
+		}
 
 #ifdef ENABLE_HOLO_ZSPACE
-	if (enableZSpaceRendering_)
-	{
-		update();
-		draw();
+		if (enableZSpaceRendering_)
+		{
+			update();
+			draw();
+		}
+		else
+		{
+#endif
+			glViewport(0, 0, (GLsizei)windowWidth_, (GLsizei)windowHeight_);
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.01f, 10.0f);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(0.0f, 0.0f, 0.222f,   // Eye
+				0.0f, 0.0f, 0.0f,     // Center
+				0.0f, 1.0f, 0.0f);
+			glTranslatef(0.0, 0.0, viewDepth_);
+			glRotatef(-viewTheta_, 1.0, 0.0, 0.0);
+			glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			//this->drawSphere(0, 0, -1.0, 0.035f);
+
+			//glDisable(GL_LIGHTING);
+
+			glPushMatrix();
+			glRotatef(180.0f, 0, 1, 0);
+			this->drawBackgroundGrid(4, 2, 3);
+
+			std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
+
+			this->drawPointCloud();
+
+			glPushMatrix();
+
+
+
+
+			glScalef(0.07f, 0.07f, 0.07f);
+
+			glEnable(GL_LIGHTING);
+			glEnable(GL_LIGHT0);
+			glEnable(GL_NORMALIZE);
+
+			//glTranslatef(0.027, 0.064f, -0.14f);
+			//glTranslatef(-0.15, 5.564, -0.6);
+
+			this->drawObjects();
+
+			glDisable(GL_LIGHTING);
+			glDisable(GL_LIGHT0);
+			glDisable(GL_NORMALIZE);
+
+			glPopMatrix();
+
+			haveNewRemoteCloud_.store(false);
+			cloudLock.unlock();
+
+			glPopMatrix();
+
+			//glEnable(GL_LIGHTING);
+			glFinish();
+
+			glutSwapBuffers();
+
+#ifdef ENABLE_HOLO_ZSPACE
+		}
+#endif
 	}
 	else
-	{
-#endif
-		glViewport(0, 0, (GLsizei)windowWidth_, (GLsizei)windowHeight_);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.01f, 10.0f);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(0.0f, 0.0f, 0.222f,   // Eye
-			0.0f, 0.0f, 0.0f,     // Center
-			0.0f, 1.0f, 0.0f);
-		glTranslatef(0.0, 0.0, viewDepth_);
-		glRotatef(-viewTheta_, 1.0, 0.0, 0.0);
-		glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
-	
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//this->drawSphere(0, 0, -1.0, 0.035f);
-
-		//glDisable(GL_LIGHTING);
-
-		glPushMatrix();
-		glRotatef(180.0f, 0, 1, 0);
-		this->drawBackgroundGrid(4, 2, 3);
-
-		std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
-
-		this->drawPointCloud();
-
-		glPushMatrix();
-		glScalef(0.07f, 0.07f, 0.07f);
-
-		//glTranslatef(0.027, 0.064f, -0.14f);
-		//glTranslatef(-0.15, 5.564, -0.6);
-
-		this->drawObjects();
-		glPopMatrix();
-
-		haveNewRemoteCloud_.store(false);
-		cloudLock.unlock();
-
-		glPopMatrix();
-
-		//glEnable(GL_LIGHTING);
-		glFinish();
-
-		glutSwapBuffers();
-
-#ifdef ENABLE_HOLO_ZSPACE
-	}
-#endif
+		glutLeaveMainLoop();
 	//std::this_thread::sleep_for(std::chrono::milliseconds(13));
 }
 
@@ -430,32 +455,27 @@ void HoloRenderOpenGL::glutReshape(int width, int height)
 
 void HoloRenderOpenGL::glutDisplay(void)
 {
-	if (gShouldRun_)
-		gCurrentOpenGLInstance->display();
+	gCurrentOpenGLInstance->display();
 }
 
 void HoloRenderOpenGL::glutIdle(void)
 {
-	if (gShouldRun_)
-		gCurrentOpenGLInstance->idle();
+	gCurrentOpenGLInstance->idle();
 }
 
 void HoloRenderOpenGL::glutKeyboard(unsigned char c, int x, int y)
 {
-	if (gShouldRun_)
-		gCurrentOpenGLInstance->keyboard(c, x, y);
+	gCurrentOpenGLInstance->keyboard(c, x, y);
 }
 
 void HoloRenderOpenGL::glutMouse(int button, int state, int x, int y) 
 {
-	if (gShouldRun_)
-		gCurrentOpenGLInstance->mouse(button, state, x, y);
+	gCurrentOpenGLInstance->mouse(button, state, x, y);
 }
 
 void HoloRenderOpenGL::glutMouseMotion(int x, int y)
 {
-	if (gShouldRun_)
-		gCurrentOpenGLInstance->mouseMotion(x, y);
+	gCurrentOpenGLInstance->mouseMotion(x, y);
 }
 
 void HoloRenderOpenGL::glutCleanup(void)
@@ -573,15 +593,15 @@ void HoloRenderOpenGL::drawPointCloud()
 	if (enableZSpaceRendering_)
 	{
 		glPushMatrix();
-		glTranslatef(0.1, 0.05, -0.09);
+		glTranslatef(0.1f, 0.05, -0.09);
 		//glRotatef(30.0f, 1, 0, 0);
 	}
 
-	//if (!haveCloudGLBuffer_)
-	//{
-	//	glGenBuffers(1, &cloudGLVertBuffer_);
-	//	haveCloudGLBuffer_ = true;
-	//}
+	if (!haveCloudGLBuffer_)
+	{
+		glGenBuffers(1, &cloudGLBuffer_);
+		haveCloudGLBuffer_ = true;
+	}
 
 	glDisable(GL_BLEND);
 
@@ -610,7 +630,6 @@ void HoloRenderOpenGL::drawPointCloud()
 	}
 	else
 	{
-
 		glEnable(GL_POINT_SMOOTH);
 		glPointSize(voxelSize_ * 4);
 
@@ -691,38 +710,38 @@ void HoloRenderOpenGL::drawObjects()
 			glRotatef(isLocal ? -transform.rotation.z * 180.0f / M_PI : transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
-			//if (!obj.second->GetHasGLBuffers())
-			//{
-			//	GLuint vertBuf = 0;
-			//	GLuint normalBuf = 0;
-			//	GLuint colorBuf = 0;
-			//	glGenBuffers(1, &vertBuf);
+			if (!obj.second->GetHasGLBuffers())
+			{
+				GLuint vertBuf = 0;
+				GLuint normalBuf = 0;
+				GLuint colorBuf = 0;
+				glGenBuffers(1, &vertBuf);
 
-			//	if (obj.second->GetNormalBuffer())
-			//		glGenBuffers(1, &normalBuf);
+				if (obj.second->GetNormalBuffer())
+					glGenBuffers(1, &normalBuf);
 
-			//	if (obj.second->GetColorBuffer())
-			//		glGenBuffers(1, &colorBuf);
+				if (obj.second->GetColorBuffer())
+					glGenBuffers(1, &colorBuf);
 
-			//	glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
-			//	glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
-			//	if (obj.second->GetNormalBuffer())
-			//	{
-			//		glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
-			//		glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
-			//	}
+				glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
+				glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
+				if (obj.second->GetNormalBuffer())
+				{
+					glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
+					glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
+				}
 
-			//	if (obj.second->GetColorBuffer())
-			//	{
-			//		glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
-			//		glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
-			//	}
+				if (obj.second->GetColorBuffer())
+				{
+					glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
+					glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
+				}
 
-			//	obj.second->SetGLVertexBufID(vertBuf);
-			//	obj.second->SetGLNormalBufID(normalBuf);
-			//	obj.second->SetGLColorBufID(colorBuf);
-			//	obj.second->SetHasGLBuffers(true);
-			//}
+				obj.second->SetGLVertexBufID(vertBuf);
+				obj.second->SetGLNormalBufID(normalBuf);
+				obj.second->SetGLColorBufID(colorBuf);
+				obj.second->SetHasGLBuffers(true);
+			}
 
 			if (obj.second->GetHasGLBuffers())
 			{
@@ -786,16 +805,24 @@ void HoloRenderOpenGL::drawObjects()
 				glEnable(GL_COLOR_MATERIAL);
 				glBegin(GL_TRIANGLES);
 
+				bool haveNormals = obj.second->GetNormalBuffer() == nullptr ? false : true;
+				bool haveColors = obj.second->GetColorBuffer() == nullptr ? false : true;
+
 				float * vp = (float*)obj.second->GetVertexBuffer();
 				float * cp = (float*)obj.second->GetColorBuffer();
 				float * np = (float*)obj.second->GetNormalBuffer();
 
-				for (int i = 0; i < info.num_vertices; i++, vp+=3, np+=3, cp+=4)
+				for (int i = 0; i < info.num_vertices; i++, vp+=info.num_indecies, np+=info.num_indecies, cp+=info.num_color_channels)
 				{
 					glVertex3f(*vp, *(vp+1), *(vp+2));
-					glNormal3f(*np, *(np + 1), *(np + 2));
-					if (amOwner)
-						glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp+3));
+
+					if (haveNormals)
+						glNormal3f(*np, *(np + 1), *(np + 2));
+
+					if (amOwner && haveColors)
+						glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp + 3));
+					else if (!haveColors)
+						glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
 					else
 						glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
 				}
