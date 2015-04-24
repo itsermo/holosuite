@@ -25,7 +25,7 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	std::unique_ptr<holo::codec::IHoloCodec<holo::HoloCloud>> && decoderCloud,
 	std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioEncoder,
 	std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
-	std::unique_ptr<holo::render::IHoloRender> && render,
+	boost::shared_ptr<holo::render::IHoloRender> && render,
 	std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
 	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
 	) :

@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	std::unique_ptr<holo::codec::IHoloCodec<std::vector<unsigned char>>> encoderAudio = nullptr;
 	std::shared_ptr<holo::net::HoloNetClient> client = nullptr;
 	std::shared_ptr<holo::net::HoloNetServer> server = nullptr;
-	std::unique_ptr<holo::render::IHoloRender> renderer = nullptr;
+	boost::shared_ptr<holo::render::IHoloRender> renderer = nullptr;
 	std::unique_ptr<holo::HoloSession> clientSession = nullptr;
 	std::unique_ptr<holo::HoloSession> serverSession = nullptr;
 	std::unique_ptr<holo::HoloSession> directSession = nullptr;
@@ -647,6 +647,12 @@ int main(int argc, char *argv[])
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKII;
 		}
 #endif
+#ifdef ENABLE_HOLO_DSCP4
+		else if (vm["render-output"].as<std::string>().compare("dscp4") == 0)
+		{
+			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKIV;
+		}
+#endif
 		else if (vm["render-output"].as<std::string>().compare("opengl") == 0)
 		{
 			if (vm.count("enable-zspace"))
@@ -995,10 +1001,17 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_HOLO_DSCP2
 				case holo::render::RENDER_TYPE_DSCP_MKII:
 					renderer = holo::render::HoloRenderGenerator::fromDSCP2(dscp2HeadNumber, dscp2DisplayEnv);
-					break;
+#else
+					renderer = nullptr;
 #endif
+					break;
+
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
-					//TODO: implement mk iv dscp algo
+#ifdef ENABLE_HOLO_DSCP4
+					renderer = holo::render::HoloRenderGenerator::fromDSCP4();
+#else
+					renderer = nullptr;
+#endif
 					break;
 				case holo::render::RENDER_TYPE_NONE:
 				default:

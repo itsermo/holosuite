@@ -33,72 +33,77 @@ void HoloRenderObjectTracker::Add3DObject(const std::string & fileName)
 	LOG4CXX_INFO(logger_, "Loading 3D object file \'" << fileName << "\'...")
 	auto objectScene = assetImporter_.ReadFile(fileName, aiFlags);
 
-	boost::filesystem::path filePath(fileName);
-	std::string meshID = filePath.stem().string();
-
-	if (!objectScene->HasMeshes())
+	if (objectScene)
 	{
-		LOG4CXX_ERROR(logger_, "3D object file '" << fileName << "' does not appear to have any meshes")
-		return;
-	}
+		boost::filesystem::path filePath(fileName);
+		std::string meshID = filePath.stem().string();
 
-	for (unsigned int m = 0; m < objectScene->mNumMeshes; m++)
-	{
-		// if it has faces, treat as mesh, otherwise as point cloud
-		if (objectScene->mMeshes[m]->HasFaces())
+		if (!objectScene->HasMeshes())
 		{
-			LOG4CXX_INFO(logger_, meshID << " has " << objectScene->mMeshes[m]->mNumVertices << " vertices")
-			if (objectScene->mMeshes[m]->HasNormals())
+			LOG4CXX_ERROR(logger_, "3D object file '" << fileName << "' does not appear to have any meshes")
+				return;
+		}
+
+		for (unsigned int m = 0; m < objectScene->mNumMeshes; m++)
+		{
+			// if it has faces, treat as mesh, otherwise as point cloud
+			if (objectScene->mMeshes[m]->HasFaces())
 			{
-				LOG4CXX_INFO(logger_, meshID << " has normals")
+				LOG4CXX_INFO(logger_, meshID << " has " << objectScene->mMeshes[m]->mNumVertices << " vertices")
+				if (objectScene->mMeshes[m]->HasNormals())
+				{
+					LOG4CXX_INFO(logger_, meshID << " has normals")
+				}
+				else
+				{
+					LOG4CXX_WARN(logger_, meshID << " does not have normals, lighting effects will look fucked up")
+				}
+
+				LOG4CXX_INFO(logger_, meshID << " has " << objectScene->mMeshes[m]->mNumFaces << " faces")
+
+				if (objectScene->mMeshes[m]->HasVertexColors(0))
+				{
+					LOG4CXX_INFO(logger_, meshID << " has vertex colors")
+
+						auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
+						meshID,
+						objectScene->mMeshes[m]->mFaces[0].mNumIndices,
+						objectScene->mMeshes[m]->mNumVertices,
+						(float*)objectScene->mMeshes[m]->mVertices,
+						(float*)objectScene->mMeshes[m]->mNormals,
+						(float*)objectScene->mMeshes[m]->mColors[0]));
+
+					std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
+
+					objectMap_[meshID] = meshObject;
+				}
+				else
+				{
+					LOG4CXX_WARN(logger_, meshID << " does not have vertex colors--it may look dull")
+
+						auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
+						meshID,
+						objectScene->mMeshes[m]->mFaces[0].mNumIndices,
+						objectScene->mMeshes[m]->mNumVertices,
+						(float*)objectScene->mMeshes[m]->mVertices,
+						(float*)objectScene->mMeshes[m]->mNormals));
+
+					std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
+
+					objectMap_[meshID] = meshObject;
+
+				}
+
 			}
 			else
 			{
-				LOG4CXX_WARN(logger_, meshID << " does not have normals, lighting effects will look fucked up")
+				LOG4CXX_DEBUG(logger_, "Found mesh " << m << " with no faces.  Treating vertecies as point cloud")
 			}
-
-			LOG4CXX_INFO(logger_, meshID << " has " << objectScene->mMeshes[m]->mNumFaces << " faces")
-
-			if (objectScene->mMeshes[m]->HasVertexColors(0))
-			{
-				LOG4CXX_INFO(logger_, meshID << " has vertex colors")
-				
-				auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
-				meshID,
-				objectScene->mMeshes[m]->mFaces[0].mNumIndices,
-				objectScene->mMeshes[m]->mNumVertices,
-				(float*)objectScene->mMeshes[m]->mVertices,
-				(float*)objectScene->mMeshes[m]->mNormals,
-				(float*)objectScene->mMeshes[m]->mColors[0]));
-
-				std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
-
-				objectMap_[meshID] = meshObject;
-			}
-			else
-			{
-				LOG4CXX_WARN(logger_, meshID << " does not have vertex colors--it may look dull")
-			
-				auto meshObject = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(
-				meshID,
-				objectScene->mMeshes[m]->mFaces[0].mNumIndices,
-				objectScene->mMeshes[m]->mNumVertices,
-				(float*)objectScene->mMeshes[m]->mVertices,
-				(float*)objectScene->mMeshes[m]->mNormals));
-
-				std::unique_lock<std::mutex> objectMapLock(objectMapMutex_);
-
-				objectMap_[meshID] = meshObject;
-
-			}
-
 		}
-		else
-		{
-			LOG4CXX_DEBUG(logger_, "Found mesh " << m << " with no faces.  Treating vertecies as point cloud")
-		}
+
 	}
-
+	else
+		LOG4CXX_ERROR(logger_, "Could not read object file '" << fileName << "'")
 #else
 	LOG4CXX_ERROR(logger_, "Cannot load 3D object file, because holosuite was built without ASSIMP support")
 #endif

@@ -10,6 +10,10 @@
 #include "HoloRenderDSCP2.hpp"
 #endif
 
+#ifdef ENABLE_HOLO_DSCP4
+#include "HoloRenderDSCP4.hpp"
+#endif
+
 #include "HoloRenderOpenGL.hpp"
 
 #include <memory>
@@ -24,14 +28,14 @@ namespace holo
 			HoloRenderGenerator();
 			~HoloRenderGenerator();
 
-			static std::unique_ptr<IHoloRender> fromPCLVisualizer()
+			static boost::shared_ptr<IHoloRender> fromPCLVisualizer()
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer());
+				return boost::shared_ptr<IHoloRender>(new HoloRenderVisualizer());
 			}
 
-			static std::unique_ptr<IHoloRender> fromPCLVisualizer(int voxelSize, bool enableMeshConstruction)
+			static boost::shared_ptr<IHoloRender> fromPCLVisualizer(int voxelSize, bool enableMeshConstruction)
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderVisualizer(voxelSize, enableMeshConstruction));
+				return boost::shared_ptr<IHoloRender>(new HoloRenderVisualizer(voxelSize, enableMeshConstruction));
 			}
 
 #ifdef ENABLE_HOLO_AUDIO
@@ -47,25 +51,40 @@ namespace holo
 #endif
 
 #ifdef ENABLE_HOLO_DSCP2
-			static std::unique_ptr<IHoloRender> fromDSCP2()
+			static boost::shared_ptr<IHoloRender> fromDSCP2()
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2());
+				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP2());
 			}
 
-			static std::unique_ptr<IHoloRender> fromDSCP2(int headNumber, std::string displayEnv)
+			static boost::shared_ptr<IHoloRender> fromDSCP2(int headNumber, std::string displayEnv)
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderDSCP2(headNumber, displayEnv));
+				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP2(headNumber, displayEnv));
 			}
 #endif
 
-			static std::unique_ptr<IHoloRender> fromOpenGL()
+#ifdef ENABLE_HOLO_DSCP4
+			static boost::shared_ptr<IHoloRender> fromDSCP4()
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderOpenGL());
+				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP4());
 			}
 
-			static std::unique_ptr<IHoloRender> fromOpenGL(int voxelSize, bool enableZSpaceRendering)
+			static boost::shared_ptr<IHoloRender> fromDSCP4(render_options_t *render_options,
+				algorithm_options_t *algorithm_options,
+				display_options_t display_options,
+				unsigned int verbosity, void * logAppender = nullptr)
 			{
-				return std::unique_ptr<IHoloRender>(new HoloRenderOpenGL(voxelSize, enableZSpaceRendering));
+				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP4(render_options, algorithm_options, display_options, verbosity, logAppender));
+			}
+#endif
+
+			static boost::shared_ptr<IHoloRender> fromOpenGL()
+			{
+				return boost::shared_ptr<IHoloRender>(new HoloRenderOpenGL());
+			}
+
+			static boost::shared_ptr<IHoloRender> fromOpenGL(int voxelSize, bool enableZSpaceRendering)
+			{
+				return boost::shared_ptr<IHoloRender>(new HoloRenderOpenGL(voxelSize, enableZSpaceRendering));
 			}
 
 		};
