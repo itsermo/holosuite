@@ -42,6 +42,7 @@ void HoloRenderDSCP4::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 {
 	remoteCloud_ = pointCloud;
 	dscp4_AddPointCloud(context_, "remoteCloud", remoteCloud_->points.size(), remoteCloud_->points.data());
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 
 void HoloRenderDSCP4::updateLocalPointCloud(HoloCloudPtr && pointCloud)

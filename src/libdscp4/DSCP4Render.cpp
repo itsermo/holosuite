@@ -1195,19 +1195,12 @@ void DSCP4Render::drawMesh(mesh_t& mesh)
 	}
 	else
 	{
+		glDisable(GL_LIGHTING);
+		//glEnable(GL_COLOR_MATERIAL);
 		//glEnable(GL_POINT_SMOOTH);
-		//glPointSize(6.0f);
+		glPointSize(3.f);
 
-		//glBegin(GL_POINTS);
-
-		//glColor3f(1.f, 0.f, 0.f);
-
-		//for (int i = 0; i < 300; i++)
-		//	glVertex4f(i/100, i/100, 4.f,1.f);
-
-		//glEnd();
-
-		//glDisable(GL_POINT_SMOOTH);
+		//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
 		glBindBuffer(GL_ARRAY_BUFFER, mesh.info.gl_vertex_buf_id);
 		glBufferData(GL_ARRAY_BUFFER, mesh.info.num_vertices * CLOUD_PT_SIZE, mesh.vertices, GL_STREAM_DRAW);
@@ -1223,6 +1216,11 @@ void DSCP4Render::drawMesh(mesh_t& mesh)
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glDisable(GL_NORMALIZE);
+		glDisable(GL_COLOR_MATERIAL);
+		glEnable(GL_LIGHTING);
+		//glDisable(GL_POINT_SMOOTH);
 	}
 
 
@@ -1239,12 +1237,22 @@ void DSCP4Render::drawAllMeshes()
 
 		modelMatrix_ = glm::mat4();
 		modelMatrix_ *= viewMatrix_;
-		modelMatrix_ = glm::scale(modelMatrix_, glm::vec3(scaleFactor + transform.scale.x, scaleFactor + transform.scale.y, scaleFactor + transform.scale.z));
+
+		modelMatrix_ = glm::scale(modelMatrix_, glm::vec3(mesh.info.transform.scale.x, mesh.info.transform.scale.y, mesh.info.transform.scale.z));
+
+		if (renderOptions_->auto_scale_enabled)
+			modelMatrix_ = glm::scale(modelMatrix_, glm::vec3(scaleFactor, scaleFactor, scaleFactor));
 
 		modelMatrix_ = glm::translate(modelMatrix_, glm::vec3(
-			-mesh.info.bounding_sphere.x + transform.translate.x,
-			-mesh.info.bounding_sphere.y + transform.translate.y,
-			-mesh.info.bounding_sphere.z + transform.translate.z));
+			mesh.info.transform.translate.x,
+			mesh.info.transform.translate.y,
+			mesh.info.transform.translate.z));
+
+		if (renderOptions_->auto_scale_enabled)
+			modelMatrix_ = glm::translate(modelMatrix_, glm::vec3(
+				-mesh.info.bounding_sphere.x,
+				-mesh.info.bounding_sphere.y,
+				-mesh.info.bounding_sphere.z));
 
 		glLoadMatrixf(glm::value_ptr(modelMatrix_));
 
@@ -1272,6 +1280,10 @@ void DSCP4Render::addMesh(const char *id, int numIndecies, int numVertices, floa
 	mesh.info.gl_color_buf_id = -1;
 	mesh.info.gl_vertex_buf_id = -1;
 	mesh.info.gl_normal_buf_id = -1;
+
+	mesh.info.transform.scale.x = 1.f;
+	mesh.info.transform.scale.y = 1.f;
+	mesh.info.transform.scale.z = 1.f;
 
 	if (renderOptions_->auto_scale_enabled)
 	{
@@ -1333,6 +1345,12 @@ void DSCP4Render::addPointCloud(const char *id, unsigned int numPoints, void * c
 	mesh.info.gl_color_buf_id = -1;
 	mesh.info.gl_vertex_buf_id = -1;
 	mesh.info.gl_normal_buf_id = -1;
+
+	mesh.info.transform.scale.x = 3.7f;
+	mesh.info.transform.scale.y = 3.7f;
+	mesh.info.transform.scale.z = -3.7f;
+
+	mesh.info.transform.translate.z = -1.0f;
 
 	std::unique_lock<std::mutex> meshLock(meshMutex_);
 	if (meshes_.find(id) != meshes_.end())
