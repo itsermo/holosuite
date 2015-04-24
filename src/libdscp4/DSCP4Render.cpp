@@ -1198,7 +1198,7 @@ void DSCP4Render::drawMesh(mesh_t& mesh)
 		glDisable(GL_LIGHTING);
 		//glEnable(GL_COLOR_MATERIAL);
 		//glEnable(GL_POINT_SMOOTH);
-		glPointSize(3.f);
+		glPointSize(6.f);
 
 		//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
@@ -1332,7 +1332,8 @@ void DSCP4Render::addMesh(const char *id, int numIndecies, int numVertices, floa
 void DSCP4Render::addPointCloud(const char *id, unsigned int numPoints, void * cloudData)
 {
 	mesh_t mesh = { 0 };
-	mesh.vertices = cloudData;
+	mesh.vertices = new unsigned char[numPoints * 32];
+	memcpy(mesh.vertices, cloudData, numPoints * 32);
 	mesh.info.is_pcl_cloud = true;
 	mesh.info.num_color_channels = 4;
 	mesh.info.num_points_per_vertex = 3;
@@ -1346,16 +1347,17 @@ void DSCP4Render::addPointCloud(const char *id, unsigned int numPoints, void * c
 	mesh.info.gl_vertex_buf_id = -1;
 	mesh.info.gl_normal_buf_id = -1;
 
-	mesh.info.transform.scale.x = 3.7f;
-	mesh.info.transform.scale.y = 3.7f;
+	mesh.info.transform.scale.x = 5.0f;
+	mesh.info.transform.scale.y = 5.0f;
 	mesh.info.transform.scale.z = -3.7f;
 
-	mesh.info.transform.translate.z = -1.0f;
+	mesh.info.transform.translate.z = -0.75f;
 
 	std::unique_lock<std::mutex> meshLock(meshMutex_);
 	if (meshes_.find(id) != meshes_.end())
 	{
 		auto m = meshes_[id];
+		delete[] (unsigned char*)m.vertices;
 		mesh.info.gl_vertex_buf_id = m.info.gl_vertex_buf_id;
 		meshes_.erase(id);
 	}
