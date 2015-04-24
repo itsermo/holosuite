@@ -746,8 +746,8 @@ void HoloSession::renderLoop()
 			ulRemoteRGBAZData.unlock();
 			ulRemoteCloud.unlock();
 
-			HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
-			render_->updateRemotePointCloud(std::move(renderCloud));
+			//HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
+			render_->updateRemotePointCloud(std::move(remoteCloud_));
 		}
 		else
 		{
