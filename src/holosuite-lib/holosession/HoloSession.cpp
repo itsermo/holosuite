@@ -742,12 +742,12 @@ void HoloSession::renderLoop()
 			holo::utils::ReprojectToRealWorld(remoteCloud_, *remoteRGBAZ_, worldConvertCache_);
 
 			haveRemoteRGBAZ_ = false;
-
 			ulRemoteRGBAZData.unlock();
+
+			HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
 			ulRemoteCloud.unlock();
 
-			//HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
-			render_->updateRemotePointCloud(std::move(remoteCloud_));
+			render_->updateRemotePointCloud(std::move(renderCloud));
 		}
 		else
 		{
