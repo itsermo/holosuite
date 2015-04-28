@@ -17,17 +17,22 @@ find_package(Log4Cxx QUIET)
 # Look for the dscp4.h header file.
 find_path( DSCP4_INCLUDE_DIR
   NAMES dscp4.h
+  PATHS /usr/include /usr/local/include
   DOC "DSCP4 include directory" )
 mark_as_advanced( DSCP4_INCLUDE_DIR )
 
 # Look for the DSCP4 library.
 find_library( DSCP4_LIBRARY
-  NAMES libdscp4
+  NAMES libdscp4.so
+  PATH_SUFFIXES lib64 lib libs64 libs libs/Win32 libs/Win64
+  PATHS /usr /usr/local
   DOC "Path to DSCP4 library" )
 mark_as_advanced( DSCP4_LIBRARY )
 
-find_library( DSCP4_LIBRARY_DEBUG
+find_library(DSCP4_LIBRARY_DEBUG
   NAMES libdscp4d
+  PATH_SUFFIXES lib64 lib libs64 libs libs/Win32 libs/Win64
+  PATHS /usr /usr/local
   DOC "Path to DSCP4 library" )
 mark_as_advanced( DSCP4_LIBRARY_DEBUG )
 

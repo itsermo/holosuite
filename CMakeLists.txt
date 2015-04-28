@@ -49,7 +49,7 @@ OPTION(WITH_AUDIO "Enables audio compression and sampling for video conferencing
 OPTION(WITH_STATIC_LOG4CXX "Defines LOG4CXX_STATIC for use with static LOG4CXX libraries" OFF)
 OPTION(BOOST_DISABLE_AUTOLINK "Defines BOOST_ALL_NO_LIB macro to turn off boost auto linking" OFF)
 OPTION(WITH_DSCP2 "Enables compiling DSCP holographic render algorithm for MK II" OFF)
-OPTION(WITH_DSCP4 "Enables compiling DSCP holographic render algorithm for MK IV" OFF)
+OPTION(WITH_DSCP4 "Enables compiling DSCP holographic render algorithm for MK IV" ON)
 OPTION(WITH_UNITY_PLUGIN "Enables compiling of DLL plugin supported by Unity" OFF)
 OPTION(WITH_ZSPACE_API "Enables ZSpace API for OpenGL renderer" OFF)
 OPTION(WITH_LEAPSDK "Enables Leap SDK for user input" OFF)
