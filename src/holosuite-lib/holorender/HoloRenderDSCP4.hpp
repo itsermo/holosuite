@@ -6,7 +6,7 @@
 
 #include <log4cxx/log4cxx.h>
 
-#include <dscp4.h>
+#include <dscp4/dscp4.h>
 
 namespace holo
 {

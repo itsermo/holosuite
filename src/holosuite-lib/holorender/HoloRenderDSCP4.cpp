@@ -1,7 +1,7 @@
 #ifdef ENABLE_HOLO_DSCP4
 
 #include "HoloRenderDSCP4.hpp"
-#include <dscp4_defs.h>
+#include <dscp4/dscp4_defs.h>
 
 using namespace holo;
 using namespace holo::render;

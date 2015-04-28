@@ -17,6 +17,7 @@ find_package(Log4Cxx QUIET)
 # Look for the dscp4.h header file.
 find_path( DSCP4_INCLUDE_DIR
   NAMES dscp4.h
+  PATH_SUFFIXES dscp4
   DOC "DSCP4 include directory" )
 mark_as_advanced( DSCP4_INCLUDE_DIR )
 
