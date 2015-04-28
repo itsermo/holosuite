@@ -18,6 +18,7 @@ find_package(Log4Cxx QUIET)
 find_path( DSCP4_INCLUDE_DIR
   NAMES dscp4.h
   PATHS /usr/include /usr/local/include
+  PATH_SUFFIXES dscp4
   DOC "DSCP4 include directory" )
 mark_as_advanced( DSCP4_INCLUDE_DIR )
 
