@@ -52,15 +52,18 @@ int main(int argc, char *argv[])
 	holo::HoloAudioFormat audioCaptureFormat = { 0 };
 	holo::HoloAudioFormat audioRenderFormat = { 0 };
 	bool enableMeshConstruction = HOLO_RENDER_VISUALIZER_DEFAULT_ENABLE_MESH_CONSTRUCTION;
+
+
 #ifdef ENABLE_HOLO_DSCP2
 	int dscp2HeadNumber = 0;
 	std::string dscp2DisplayEnv;
 #endif
 
 #ifdef ENABLE_HOLO_DSCP4
-	algorithm_options_t *dscp4AlgorithmOptions = nullptr;
-	render_options_t *dscp4RenderOptions = nullptr;
-	display_options_t *dscp4DisplayOptions = nullptr;
+	std::string dscp4DisplayEnv;
+	algorithm_options_t dscp4AlgorithmOptions = { 0 };
+	render_options_t dscp4RenderOptions = { 0 };
+	display_options_t dscp4DisplayOptions = { 0 };
 #endif
 
 	bool enableZSpace = false;
@@ -206,6 +209,12 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_HOLO_DSCP2
 	render_options.add_options()("dscp2-head-number", boost::program_options::value<int>()->default_value(0), "DSCP2 instance head number")
 		("dscp2-display-env", boost::program_options::value<std::string>()->default_value(":0.0"), "X server display (e.g. \":0.0\")");
+#endif
+
+#ifdef ENABLE_HOLO_DSCP4
+	render_options.add_options()("dscp4-render-mode", boost::program_options::value<std::string>()->default_value("stereogram"), "valid settings are [modelview,stereogram,aerial,holovideo]")
+		("dscp4-display-env", boost::program_options::value<std::string>()->default_value(":0"), "X server display (e.g. \":0.0\")")
+		("dscp4-compute-method", boost::program_options::value<std::string>()->default_value("cuda"), "valid options are [cuda,opencl]");
 #endif
 
 #ifdef ENABLE_HOLO_ZSPACE
@@ -656,7 +665,7 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_HOLO_DSCP4
 		else if (vm["render-output"].as<std::string>().compare("dscp4") == 0)
 		{
-			dscp4RenderOptions = new render_options_t{
+			dscp4RenderOptions = render_options_t{
 				DSCP4_DEFAULT_RENDER_SHADERS_PATH,
 				DSCP4_DEFAULT_RENDER_KERNELS_PATH,
 				DSCP4_DEFAULT_RENDER_SHADER_FILENAME_PREFIX,
@@ -667,7 +676,7 @@ int main(int argc, char *argv[])
 				DSCP4_DEFAULT_RENDER_LIGHT_POS_Z,
 				DSCP4_DEFAULT_RENDER_AUTOSCALE_ENABLED };
 
-			dscp4AlgorithmOptions = new algorithm_options_t{
+			dscp4AlgorithmOptions = algorithm_options_t{
 				DSCP4_DEFAULT_ALGORITHM_NUM_VIEWS_X,
 				DSCP4_DEFAULT_ALGORITHM_NUM_VIEWS_Y,
 				DSCP4_DEFAULT_ALGORITHM_NUM_WAFELS,
@@ -694,7 +703,7 @@ int main(int argc, char *argv[])
 				DSCP4_DEFAULT_ALGORITHM_CUDA_BLOCK_DIM_Y },
 				algorithm_cache_t() };
 
-			dscp4DisplayOptions = new display_options_t{
+			dscp4DisplayOptions = display_options_t{
 				DSCP4_DEFAULT_DISPLAY_NAME,
 				DSCP4_DEFAULT_DISPLAY_X11_ENV_VAR,
 				DSCP4_DEFAULT_DISPLAY_NUM_HEADS,
@@ -709,6 +718,34 @@ int main(int argc, char *argv[])
 				DSCP4_DEFAULT_DISPLAY_PIXEL_CLOCK_RATE
 			};
 
+			if (vm["dscp4-render-mode"].as<std::string>().compare("modelview") == 0)
+			{
+				dscp4RenderOptions.render_mode = DSCP4_RENDER_MODE_MODEL_VIEWING;
+			}
+			else if (vm["dscp4-render-mode"].as<std::string>().compare("stereogram") == 0)
+			{
+				dscp4RenderOptions.render_mode = DSCP4_RENDER_MODE_STEREOGRAM_VIEWING;
+			}
+			else if (vm["dscp4-render-mode"].as<std::string>().compare("aerial") == 0)
+			{
+				dscp4RenderOptions.render_mode = DSCP4_RENDER_MODE_AERIAL_DISPLAY;
+			}
+			else if (vm["dscp4-render-mode"].as<std::string>().compare("holovideo") == 0)
+			{
+				dscp4RenderOptions.render_mode = DSCP4_RENDER_MODE_HOLOVIDEO_FRINGE;
+			}
+
+			dscp4DisplayEnv = vm["dscp4-display-env"].as<string>();
+			dscp4DisplayOptions.x11_env_var = dscp4DisplayEnv.c_str();
+
+			if (vm["dscp4-compute-method"].as<std::string>().compare("cuda") == 0)
+			{
+				dscp4AlgorithmOptions.compute_method = DSCP4_COMPUTE_METHOD_CUDA;
+			}
+			else if (vm["dscp4-compute-method"].as<std::string>().compare("opencl") == 0)
+			{
+				dscp4AlgorithmOptions.compute_method = DSCP4_COMPUTE_METHOD_OPENCL;
+			}
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKIV;
 		}
 #endif
@@ -1067,7 +1104,7 @@ int main(int argc, char *argv[])
 
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
 #ifdef ENABLE_HOLO_DSCP4
-					renderer = holo::render::HoloRenderGenerator::fromDSCP4();
+					renderer = holo::render::HoloRenderGenerator::fromDSCP4(&dscp4RenderOptions, &dscp4AlgorithmOptions, dscp4DisplayOptions, 6, (void*)logAppenderPtr);
 #else
 					renderer = nullptr;
 #endif
