@@ -41,7 +41,7 @@ void HoloRenderDSCP4::deinit()
 void HoloRenderDSCP4::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 {
 	remoteCloud_ = pointCloud;
-	dscp4_AddPointCloud(context_, "remoteCloud", remoteCloud_->points.size(), 1, remoteCloud_->points.data());
+	dscp4_AddPointCloud(context_, "remoteCloud", remoteCloud_->points.size(), 3, remoteCloud_->points.data());
 }
 
 void HoloRenderDSCP4::updateLocalPointCloud(HoloCloudPtr && pointCloud)

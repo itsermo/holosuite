@@ -50,13 +50,14 @@ OPTION(WITH_STATIC_LOG4CXX "Defines LOG4CXX_STATIC for use with static LOG4CXX l
 OPTION(BOOST_DISABLE_AUTOLINK "Defines BOOST_ALL_NO_LIB macro to turn off boost auto linking" OFF)
 OPTION(WITH_DSCP2 "Enables compiling DSCP holographic render algorithm for MK II" OFF)
 OPTION(WITH_DSCP4 "Enables compiling DSCP holographic render algorithm for MK IV" ON)
-OPTION(WITH_UNITY_PLUGIN "Enables compiling of DLL plugin supported by Unity" OFF)
 OPTION(WITH_ZSPACE_API "Enables ZSpace API for OpenGL renderer" OFF)
 OPTION(WITH_LEAPSDK "Enables Leap SDK for user input" OFF)
 OPTION(WITH_STATIC_FREEGLUT "Enables FREEGLUT_STATIC preprocessor macro" ON)
 #OPTION(WITH_ODE "Enables ODE Physics Engine support" OFF)
 OPTION(WITH_ASSIMP "Enables 3D object asset import" OFF)
 OPTION(WITH_TRACE_LOG "Enables trace log for FPS counting, could slow things down" OFF)
+OPTION(WITH_UDT "Uses UDT instead of TCP for networking. Requires UDT library." OFF)
+OPTION(WITH_STATIC_UDT "Uses static library of UDT" ${WIN32})
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)
@@ -161,7 +162,7 @@ FIND_PACKAGE(OpenCL QUIET)
 FIND_PACKAGE(X11 QUIET)
 FIND_PACKAGE(PNG QUIET)
 FIND_PACKAGE(DSCP4 QUIET)
-#FIND_PACKAGE(ODE)
+FIND_PACKAGE(UDT QUIET)
 
 IF(UNIX)
 	FIND_PACKAGE(X11)
@@ -175,7 +176,7 @@ IF((OPENGL_FOUND AND GLUT_FOUND AND CG_FOUND) OR (UNIX AND X11_FOUND AND OPENGL_
 	SET(WITH_DSCP2 YES)
 ENDIF()
 
-IF((OPENGL_FOUND AND GLUT_FOUND) OR (UNIX AND X11_FOUND AND OPENGL_FOUND AND GLUT_FOUND))
+IF(DSCP4_FOUND AND ((OPENGL_FOUND AND GLUT_FOUND) OR (UNIX AND X11_FOUND AND OPENGL_FOUND AND GLUT_FOUND)))
 	SET(WITH_DSCP4 YES)
 ENDIF()
 
@@ -187,16 +188,12 @@ IF(LEAP_FOUND)
 	SET(WITH_LEAPSDK YES)
 ENDIF()
 
-IF(ODE_FOUND)
-	SET(WITH_ODE YES)
-ENDIF()
-
 IF(assimp_FOUND)
 	SET(WITH_ASSIMP YES)
 ENDIF()
 
-IF(DSCP4_FOUND)
-	SET(WITH_DSCP4 YES)
+IF(UDT_FOUND)
+	SET(WITH_UDT YES)
 ENDIF()
 
 # enable trace logs for profiling and timing

@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
 	algorithm_options_t dscp4AlgorithmOptions = { 0 };
 	render_options_t dscp4RenderOptions = { 0 };
 	display_options_t dscp4DisplayOptions = { 0 };
+	unsigned int dscp4Verbosity = 0;
 #endif
 
 	bool enableZSpace = false;
@@ -214,7 +215,8 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_HOLO_DSCP4
 	render_options.add_options()("dscp4-render-mode", boost::program_options::value<std::string>()->default_value("stereogram"), "valid settings are [modelview,stereogram,aerial,holovideo]")
 		("dscp4-display-env", boost::program_options::value<std::string>()->default_value(":0"), "X server display (e.g. \":0.0\")")
-		("dscp4-compute-method", boost::program_options::value<std::string>()->default_value("cuda"), "valid options are [cuda,opencl]");
+		("dscp4-compute-method", boost::program_options::value<std::string>()->default_value("cuda"), "valid options are [cuda,opencl]")
+		("dscp4-verbosity", boost::program_options::value<unsigned int>()->default_value(3), "valid options are [0-6]");
 #endif
 
 #ifdef ENABLE_HOLO_ZSPACE
@@ -746,6 +748,10 @@ int main(int argc, char *argv[])
 			{
 				dscp4AlgorithmOptions.compute_method = DSCP4_COMPUTE_METHOD_OPENCL;
 			}
+
+			if (vm.count("dscp4-verbosity"))
+				dscp4Verbosity = vm["dscp4-verbosity"].as<unsigned int>();
+
 			renderType = holo::render::RENDER_TYPE::RENDER_TYPE_DSCP_MKIV;
 		}
 #endif
@@ -1104,7 +1110,7 @@ int main(int argc, char *argv[])
 
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
 #ifdef ENABLE_HOLO_DSCP4
-					renderer = holo::render::HoloRenderGenerator::fromDSCP4(&dscp4RenderOptions, &dscp4AlgorithmOptions, dscp4DisplayOptions, 6, (void*)logAppenderPtr);
+					renderer = holo::render::HoloRenderGenerator::fromDSCP4(&dscp4RenderOptions, &dscp4AlgorithmOptions, dscp4DisplayOptions, dscp4Verbosity, (void*)logAppenderPtr);
 #else
 					renderer = nullptr;
 #endif
