@@ -64,7 +64,7 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 		throw std::exception();
 	}
 
-	std::this_thread::sleep_for(std::chrono::seconds(5));
+	//std::this_thread::sleep_for(std::chrono::seconds(5));
 
 	if (UDT::ERROR == UDT::connect(socket, peer->ai_addr, peer->ai_addrlen))
 	{
