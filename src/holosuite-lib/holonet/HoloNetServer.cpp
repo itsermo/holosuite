@@ -80,6 +80,9 @@ void HoloNetServer::listenLoop()
 	}
 
 	UDTSOCKET serv = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	int ret = UDT::setsockopt(serv, 0, UDT_MSS, new int(9000), sizeof(int));
+	ret = UDT::setsockopt(serv, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
+	ret = UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
 
 	if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen))
 	{

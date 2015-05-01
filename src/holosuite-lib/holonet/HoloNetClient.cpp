@@ -52,9 +52,10 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	}
 
 	UDTSOCKET socket = UDT::socket(local->ai_family, local->ai_socktype, local->ai_protocol);
-#ifdef WIN32
-	UDT::setsockopt(socket, 0, UDT_MSS, new int(1052), sizeof(int));
-#endif
+
+	int ret = UDT::setsockopt(socket, 0, UDT_MSS, new int(9000), sizeof(int));
+	ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
+	ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
 
 	freeaddrinfo(local);
 
