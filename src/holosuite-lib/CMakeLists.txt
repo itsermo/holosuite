@@ -13,6 +13,11 @@ file(GLOB_RECURSE LIB_SRC_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cl
 )
 
+file(GLOB_RECURSE LIB_H_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+)
+
 foreach(f ${LIB_SRC_FILES})
     # Get the path of the file relative to ${DIRECTORY},
     # then alter it (not compulsory)
@@ -27,7 +32,11 @@ foreach(f ${LIB_SRC_FILES})
     source_group("${SRCGR}" FILES ${f})
 endforeach()
 
-ADD_LIBRARY(holosuite-lib ${LIB_SRC_FILES})
+if(BUILD_HOLOSUITE_LIB_STATIC)
+	ADD_LIBRARY(holosuite-lib STATIC ${LIB_SRC_FILES})
+else()
+	ADD_LIBRARY(holosuite-lib SHARED ${LIB_SRC_FILES})
+endif()
 
 TARGET_INCLUDE_DIRECTORIES (holosuite-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -108,20 +117,29 @@ file(GLOB SHADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/holoshaders/*.cg
 )
 
 # Copy shader files
-add_custom_target(copy-shader-files)
+#add_custom_target(copy-shader-files)
 #get_target_property(MyTargetLocation holosuite-lib LOCATION)
 #get_filename_component(MyTargetDir ${MyTargetLocation} PATH)
 
-foreach(SHADER_FILE ${SHADER_FILES})
-  add_custom_command(TARGET copy-shader-files PRE_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E
-                         copy_if_different ${SHADER_FILE} ${SHADER_OUTPUT_PATH})
-  IF(WIN32)
-    add_custom_command(TARGET copy-shader-files PRE_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E
-                         copy_if_different ${SHADER_FILE} ${CMAKE_BINARY_DIR}/src)
-  ENDIF()
-endforeach()
-add_dependencies(holosuite-lib copy-shader-files)
+#foreach(SHADER_FILE ${SHADER_FILES})
+#  add_custom_command(TARGET copy-shader-files PRE_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E
+#                         copy_if_different ${SHADER_FILE} ${SHADER_OUTPUT_PATH})
+#  IF(WIN32)
+#    add_custom_command(TARGET copy-shader-files PRE_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E
+#                         copy_if_different ${SHADER_FILE} ${CMAKE_BINARY_DIR}/src)
+#  ENDIF()
+#endforeach()
+#add_dependencies(holosuite-lib copy-shader-files)
 
-#INSTALL(TARGETS ${holosuite_BIN} DESTINATION bin)
+INSTALL(TARGETS holosuite-lib DESTINATION lib)
+
+foreach ( file ${LIB_H_FILES} )
+    #get_filename_component( dir ${file} DIRECTORY )
+    file(RELATIVE_PATH H_GR_FILE ${CMAKE_CURRENT_SOURCE_DIR} ${file})
+    get_filename_component(dir ${H_GR_FILE} DIRECTORY)
+    install(FILES ${file} DESTINATION include/holosuite/${dir} )
+endforeach()
+
+INSTALL(FILES ${SHADER_FILES} DESTINATION "${CMAKE_INSTALL_PREFIX}/share/holosuite/shaders")

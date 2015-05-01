@@ -59,6 +59,7 @@ OPTION(WITH_TRACE_LOG "Enables trace log for FPS counting, could slow things dow
 OPTION(WITH_UDT "Uses UDT instead of TCP for networking. Requires UDT library." OFF)
 OPTION(WITH_STATIC_UDT "Uses static library of UDT" ${WIN32})
 OPTION(WITH_STATIC_GLEW "Uses GLEW static library linking" ${WIN32})
+OPTION(BUILD_HOLOSUITE_LIB_STATIC "Builds the library as static" OFF)
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)
@@ -219,10 +220,38 @@ FOREACH (CONFIGINPUT ${CONFIGINPUTS})
     CONFIGURE_FILE ("${CONFIGINPUT}" "${CONFIGOUTPUT2}")
 ENDFOREACH (CONFIGINPUT ${CONFIGINPUTS})
 
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+
+# the RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
 #
 # Add Build Targets
 #
 ADD_SUBDIRECTORY(src)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 #
 # Add Install Targets
