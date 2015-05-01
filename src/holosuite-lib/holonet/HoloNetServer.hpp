@@ -37,8 +37,12 @@ namespace holo
 			std::thread listenThread_;
 			void listenLoop();
 
+#ifdef ENABLE_HOLO_UDT
+
+#else
 			boost::shared_ptr<boost::asio::io_service> io_service_;
 			boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
+#endif
 
 			log4cxx::LoggerPtr logger_;
 		};

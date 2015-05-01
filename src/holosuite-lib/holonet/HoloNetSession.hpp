@@ -8,6 +8,10 @@
 #include <condition_variable>
 #include <atomic>
 
+#ifdef ENABLE_HOLO_UDT
+#include <udt.h>
+#endif
+
 namespace holo
 {
 	namespace net
@@ -24,7 +28,11 @@ namespace holo
 
 			bool isConnected();
 
+#ifdef ENABLE_HOLO_UDT
+			void performHandshake(HoloNetProtocolHandshake localInfo, UDTSOCKET socket);
+#else
 			void performHandshake(HoloNetProtocolHandshake localInfo, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
+#endif
 
 			static HoloNetProtocolHandshake GetHandshakeFromPacket(boost::shared_ptr<HoloNetPacket> & packet);
 
@@ -33,22 +41,36 @@ namespace holo
 		protected:
 			void start();
 
-			void addSocket(boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+#ifdef ENABLE_HOLO_UDT
+			void addSocket(UDTSOCKET socket)
 			{
-				//std::lock_guard<std::mutex> lg(socketListMutex_);
 				this->sockets_.push_back(socket);
 			}
 
-			std::thread sendQueueThread_;
-			//std::thread recvQueueThread_;
+			std::vector<UDTSOCKET> sockets_;
+#else
+			void addSocket(boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+			{
+				this->sockets_.push_back(socket);
+			}
+
 			std::vector<boost::shared_ptr<boost::asio::ip::tcp::socket>> sockets_;
+#endif
+
+			std::thread sendQueueThread_;
+
+
 			void sendLoop();
-			//void recvLoop();
 
 			bool isConnected_;
 
+#ifdef ENABLE_HOLO_UDT
+			static void sendPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSOCKET socket);
+			static void recvPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSOCKET socket);
+#else
 			static void sendPacket(boost::shared_ptr<HoloNetPacket> & packet, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
 			static void recvPacket(boost::shared_ptr<HoloNetPacket> & packet, boost::shared_ptr<boost::asio::ip::tcp::socket> socket);
+#endif
 
 		private:
 
@@ -57,17 +79,12 @@ namespace holo
 
 			std::mutex socketListMutex_;
 
-			//void popRemotePacket(boost::shared_ptr<HoloNetPacket> & packet);
-			//void pushRemotePacket(boost::shared_ptr<HoloNetPacket> && packet);
-
 			std::queue<boost::shared_ptr<HoloNetPacket>> sendQueue_;
-			//std::queue<boost::shared_ptr<HoloNetPacket>> recvQueue_;
+
 			std::mutex sendQueueMutex_;
-			//std::mutex recvQueueMutex_;
 
 			std::condition_variable haveLocalPacketCV_;
 			std::atomic<bool> haveLocalPacket_;
-			//std::condition_variable haveNewRemotePacket_;
 
 			std::atomic<bool> shouldSend_;
 

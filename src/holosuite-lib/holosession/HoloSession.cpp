@@ -354,86 +354,89 @@ void HoloSession::netRecvLoop()
 			return;
 		}
 
-		switch (recvPacket->type)
+		if (recvPacket)
 		{
-		case HOLO_NET_PACKET_TYPE_HANDSHAKE:
-			remoteInfo_ = holo::net::HoloNetSession::GetHandshakeFromPacket(recvPacket);
-			break;
-		case HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT:
-			//shouldRecv_ = false;
-			//if (isRunning())
-				std::async(std::launch::async, &HoloSession::stop, this);
-			return;
-		case HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED:
-		{
-			std::unique_lock<std::mutex> rccLock(remoteCloudCompressedMutex_);
-			if (remoteCloudCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-				remoteCloudCompressed_.push(boost::make_shared <std::vector<uchar>>(recvPacket->value));
-			else
-				LOG4CXX_WARN(logger_, "Dropping compressed point cloud packets from receive function")
-			//remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
-			rccLock.unlock();
-			haveRemoteCloudCompressed_ = true;
-			haveRemoteCloudCompressedCV_.notify_all();
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED:
-		{
-			std::unique_lock<std::mutex> racLock(remoteAudioCompressedMutex_);
-			//*remoteAudioCompressed_ = recvPacket->value;
-			if (remoteAudioCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-				remoteAudioCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
-			else
-				LOG4CXX_WARN(logger_, "Dropping compressed audio packets from receive function")
-			racLock.unlock();
-			haveRemoteAudioCompressed_ = true;
-			haveRemoteAudioCompressedCV_.notify_all();
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED:
-		{
-			std::unique_lock<std::mutex> rgbazLock(remoteRGBAZCompressedMutex_);
-			if (remoteRGBAZCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-				remoteRGBAZCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
-			else
-				LOG4CXX_WARN(logger_, "Dropping compressed RGBAZ packets from receive function")
-			rgbazLock.unlock();
-			haveRemoteRGBAZCompressed_ = true;
-			haveRemoteRGBAZCompressedCV_.notify_all();
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_OBJECT_ADD:
-		{
-			auto obj = boost::shared_ptr<holo::render::HoloRender3DObject>(new holo::render::HoloRender3DObject(recvPacket));
-			objectTracker_->Add3DObject(obj);
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_OBJECT_DEL:
-		{
-			throw std::exception();
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER:
-		{
-			std::string objectName;
-			bool amOwner;
-			std::tie(objectName, amOwner) = holo::render::HoloRender3DObject::GetChangeOwnerInfoFromPacket(recvPacket);
-			objectTracker_->SetObjectOwner(objectName, amOwner);
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
-		{
-			std::unique_lock<std::mutex> objUpdateLock(remoteObjectDataMutex_);
-			remoteObjectStateData_.push_back(holo::render::HoloRender3DObject::GetTransformFromPacket(recvPacket));
-			objUpdateLock.unlock();
-			haveRemoteObjectData_ = true;
-			haveRemoteObjectDataCV_.notify_all();
-			break;
-		}
-		case HOLO_NET_PACKET_TYPE_UNKNOWN:
-		default:
-			LOG4CXX_ERROR(logger_, "Unknown network packet type received")
-			break;
+			switch (recvPacket->type)
+			{
+			case HOLO_NET_PACKET_TYPE_HANDSHAKE:
+				remoteInfo_ = holo::net::HoloNetSession::GetHandshakeFromPacket(recvPacket);
+				break;
+			case HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT:
+				//shouldRecv_ = false;
+				//if (isRunning())
+					std::async(std::launch::async, &HoloSession::stop, this);
+				return;
+			case HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED:
+			{
+				std::unique_lock<std::mutex> rccLock(remoteCloudCompressedMutex_);
+				if (remoteCloudCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+					remoteCloudCompressed_.push(boost::make_shared <std::vector<uchar>>(recvPacket->value));
+				else
+					LOG4CXX_WARN(logger_, "Dropping compressed point cloud packets from receive function")
+				//remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
+				rccLock.unlock();
+				haveRemoteCloudCompressed_ = true;
+				haveRemoteCloudCompressedCV_.notify_all();
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED:
+			{
+				std::unique_lock<std::mutex> racLock(remoteAudioCompressedMutex_);
+				//*remoteAudioCompressed_ = recvPacket->value;
+				if (remoteAudioCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+					remoteAudioCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+				else
+					LOG4CXX_WARN(logger_, "Dropping compressed audio packets from receive function")
+				racLock.unlock();
+				haveRemoteAudioCompressed_ = true;
+				haveRemoteAudioCompressedCV_.notify_all();
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED:
+			{
+				std::unique_lock<std::mutex> rgbazLock(remoteRGBAZCompressedMutex_);
+				if (remoteRGBAZCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
+					remoteRGBAZCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+				else
+					LOG4CXX_WARN(logger_, "Dropping compressed RGBAZ packets from receive function")
+				rgbazLock.unlock();
+				haveRemoteRGBAZCompressed_ = true;
+				haveRemoteRGBAZCompressedCV_.notify_all();
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_OBJECT_ADD:
+			{
+				auto obj = boost::shared_ptr<holo::render::HoloRender3DObject>(new holo::render::HoloRender3DObject(recvPacket));
+				objectTracker_->Add3DObject(obj);
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_OBJECT_DEL:
+			{
+				throw std::exception();
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER:
+			{
+				std::string objectName;
+				bool amOwner;
+				std::tie(objectName, amOwner) = holo::render::HoloRender3DObject::GetChangeOwnerInfoFromPacket(recvPacket);
+				objectTracker_->SetObjectOwner(objectName, amOwner);
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_OBJECT_UPDATE:
+			{
+				std::unique_lock<std::mutex> objUpdateLock(remoteObjectDataMutex_);
+				remoteObjectStateData_.push_back(holo::render::HoloRender3DObject::GetTransformFromPacket(recvPacket));
+				objUpdateLock.unlock();
+				haveRemoteObjectData_ = true;
+				haveRemoteObjectDataCV_.notify_all();
+				break;
+			}
+			case HOLO_NET_PACKET_TYPE_UNKNOWN:
+			default:
+				LOG4CXX_ERROR(logger_, "Unknown network packet type received")
+				break;
+			}
 		}
 	}
 }

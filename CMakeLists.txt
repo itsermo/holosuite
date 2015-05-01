@@ -58,6 +58,7 @@ OPTION(WITH_ASSIMP "Enables 3D object asset import" OFF)
 OPTION(WITH_TRACE_LOG "Enables trace log for FPS counting, could slow things down" OFF)
 OPTION(WITH_UDT "Uses UDT instead of TCP for networking. Requires UDT library." OFF)
 OPTION(WITH_STATIC_UDT "Uses static library of UDT" ${WIN32})
+OPTION(WITH_STATIC_GLEW "Uses GLEW static library linking" ${WIN32})
 
 IF(MSVC)
 	OPTION(WITH_VS_FOLDERS "Organizes project source code into folders for Visual Studio" ON)

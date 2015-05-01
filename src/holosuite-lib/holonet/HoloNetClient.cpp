@@ -9,13 +9,22 @@ HoloNetClient::HoloNetClient() : HoloNetSession()
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.net.client");
 
 	LOG4CXX_TRACE(logger_, "Instantiating HoloClient object");
+
+#ifndef ENABLE_HOLO_UDT
 	resolver_ = boost::shared_ptr<boost::asio::ip::tcp::resolver>(new boost::asio::ip::tcp::resolver(io_service_));
+#else
+	UDT::startup();
+#endif
 }
 
 HoloNetClient::~HoloNetClient()
 {
 	LOG4CXX_TRACE(logger_, "Destroying HoloClient object");
 	disconnect();
+
+#ifdef ENABLE_HOLO_UDT
+	UDT::cleanup();
+#endif
 }
 
 HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, HoloNetProtocolHandshake localInfo)
@@ -24,6 +33,48 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	LOG4CXX_INFO(logger_, "Resolving address " << address << ":" << port);
 
+#ifdef ENABLE_HOLO_UDT
+	struct addrinfo hints, *local, *peer;
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	//hints.ai_socktype = SOCK_DGRAM;
+
+	std::string portstr(std::to_string(port));
+
+	if (0 != getaddrinfo(NULL, portstr.c_str(), &hints, &local))
+	{
+		LOG4CXX_ERROR(logger_, "Incorrect network address")
+		throw std::exception();
+	}
+
+	UDTSOCKET socket = UDT::socket(local->ai_family, local->ai_socktype, local->ai_protocol);
+#ifdef WIN32
+	UDT::setsockopt(socket, 0, UDT_MSS, new int(1052), sizeof(int));
+#endif
+
+	freeaddrinfo(local);
+
+	if (0 != getaddrinfo(address.c_str(), portstr.c_str(), &hints, &peer))
+	{
+		LOG4CXX_ERROR(logger_, "Incorrect server/peer address " << address << ":" << port)
+		throw std::exception();
+	}
+
+	std::this_thread::sleep_for(std::chrono::seconds(5));
+
+	if (UDT::ERROR == UDT::connect(socket, peer->ai_addr, peer->ai_addrlen))
+	{
+		LOG4CXX_ERROR(logger_, "Connecting UDT socket: " << UDT::getlasterror().getErrorMessage())
+		throw std::exception();
+	}
+
+	freeaddrinfo(peer);
+
+#else
 	auto socket = boost::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(io_service_));
 
 	boost::asio::ip::tcp::resolver::query query(address.c_str(), std::to_string(port));
@@ -43,9 +94,6 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 		throw boost::system::system_error(error);
 	}
 
-	isConnected_ = true;
-	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
-
 	socket->set_option(boost::asio::ip::tcp::no_delay(true), error);
 	if (error)
 	{
@@ -53,6 +101,11 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	}
 	socket->set_option(boost::asio::socket_base::send_buffer_size(65536));
 	socket->set_option(boost::asio::socket_base::receive_buffer_size(65536));
+
+#endif
+
+	isConnected_ = true;
+	LOG4CXX_INFO(logger_, "Connected to " << address << ":" << port);
 
 	performHandshake(localInfo, socket);
 

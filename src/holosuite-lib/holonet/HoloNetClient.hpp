@@ -22,10 +22,12 @@ namespace holo
 
 		private:
 
-			boost::asio::io_service io_service_;
+#ifdef ENABLE_HOLO_UDT
+			boost::shared_ptr<boost::asio::ip::udp::resolver> resolver_;
+#else
 			boost::shared_ptr<boost::asio::ip::tcp::resolver> resolver_;
-			
-
+			boost::asio::io_service io_service_;
+#endif
 			log4cxx::LoggerPtr logger_;
 		};
 	}
