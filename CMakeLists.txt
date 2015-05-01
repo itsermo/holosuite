@@ -193,10 +193,6 @@ IF(assimp_FOUND)
 	SET(WITH_ASSIMP YES)
 ENDIF()
 
-IF(UDT_FOUND)
-	SET(WITH_UDT YES)
-ENDIF()
-
 # enable trace logs for profiling and timing
 IF(WITH_TRACE_LOG)
 	ADD_DEFINITIONS(-DTRACE_LOG_ENABLED)
