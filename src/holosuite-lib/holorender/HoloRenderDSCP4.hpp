@@ -18,7 +18,7 @@ namespace holo
 			HoloRenderDSCP4();
 			HoloRenderDSCP4(render_options_t *render_options,
 				algorithm_options_t *algorithm_options,
-				display_options_t display_options,
+				display_options_t display_options, unsigned int voxelSize,
 				unsigned int verbosity, void * logAppender = nullptr);
 			~HoloRenderDSCP4();
 
@@ -51,6 +51,10 @@ namespace holo
 			display_options_t displayOptions_;
 
 			boost::shared_ptr<HoloRenderObjectTracker> objectTracker_;
+
+			unsigned int voxelSize_;
+
+			bool firstRun_;
 
 		};
 	}

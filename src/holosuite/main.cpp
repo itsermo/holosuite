@@ -1110,7 +1110,7 @@ int main(int argc, char *argv[])
 
 				case holo::render::RENDER_TYPE_DSCP_MKIV:
 #ifdef ENABLE_HOLO_DSCP4
-					renderer = holo::render::HoloRenderGenerator::fromDSCP4(&dscp4RenderOptions, &dscp4AlgorithmOptions, dscp4DisplayOptions, dscp4Verbosity, (void*)logAppenderPtr);
+					renderer = holo::render::HoloRenderGenerator::fromDSCP4(&dscp4RenderOptions, &dscp4AlgorithmOptions, dscp4DisplayOptions, voxelSize, dscp4Verbosity, (void*)logAppenderPtr);
 #else
 					renderer = nullptr;
 #endif

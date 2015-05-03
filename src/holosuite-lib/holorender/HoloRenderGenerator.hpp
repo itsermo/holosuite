@@ -71,9 +71,10 @@ namespace holo
 			static boost::shared_ptr<IHoloRender> fromDSCP4(render_options_t *render_options,
 				algorithm_options_t *algorithm_options,
 				display_options_t display_options,
+				unsigned int voxelSize,
 				unsigned int verbosity, void * logAppender = nullptr)
 			{
-				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP4(render_options, algorithm_options, display_options, verbosity, logAppender));
+				return boost::shared_ptr<IHoloRender>(new HoloRenderDSCP4(render_options, algorithm_options, display_options, voxelSize, verbosity, logAppender));
 			}
 #endif
 
