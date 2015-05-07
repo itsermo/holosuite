@@ -42,6 +42,9 @@ void holo::utils::ReprojectToRealWorld(HoloCloudPtr& cloudOut, HoloRGBAZMat& rgb
 			point->z = depthVal;
 
 			point->rgba = *pp;
+			//point->r = abs(point->z) * 1024.f;
+			//point->g = abs(point->y) * 255.f;
+			//point->b = point->z * 512.f;
 		}
 	}
 
