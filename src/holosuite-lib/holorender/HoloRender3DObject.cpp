@@ -188,32 +188,42 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		std::async(std::launch::async,
 		[&]()
 	{
-		normals_ = new unsigned char[normalSize_];
-		// copy and convert normal floats from network to host endianness
-		memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
-		float * realVal = (float*)normals_;
-		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
+		if (normalSize_ > 0)
 		{
-			unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
-			*realVal = reinterpret_cast<float&>(netVal);
-			realVal++;
+			normals_ = new unsigned char[normalSize_];
+			// copy and convert normal floats from network to host endianness
+			memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
+			float * realVal = (float*)normals_;
+			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
+			{
+				unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
+				*realVal = reinterpret_cast<float&>(netVal);
+				realVal++;
+			}
 		}
+		else
+			normals_ = nullptr;
 	});
 
 	std::future<void> colorFuture =
 		std::async(std::launch::async,
 		[&]()
 	{
-		colors_ = new unsigned char[colorSize_];
-		// copy and convert color floats from network to host endianness
-		memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
-		float * realVal = (float*)colors_;
-		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
+		if (colorSize_ > 0)
 		{
-			unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
-			*realVal = reinterpret_cast<float&>(netVal);
-			realVal++;
+			colors_ = new unsigned char[colorSize_];
+			// copy and convert color floats from network to host endianness
+			memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
+			float * realVal = (float*)colors_;
+			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
+			{
+				unsigned int netVal = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<unsigned int*>(realVal));
+				*realVal = reinterpret_cast<float&>(netVal);
+				realVal++;
+			}
 		}
+		else
+			colors_ = nullptr;
 	});
 
 	// create the name string
@@ -324,42 +334,49 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 		std::async(std::launch::async,
 		[&]()
 	{
-		unsigned char * normals = new unsigned char[normalSize_];
-		unsigned int * np = (unsigned int*)normals;
-
-		// copy and convert normal floats to network endianness
-		float * realVal = (float*)normals_;
-		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
+		if (normalSize_ > 0)
 		{
-			*np = boost::asio::detail::socket_ops::host_to_network_long(*reinterpret_cast<unsigned int*>(realVal));
-			np++;
-			realVal++;
+
+			unsigned char * normals = new unsigned char[normalSize_];
+			unsigned int * np = (unsigned int*)normals;
+
+			// copy and convert normal floats to network endianness
+			float * realVal = (float*)normals_;
+			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
+			{
+				*np = boost::asio::detail::socket_ops::host_to_network_long(*reinterpret_cast<unsigned int*>(realVal));
+				np++;
+				realVal++;
+			}
+
+			memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
+
+			delete[] normals;
 		}
-
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
-
-		delete[] normals;
 	});
 
 	std::future<void> colorFuture =
 		std::async(std::launch::async,
 		[&]()
 	{
-		unsigned char * colors = new unsigned char[colorSize_];
-		unsigned int *cp = (unsigned int*)colors;
-
-		// copy and convert color floats from host to network endianness
-		float *realVal = (float*)colors_;
-		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
+		if (colorSize_ > 0)
 		{
-			*cp = boost::asio::detail::socket_ops::host_to_network_long(*reinterpret_cast<unsigned int*>(realVal));
-			cp++;
-			realVal++;
+			unsigned char * colors = new unsigned char[colorSize_];
+			unsigned int *cp = (unsigned int*)colors;
+
+			// copy and convert color floats from host to network endianness
+			float *realVal = (float*)colors_;
+			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
+			{
+				*cp = boost::asio::detail::socket_ops::host_to_network_long(*reinterpret_cast<unsigned int*>(realVal));
+				cp++;
+				realVal++;
+			}
+
+			memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, colorSize_);
+
+			delete[] colors;
 		}
-
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, colorSize_);
-
-		delete[] colors;
 	});
 
 	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_ + colorSize_, objectName_.data(), objectName_.size());
