@@ -35,16 +35,16 @@ HoloCodecH264::HoloCodecH264() : IHoloCodec<HoloRGBAZMat>(),
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.codec.h264");
 
-	AVRational rat;
-	rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
-	rat.den = HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN;
+	//AVRational rat;
+	//rat.num = HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM;
+	//rat.den = HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN;
 
 	args_.bitRate = HOLO_CODEC_H264_DEFAULT_BITRATE;
 	args_.width = HOLO_CODEC_H264_DEFAULT_WIDTH;
 	args_.height = HOLO_CODEC_H264_DEFAULT_HEIGHT;
 	args_.gopSize = HOLO_CODEC_H264_DEFAULT_GOPSIZE;
 	args_.maxBFrames = HOLO_CODEC_H264_DEFAULT_MAXBFRAMES;
-	args_.timeBase = rat;
+	args_.timeBase = { HOLO_CODEC_H264_DEFAULT_TIMEBASE_NUM, HOLO_CODEC_H264_DEFAULT_TIMEBASE_DEN };
 	args_.pixelFormat = HOLO_CODEC_H264_DEFAULT_PIXELFMT;
 	args_.crf = HOLO_CODEC_H264_DEFAULT_CRF;
 	args_.zCompressionLevel = HOLO_CODEC_H264_DEFAULT_ZCOMPRESSIONLEVEL;
@@ -116,7 +116,7 @@ bool HoloCodecH264::init(CODEC_MODE encodeOrDecode)
 		encoderCtx_->gop_size = args_.gopSize;
 		encoderCtx_->max_b_frames = args_.maxBFrames;
 		encoderCtx_->pix_fmt = args_.pixelFormat;
-		//encoderCtx_->thread_count = 2;
+		//encoderCtx_->thread_count = 4;
 		encoderCtx_->delay = 0;
 		encoderCtx_->rc_buffer_size = 20000000;
 

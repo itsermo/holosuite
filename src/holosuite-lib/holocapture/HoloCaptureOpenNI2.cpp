@@ -222,10 +222,22 @@ bool HoloCaptureOpenNI2::init(int which)
 		return false;
 	}
 
+	if (!(zHOV_ > 0))
+	{
+		zHOV_ = 58.f * M_PI / 180.f;
+		LOG4CXX_WARN(logger_, "Got a bogus horizontal field-of-view from depth stream. Setting HOV to 58 deg.")
+	}
+
 	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &zVOV_) != Status::STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
 		return false;
+	}
+
+	if (!(zVOV_ > 0))
+	{
+		zVOV_ = 45.f * M_PI / 180.f;
+		LOG4CXX_WARN(logger_, "Got a bogus vertical field-of-view from depth stream. Setting VOV to 45 deg.")
 	}
 
 	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &rgbHOV_) != Status::STATUS_OK)
@@ -234,10 +246,22 @@ bool HoloCaptureOpenNI2::init(int which)
 		rgbHOV_ = zHOV_;
 	}
 
+	if (!(rgbHOV_ > 0))
+	{
+		rgbHOV_ = 58.f * M_PI / 180.f;
+		LOG4CXX_WARN(logger_, "Got a bogus horizontal field-of-view from color stream. Setting HOV to 58 deg.")
+	}
+
 	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &rgbVOV_) != Status::STATUS_OK)
 	{
 		LOG4CXX_WARN(logger_, "Could not get VOV from color stream. Using depth value instead.");
 		rgbVOV_ = zVOV_;
+	}
+
+	if (!(rgbVOV_ > 0))
+	{
+		rgbVOV_ = 45.f * M_PI / 180.f;
+		LOG4CXX_WARN(logger_, "Got a bogus vertical field-of-view from color stream. Setting VOV to 58 deg.")
 	}
 
 	// constants for reprojecting the point cloud to real-world coordinates
@@ -351,42 +375,9 @@ void HoloCaptureOpenNI2::waitAndGetNextPointCloud(HoloCloudPtr& pointCloud)
 
 		waitAndGetNextFrame(mats.rgba, mats.z);
 
-		//const unsigned char * pp = (const unsigned char*)color.getData();
-		//const unsigned short *depthPix = (unsigned short*)depth.getData();
-
-		//HoloPoint3D * point = &pointCloud_->points[0];
-
-		//float depthVal = HOLO_CLOUD_BAD_POINT;
-
 #ifdef TRACE_LOG_ENABLED
 		auto startTime = std::chrono::system_clock::now();
 #endif
-		//for (int i = 0, idx = 0; i < zHeight_; i++)
-		//{
-		//	for (int j = 0; j < zWidth_; j++, idx++, pp+=3, depthPix++, point++)
-		//	{
-		//		if (*depthPix <= 0)
-		//		{
-		//			point->x = point->y = point->z = HOLO_CLOUD_BAD_POINT;
-		//			point->r = point->g = point->b = 0;
-		//			point->a = 255;
-		//			continue;
-		//		}
-
-		//		//openni::CoordinateConverter::convertDepthToWorld(depthStream_, i, j, *depthPix, &x, &y, &z);
-		//		depthVal = static_cast<float>(*depthPix) * 0.001f;
-
-		//		point->x = (.5f - static_cast<float>(j) / worldConvertCache_.resolutionY) * depthVal * worldConvertCache_.yzFactor;
-		//		point->y = -(static_cast<float>(i) / worldConvertCache_.resolutionX - .5f) * depthVal * worldConvertCache_.xzFactor;
-		//		point->z = depthVal;
-
-		//		point->r = *pp;
-		//		point->g = *(pp + 1);
-		//		point->b = *(pp + 2);
-		//		point->a = 0;
-		//	}
-		//}
-
 		holo::utils::ReprojectToRealWorld(pointCloud_, mats, worldConvertCache_);
 
 		pointCloud = (HoloCloudPtr)futureCloud.get();
