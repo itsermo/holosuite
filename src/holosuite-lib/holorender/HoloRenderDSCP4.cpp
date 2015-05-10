@@ -49,7 +49,7 @@ void HoloRenderDSCP4::updateRemotePointCloud(HoloCloudPtr && pointCloud)
 	{
 		dscp4_AddPointCloud(context_, "remoteCloud", remoteCloud_->points.size(), voxelSize_, remoteCloud_->points.data());
 		dscp4_ScaleObject(context_, "remoteCloud", 3.7f, 3.7f, -3.7f);
-		dscp4_TranslateObject(context_, "remoteCloud", 0.f, 0.f, -0.75f);
+		dscp4_TranslateObject(context_, "remoteCloud", -0.05f, 0.f, -0.75f);
 		firstRun_ = false;
 	}
 	else

@@ -388,7 +388,10 @@ boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned 
 	auto encodedRGBA = std::vector<unsigned char>(dataBegin, dataEnd);
 	auto rgba = boost::shared_ptr<cv::Mat>(new cv::Mat(args_.height, args_.width, CV_8UC4));
 	int gotPicture = 0;
-	av_new_packet(&decodePacket_, encodedRGBA.size());
+	//av_new_packet(&decodePacket_, encodedRGBA.size());
+	av_init_packet(&decodePacket_);
+	decodePacket_.size = encodedRGBA.size();
+	decodePacket_.data = encodedRGBA.data();
 
 	memcpy(decodePacket_.data, encodedRGBA.data(), decodePacket_.size);
 
@@ -397,13 +400,18 @@ boost::shared_ptr<cv::Mat> HoloCodecH264::decodeColorFrame(std::vector<unsigned 
 #endif
 
 	int len = avcodec_decode_video2(decoderCtx_, decodeOutFrame_, &gotPicture, &decodePacket_);
+	if(len < 0)
+	{
+		LOG4CXX_ERROR(logger_, "Failed to decode h.264 color frame")
+		return nullptr;
+	}
 
 #ifdef TRACE_LOG_ENABLED
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime);
 	LOG4CXX_TRACE(logger_, "h.264 decoded a " << len << " byte color frame in " << duration.count() << "ms");
 #endif
 
-	av_free_packet(&decodePacket_);
+	//av_free_packet(&decodePacket_);
 
 	if (gotPicture > 0)
 	{
