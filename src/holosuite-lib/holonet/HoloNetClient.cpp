@@ -40,7 +40,7 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 	//hints.ai_socktype = SOCK_DGRAM;
 
 	std::string portstr(std::to_string(port));
@@ -53,9 +53,11 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	UDTSOCKET socket = UDT::socket(local->ai_family, local->ai_socktype, local->ai_protocol);
 
-	int ret = UDT::setsockopt(socket, 0, UDT_MSS, new int(9000), sizeof(int));
-	ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
-	ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
+	//int ret = UDT::setsockopt(socket, 0, UDT_MSS, new int(9000), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
 
 	freeaddrinfo(local);
 

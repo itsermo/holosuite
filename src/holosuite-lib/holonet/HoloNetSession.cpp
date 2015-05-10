@@ -91,14 +91,15 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSO
 	//	throw boost::system::system_error(boost::asio::error::interrupted);
 
 	int remaining = dataLength;
-	while (remaining > 0)
-	{
-		ret = UDT::send(socket, (const char*)packetPtr + (dataLength - remaining), remaining, 0);
+	//while (remaining > 0)
+	//{
+		//ret = UDT::send(socket, (const char*)packetPtr + (dataLength - remaining), remaining, 0);
+		ret = UDT::sendmsg(socket, (const char*)packetPtr + (dataLength - remaining), dataLength);
 		if (ret == UDT::ERROR)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
-		remaining -= ret;
-	}
+	//	remaining -= ret;
+	//}
 	//packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
 	//packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
 }
@@ -111,30 +112,32 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSO
 	//boost::system::error_code error;
 	size_t received = 0;
 
-	std::vector<uint8_t> packetBuffer(sizeof(uint32_t)* 2);
+	//std::vector<uint8_t> packetBuffer(sizeof(uint32_t)* 2);
+	std::vector<uint8_t> packetBuffer(1000000);
 	//boost::asio::read(*socket, boost::asio::buffer(typeLength), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
-	ret = UDT::recv(socket, (char*)packetBuffer.data(), sizeof(uint32_t)* 2, 0);
+	//ret = UDT::recvmsg(socket, (char*)packetBuffer.data(), sizeof(uint32_t)* 2, 0);
+
+	ret = UDT::recvmsg(socket, (char*)packetBuffer.data(), 1000000);
 	if (ret == UDT::ERROR)
 		throw boost::system::system_error(boost::asio::error::interrupted);
-
 
 	uint32_t t = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()));
 	uint32_t len = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data() + sizeof(uint32_t)));
 
 	packetBuffer.resize(len + sizeof(uint32_t)* 2);
 
-	auto packetValue = packetBuffer.data() + sizeof(uint32_t)* 2;
+	//auto packetValue = packetBuffer.data() + sizeof(uint32_t)* 2;
 
-	int remaining = len;
-	while (remaining > 0)
-	{
-		//boost::asio::read(*socket, boost::asio::buffer(packet->value), boost::asio::transfer_exactly(packet->length), error);
-		ret = UDT::recv(socket, (char*)packetValue + (len - remaining), remaining, 0);
-		if (ret == UDT::ERROR)
-			throw boost::system::system_error(boost::asio::error::interrupted);
+	//int remaining = len;
+	//while (remaining > 0)
+	//{
+	//	//boost::asio::read(*socket, boost::asio::buffer(packet->value), boost::asio::transfer_exactly(packet->length), error);
+	//	ret = UDT::recv(socket, (char*)packetValue + (len - remaining), remaining, 0);
+	//	if (ret == UDT::ERROR)
+	//		throw boost::system::system_error(boost::asio::error::interrupted);
 
-		remaining -= ret;
-	}
+	//	remaining -= ret;
+	//}
 
 	packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(packetBuffer));
 }
