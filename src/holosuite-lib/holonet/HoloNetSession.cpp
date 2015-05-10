@@ -142,55 +142,55 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, boost
 {
 		boost::system::error_code error;
 
-		int dataLength = packet->length;
+		//int dataLength = packet->length;
 	
-		packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
-		packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
+		//packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
+		//packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
 
-		boost::asio::write(*socket, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
+		boost::asio::write(*socket, boost::asio::buffer(packet->GetPacketBuffer(), packet->GetPacketLength() + sizeof(uint32_t)* 2), boost::asio::transfer_exactly(packet->GetPacketLength() + sizeof(uint32_t)* 2), error);
 		if (error)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
-		boost::asio::write(*socket, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
-		if (error)
-			throw boost::system::system_error(boost::asio::error::interrupted);
+		//boost::asio::write(*socket, boost::asio::buffer(packet->value, dataLength), boost::asio::transfer_exactly(dataLength), error);
+		//if (error)
+		//	throw boost::system::system_error(boost::asio::error::interrupted);
 
-		packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
-		packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
+		//packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
+		//packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
 
 }
 
 void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
 {
-		packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
+		//packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
 
 		boost::system::error_code error;
 		size_t received = 0;
 
-		std::vector<uint32_t> typeLength(sizeof(uint32_t)* 2);
-		boost::asio::read(*socket, boost::asio::buffer(typeLength), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
+		std::vector<uint8_t> packetBuffer(sizeof(uint32_t)* 2);
+		boost::asio::read(*socket, boost::asio::buffer(packetBuffer), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 		if (error)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
 
-		packet->type = boost::asio::detail::socket_ops::network_to_host_long(typeLength[0]);
-		packet->length = boost::asio::detail::socket_ops::network_to_host_long(typeLength[1]);
+		uint32_t t = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()));
+		uint32_t len = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()+sizeof(uint32_t)));
 
-		packet->value = std::vector<uint8_t>(packet->length);
+		//packet->value = std::vector<uint8_t>(packet->length);
+		packetBuffer.resize(len + sizeof(uint32_t)* 2);
 
-		boost::asio::read(*socket, boost::asio::buffer(packet->value), boost::asio::transfer_exactly(packet->length), error);
+		boost::asio::read(*socket, boost::asio::buffer(boost::asio::mutable_buffer(packetBuffer.data() + sizeof(uint32_t)*2, len)), boost::asio::transfer_exactly(len), error);
 		if (error)
 			throw boost::system::system_error(boost::asio::error::interrupted);
+
+		packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(packetBuffer));
 }
 
 void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
 {
 	LOG4CXX_DEBUG(logger_, "Sending handshake info");
 
-	auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
-	packet->type = HOLO_NET_PACKET_TYPE_HANDSHAKE;
-	packet->length = sizeof(HoloNetProtocolHandshake);
-	packet->value = std::vector<uint8_t>(sizeof(HoloNetProtocolHandshake));
+	auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_HANDSHAKE, sizeof(HoloNetProtocolHandshake)));
 
 	localInfo.magicNumber = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_MAGIC_NUMBER);
 	localInfo.protocolVersion = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_CURRENT_PROTOCOL_VERSION);
@@ -205,7 +205,7 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, boost:
 	localInfo.audioNumChan = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioNumChan);
 	localInfo.audioFreq = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioFreq);
 
-	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
+	memcpy(packet->GetPacketValue(), &localInfo, sizeof(localInfo));
 
 	sendPacket(packet, socket);
 }
@@ -242,9 +242,7 @@ void HoloNetSession::disconnect()
 
 				if (sockets_[i]->is_open())
 				{
-					auto disconnectPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
-					disconnectPacket->type = HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT;
-					disconnectPacket->length = 0;
+					auto disconnectPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT, 0));
 
 					try{
 						this->sendPacket(std::move(disconnectPacket));
@@ -324,7 +322,7 @@ HoloNetProtocolHandshake HoloNetSession::GetHandshakeFromPacket(boost::shared_pt
 {
 	HoloNetProtocolHandshake hs;
 
-	memcpy(&hs, packet->value.data(), sizeof(hs));
+	memcpy(&hs, packet->GetPacketValue(), sizeof(hs));
 
 	hs.magicNumber = boost::asio::detail::socket_ops::network_to_host_long(hs.magicNumber);
 	hs.protocolVersion = boost::asio::detail::socket_ops::network_to_host_long(hs.protocolVersion);

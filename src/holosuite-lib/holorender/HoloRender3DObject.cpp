@@ -108,7 +108,9 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	amOwner_ = false;
 	isLocal_ = false;
 
-	memcpy(&objectHeader_, objectPacket->value.data(), sizeof(objectHeader_));
+	auto packetValue = objectPacket->GetPacketValue();
+
+	memcpy(&objectHeader_, packetValue, sizeof(objectHeader_));
 	objectHeader_.num_vertices = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_vertices);
 	objectHeader_.num_points_per_vertex = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_points_per_vertex);
 	objectHeader_.num_color_channels = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_color_channels);
@@ -116,7 +118,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	objectHeader_.color_stride = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.color_stride);
 	objectHeader_.num_indecies = boost::asio::detail::socket_ops::network_to_host_long(objectHeader_.num_indecies);
 
-	memcpy(&objectTransform_, objectPacket->value.data() + sizeof(objectHeader_), sizeof(objectTransform_));
+	memcpy(&objectTransform_, packetValue + sizeof(objectHeader_), sizeof(objectTransform_));
 
 	unsigned int x, y, z, w = 0;
 
@@ -156,10 +158,10 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	objectTransform_.bounding_sphere.z = reinterpret_cast<float&>(z);
 	objectTransform_.bounding_sphere.w = reinterpret_cast<float&>(w);
 
-	memcpy(&vertSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_), sizeof(vertSize_));
-	memcpy(&normalSize_, objectPacket->value.data() + sizeof(objectHeader_) + sizeof(objectTransform_)+sizeof(vertSize_), sizeof(normalSize_));
-	memcpy(&colorSize_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_), sizeof(colorSize_));
-	memcpy(&stringSize_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(stringSize_), sizeof(stringSize_));
+	memcpy(&vertSize_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_), sizeof(vertSize_));
+	memcpy(&normalSize_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_), sizeof(normalSize_));
+	memcpy(&colorSize_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_), sizeof(colorSize_));
+	memcpy(&stringSize_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(stringSize_), sizeof(stringSize_));
 
 	vertSize_ = boost::asio::detail::socket_ops::network_to_host_long(vertSize_);
 	normalSize_ = boost::asio::detail::socket_ops::network_to_host_long(normalSize_);
@@ -173,7 +175,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	{
 		vertices_ = new unsigned char[vertSize_];
 		// copy and convert vertices floats from network to host endianness
-		memcpy(vertices_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_), vertSize_);
+		memcpy(vertices_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_), vertSize_);
 		float * realVal = (float*)vertices_;
 		for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 		{
@@ -192,7 +194,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		{
 			normals_ = new unsigned char[normalSize_];
 			// copy and convert normal floats from network to host endianness
-			memcpy(normals_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
+			memcpy(normals_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_, normalSize_);
 			float * realVal = (float*)normals_;
 			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_points_per_vertex; i++)
 			{
@@ -213,7 +215,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 		{
 			colors_ = new unsigned char[colorSize_];
 			// copy and convert color floats from network to host endianness
-			memcpy(colors_, objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
+			memcpy(colors_, packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_, colorSize_);
 			float * realVal = (float*)colors_;
 			for (unsigned int i = 0; i < objectHeader_.num_vertices * objectHeader_.num_color_channels; i++)
 			{
@@ -228,7 +230,7 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 
 	// create the name string
 	objectName_.resize(stringSize_);
-	memcpy((void*)objectName_.data(), objectPacket->value.data() + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_ + colorSize_, stringSize_);
+	memcpy((void*)objectName_.data(), packetValue + sizeof(objectHeader_)+sizeof(objectTransform_)+sizeof(vertSize_)+sizeof(normalSize_)+sizeof(colorSize_)+sizeof(stringSize_)+vertSize_ + normalSize_ + colorSize_, stringSize_);
 
 	// Wait for them to be finished
 	vertFuture.wait();
@@ -238,11 +240,11 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 
 const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() const
 {
-	auto netPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
-
-	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_ADD;
-	netPacket->length = sizeof(objectHeader_) + 4 * sizeof(unsigned int)+vertSize_ + normalSize_ + colorSize_ + vertSize_ + stringSize_;
-	netPacket->value.resize(netPacket->length);
+	auto netPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_OBJECT_ADD, sizeof(objectHeader_)+4 * sizeof(unsigned int)+vertSize_ + normalSize_ + colorSize_ + vertSize_ + stringSize_));
+	auto packetValue = netPacket->GetPacketValue();
+	//netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_ADD;
+	//netPacket->length = sizeof(objectHeader_) + 4 * sizeof(unsigned int)+vertSize_ + normalSize_ + colorSize_ + vertSize_ + stringSize_;
+	//netPacket->value.resize(netPacket->length);
 
 	// convert info to network byte-type, and copy to value buffer
 	auto objHeader = objectHeader_;
@@ -252,7 +254,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	objHeader.vertex_stride = boost::asio::detail::socket_ops::host_to_network_long(objHeader.vertex_stride);
 	objHeader.color_stride = boost::asio::detail::socket_ops::host_to_network_long(objHeader.color_stride);
 	objHeader.num_indecies = boost::asio::detail::socket_ops::host_to_network_long(objHeader.num_indecies);
-	memcpy(netPacket->value.data(), &objHeader, sizeof(objHeader));
+	memcpy(packetValue, &objHeader, sizeof(objHeader));
 
 	auto objectTransform = objectTransform_;
 	
@@ -294,7 +296,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	objectTransform.bounding_sphere.z = reinterpret_cast<float&>(z);
 	objectTransform.bounding_sphere.w = reinterpret_cast<float&>(w);
 
-	memcpy(netPacket->value.data() + sizeof(objHeader), &objectTransform, sizeof(objectTransform));
+	memcpy(packetValue + sizeof(objHeader), &objectTransform, sizeof(objectTransform));
 
 	// convert size to network byte endianness, and copy to value buffer
 	auto vertSize = boost::asio::detail::socket_ops::host_to_network_long(vertSize_);
@@ -302,10 +304,10 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 	auto colorSize = boost::asio::detail::socket_ops::host_to_network_long(colorSize_);
 	auto stringSize = boost::asio::detail::socket_ops::host_to_network_long(stringSize_);
 
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform), &vertSize, sizeof(vertSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize), &normalSize, sizeof(normalSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize), &colorSize, sizeof(colorSize));
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize), &stringSize, sizeof(stringSize));
+	memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform), &vertSize, sizeof(vertSize));
+	memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize), &normalSize, sizeof(normalSize));
+	memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize), &colorSize, sizeof(colorSize));
+	memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize), &stringSize, sizeof(stringSize));
 
 	// Launch vert/normal/color processing simultaneously
 	std::future<void> vertFuture =
@@ -324,7 +326,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 			realVal++;
 		}
 
-		memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize), vertices, vertSize_);
+		memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize), vertices, vertSize_);
 
 		delete[] vertices;
 	});
@@ -349,7 +351,7 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 				realVal++;
 			}
 
-			memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
+			memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_, normals, normalSize_);
 
 			delete[] normals;
 		}
@@ -373,13 +375,13 @@ const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() con
 				realVal++;
 			}
 
-			memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, colorSize_);
+			memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_, colors, colorSize_);
 
 			delete[] colors;
 		}
 	});
 
-	memcpy(netPacket->value.data() + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_ + colorSize_, objectName_.data(), objectName_.size());
+	memcpy(packetValue + sizeof(objHeader)+sizeof(objectTransform)+sizeof(vertSize)+sizeof(normalSize)+sizeof(colorSize)+sizeof(stringSize)+vertSize_ + normalSize_ + colorSize_, objectName_.data(), objectName_.size());
 
 	// Wait for them to be finished
 	vertFuture.wait();
@@ -395,7 +397,9 @@ const std::tuple<std::string, HoloTransform> HoloRender3DObject::GetTransformFro
 	HoloTransform objectTransform;
 	std::string objectName;
 
-	memcpy(&objectTransform, transformNetPacket->value.data(), sizeof(objectTransform));
+	auto packetValue = transformNetPacket->GetPacketValue();
+
+	memcpy(&objectTransform, packetValue, sizeof(objectTransform));
 
 	unsigned int x, y, z, w = 0;
 
@@ -436,18 +440,18 @@ const std::tuple<std::string, HoloTransform> HoloRender3DObject::GetTransformFro
 	objectTransform.bounding_sphere.w = reinterpret_cast<float&>(w);
 
 	unsigned int stringSize = 0;
-	memcpy(&stringSize, transformNetPacket->value.data() + sizeof(objectTransform), sizeof(stringSize));
+	memcpy(&stringSize, packetValue + sizeof(objectTransform), sizeof(stringSize));
 	stringSize = boost::asio::detail::socket_ops::network_to_host_long(stringSize);
 	
 	objectName.resize(stringSize);
-	memcpy((void*)objectName.data(), transformNetPacket->value.data() + sizeof(objectTransform)+sizeof(stringSize), stringSize);
+	memcpy((void*)objectName.data(), packetValue + sizeof(objectTransform)+sizeof(stringSize), stringSize);
 
 	return std::make_tuple(objectName, objectTransform);
 }
 
 const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::CreateNetPacketFromTransform(const std::tuple<std::string, HoloTransform>& objInfo)
 {
-	auto netPacket = boost::shared_ptr<holo::net::HoloNetPacket>(new holo::net::HoloNetPacket);
+	
 	std::string objectName;
 	HoloTransform objectTransform;
 
@@ -493,31 +497,33 @@ const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::CreateNetP
 
 	unsigned int stringSize = boost::asio::detail::socket_ops::network_to_host_long(objectName.size());
 
-	netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_UPDATE;
-	netPacket->length = sizeof(objectTransform)+sizeof(stringSize)+objectName.size();
-	netPacket->value.resize(netPacket->length);
-
-	memcpy(netPacket->value.data(), &objectTransform, sizeof(objectTransform));
-	memcpy(netPacket->value.data() + sizeof(objectTransform), &stringSize, sizeof(stringSize));
-	memcpy(netPacket->value.data() + sizeof(objectTransform)+sizeof(stringSize), objectName.data(), objectName.size());
+	auto netPacket = boost::shared_ptr<holo::net::HoloNetPacket>(new holo::net::HoloNetPacket(HOLO_NET_PACKET_TYPE_OBJECT_UPDATE, sizeof(objectTransform)+sizeof(stringSize)+objectName.size()));
+	//netPacket->type = HOLO_NET_PACKET_TYPE_OBJECT_UPDATE;
+	//netPacket->length = sizeof(objectTransform)+sizeof(stringSize)+objectName.size();
+	//netPacket->value.resize(netPacket->length);
+	auto packetValue = netPacket->GetPacketValue();
+	memcpy(packetValue, &objectTransform, sizeof(objectTransform));
+	memcpy(packetValue + sizeof(objectTransform), &stringSize, sizeof(stringSize));
+	memcpy(packetValue + sizeof(objectTransform)+sizeof(stringSize), objectName.data(), objectName.size());
 
 	return netPacket;
 }
 
 const boost::shared_ptr<holo::net::HoloNetPacket> HoloRender3DObject::ToggleOwnerAndGetOwnerChangePacket()
 {
-	auto ownerChangePacket = boost::shared_ptr<holo::net::HoloNetPacket>(new HoloNetPacket);
-	ownerChangePacket->type = holo::net::HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER;
-	ownerChangePacket->length = 2*sizeof(unsigned int)+stringSize_;
-	ownerChangePacket->value.resize(ownerChangePacket->length);
+	auto ownerChangePacket = boost::shared_ptr<holo::net::HoloNetPacket>(new HoloNetPacket(holo::net::HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER, 2 * sizeof(unsigned int)+stringSize_));
+	auto packetValue = ownerChangePacket->GetPacketValue();
+	//ownerChangePacket->type = holo::net::HOLO_NET_PACKET_TYPE_OBJECT_CHANGE_OWNER;
+	//ownerChangePacket->length = 2*sizeof(unsigned int)+stringSize_;
+	//ownerChangePacket->value.resize(ownerChangePacket->length);
 
 	unsigned int amOwnerInt = static_cast<unsigned int>(amOwner_.load());
 	amOwnerInt = boost::asio::detail::socket_ops::host_to_network_long(amOwnerInt);
 	unsigned int stringSize = boost::asio::detail::socket_ops::host_to_network_long(stringSize_);
 
-	memcpy(ownerChangePacket->value.data(), &amOwnerInt, sizeof(amOwnerInt));
-	memcpy(ownerChangePacket->value.data() + sizeof(amOwnerInt), &stringSize, sizeof(stringSize));
-	memcpy(ownerChangePacket->value.data() + sizeof(amOwnerInt)+sizeof(stringSize), objectName_.data(), stringSize_);
+	memcpy(packetValue, &amOwnerInt, sizeof(amOwnerInt));
+	memcpy(packetValue + sizeof(amOwnerInt), &stringSize, sizeof(stringSize));
+	memcpy(packetValue + sizeof(amOwnerInt)+sizeof(stringSize), objectName_.data(), stringSize_);
 
 	amOwner_.store(!amOwner_.load());
 
@@ -530,14 +536,16 @@ const std::tuple<std::string, bool> HoloRender3DObject::GetChangeOwnerInfoFromPa
 	unsigned int stringSize = 0;
 	std::string objectName;
 
-	memcpy(&amOwnerInt, changeOwnerPacket->value.data(), sizeof(amOwnerInt));
-	memcpy(&stringSize, changeOwnerPacket->value.data() + sizeof(amOwnerInt), sizeof(stringSize));
+	auto packetValue = changeOwnerPacket->GetPacketValue();
+
+	memcpy(&amOwnerInt, packetValue, sizeof(amOwnerInt));
+	memcpy(&stringSize, packetValue + sizeof(amOwnerInt), sizeof(stringSize));
 
 	stringSize = boost::asio::detail::socket_ops::network_to_host_long(stringSize);
 
 	objectName.resize(stringSize);
 	
-	memcpy((void*)objectName.data(), changeOwnerPacket->value.data() + sizeof(amOwnerInt)+sizeof(stringSize), stringSize);
+	memcpy((void*)objectName.data(), packetValue + sizeof(amOwnerInt)+sizeof(stringSize), stringSize);
 
 	return std::make_tuple(objectName, amOwnerInt);
 }

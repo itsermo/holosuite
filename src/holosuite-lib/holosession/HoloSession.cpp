@@ -356,7 +356,7 @@ void HoloSession::netRecvLoop()
 
 		if (recvPacket)
 		{
-			switch (recvPacket->type)
+			switch (recvPacket->GetPacketType())
 			{
 			case HOLO_NET_PACKET_TYPE_HANDSHAKE:
 				remoteInfo_ = holo::net::HoloNetSession::GetHandshakeFromPacket(recvPacket);
@@ -370,7 +370,7 @@ void HoloSession::netRecvLoop()
 			{
 				std::unique_lock<std::mutex> rccLock(remoteCloudCompressedMutex_);
 				if (remoteCloudCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-					remoteCloudCompressed_.push(boost::make_shared <std::vector<uchar>>(recvPacket->value));
+					remoteCloudCompressed_.push(boost::make_shared <std::vector<uchar>>(recvPacket->GetPacketValue(), recvPacket->GetPacketValue()+recvPacket->GetPacketLength()));
 				else
 					LOG4CXX_WARN(logger_, "Dropping compressed point cloud packets from receive function")
 				//remoteCloudCompressed_ = boost::shared_ptr<std::vector<uchar>>(new std::vector<uchar>(recvPacket->value));
@@ -384,7 +384,7 @@ void HoloSession::netRecvLoop()
 				std::unique_lock<std::mutex> racLock(remoteAudioCompressedMutex_);
 				//*remoteAudioCompressed_ = recvPacket->value;
 				if (remoteAudioCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-					remoteAudioCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+					remoteAudioCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->GetPacketValue(), recvPacket->GetPacketValue() + recvPacket->GetPacketLength()));
 				else
 					LOG4CXX_WARN(logger_, "Dropping compressed audio packets from receive function")
 				racLock.unlock();
@@ -396,7 +396,7 @@ void HoloSession::netRecvLoop()
 			{
 				std::unique_lock<std::mutex> rgbazLock(remoteRGBAZCompressedMutex_);
 				if (remoteRGBAZCompressed_.size() < HOLO_NET_PACKET_BUFFER_SIZE)
-					remoteRGBAZCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->value));
+					remoteRGBAZCompressed_.push(boost::make_shared<std::vector<uchar>>(recvPacket->GetPacketValue(), recvPacket->GetPacketValue() + recvPacket->GetPacketLength()));
 				else
 					LOG4CXX_WARN(logger_, "Dropping compressed RGBAZ packets from receive function")
 				rgbazLock.unlock();
@@ -672,10 +672,11 @@ void HoloSession::encodeLoop()
 
 			if (encodedData)
 			{
-				auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket());
-				packet->type = HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED;
-				packet->length = encodedData->size();
-				packet->value = *encodedData;
+				auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED, encodedData->size()));
+				std::copy(encodedData->begin(), encodedData->end(), packet->GetPacketValue());
+				//packet->type = HOLO_NET_PACKET_TYPE_RGBZ_FRAME_COMPRESSED;
+				//packet->length = encodedData->size();
+				//packet->value = *encodedData;
 
 				try{
 					netSession_->sendPacketAsync(std::move(packet));
@@ -706,10 +707,11 @@ void HoloSession::encodeLoop()
 
 			ulLocalCloud.unlock();
 
-			auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket());
-			packet->type = HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED;
-			packet->length = encodedData->size();
-			packet->value = *encodedData;
+			auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED, encodedData->size()));
+			std::copy(encodedData->begin(), encodedData->end(), packet->GetPacketValue());
+			//packet->type = HOLO_NET_PACKET_TYPE_OCTREE_COMPRESSED;
+			//packet->length = encodedData->size();
+			//packet->value = *encodedData;
 			
 			try{
 				netSession_->sendPacketAsync(std::move(packet));
@@ -807,10 +809,11 @@ void HoloSession::encodeAudioLoop()
 		haveLocalAudio_ = false;
 		ulLocalAudio.unlock();
 
-		auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket());
-		packet->type = HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED;
-		packet->length = encData->size();
-		packet->value = *encData;
+		auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED, encData->size()));
+		std::copy(encData->begin(), encData->end(), packet->GetPacketValue());
+		//packet->type = HOLO_NET_PACKET_TYPE_AUDIO_COMPRESSED;
+		//packet->length = encData->size();
+		//packet->value = *encData;
 
 		try
 		{
