@@ -54,10 +54,7 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, UDTSOC
 {
 	LOG4CXX_DEBUG(logger_, "Sending handshake info");
 
-	auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
-	packet->type = HOLO_NET_PACKET_TYPE_HANDSHAKE;
-	packet->length = sizeof(HoloNetProtocolHandshake);
-	packet->value = std::vector<uint8_t>(sizeof(HoloNetProtocolHandshake));
+	auto packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_HANDSHAKE, sizeof(HoloNetProtocolHandshake)));
 
 	localInfo.magicNumber = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_MAGIC_NUMBER);
 	localInfo.protocolVersion = boost::asio::detail::socket_ops::host_to_network_long(HOLO_NET_CURRENT_PROTOCOL_VERSION);
@@ -72,7 +69,7 @@ void HoloNetSession::performHandshake(HoloNetProtocolHandshake localInfo, UDTSOC
 	localInfo.audioNumChan = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioNumChan);
 	localInfo.audioFreq = boost::asio::detail::socket_ops::host_to_network_long(localInfo.audioFreq);
 
-	memcpy(packet->value.data(), &localInfo, sizeof(localInfo));
+	memcpy(packet->GetPacketValue(), &localInfo, sizeof(localInfo));
 
 	sendPacket(packet, socket);
 }
@@ -81,59 +78,65 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSO
 {
 	int ret = 0;
 
-	int dataLength = packet->length;
+	auto packetPtr = packet->GetPacketBuffer().data();
+	int dataLength = packet->GetPacketBuffer().size();
+	//int dataLength = packet->GetPacketLength();
 
-	packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
-	packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
+	//packet->type = boost::asio::detail::socket_ops::host_to_network_long(packet->type);
+	//packet->length = boost::asio::detail::socket_ops::host_to_network_long(packet->length);
 
 	//boost::asio::write(*socket, boost::asio::buffer(&packet->type, sizeof(uint32_t)* 2), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
-	ret = UDT::send(socket, (const char*)&packet->type, sizeof(uint32_t)* 2, 0);
-	if (ret == UDT::ERROR)
-		throw boost::system::system_error(boost::asio::error::interrupted);
+	//ret = UDT::send(socket, (const char*)&packet->type, sizeof(uint32_t)* 2, 0);
+	//if (ret == UDT::ERROR)
+	//	throw boost::system::system_error(boost::asio::error::interrupted);
 
 	int remaining = dataLength;
 	while (remaining > 0)
 	{
-		ret = UDT::send(socket, (const char*)packet->value.data() + (dataLength - remaining), remaining, 0);
+		ret = UDT::send(socket, (const char*)packetPtr + (dataLength - remaining), remaining, 0);
 		if (ret == UDT::ERROR)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
 		remaining -= ret;
 	}
-	packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
-	packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
+	//packet->type = boost::asio::detail::socket_ops::network_to_host_long(packet->type);
+	//packet->length = boost::asio::detail::socket_ops::network_to_host_long(packet->length);
 }
 
 void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSOCKET socket)
 {
-	packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
+	//packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
 
 	int ret = 0;
 	//boost::system::error_code error;
 	size_t received = 0;
 
-	std::vector<uint32_t> typeLength(sizeof(uint32_t)* 2);
+	std::vector<uint8_t> packetBuffer(sizeof(uint32_t)* 2);
 	//boost::asio::read(*socket, boost::asio::buffer(typeLength), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
-	ret = UDT::recv(socket, (char*)typeLength.data(), sizeof(uint32_t)* 2, 0);
+	ret = UDT::recv(socket, (char*)packetBuffer.data(), sizeof(uint32_t)* 2, 0);
 	if (ret == UDT::ERROR)
 		throw boost::system::system_error(boost::asio::error::interrupted);
 
 
-	packet->type = boost::asio::detail::socket_ops::network_to_host_long(typeLength[0]);
-	packet->length = boost::asio::detail::socket_ops::network_to_host_long(typeLength[1]);
+	uint32_t t = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()));
+	uint32_t len = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data() + sizeof(uint32_t)));
 
-	packet->value = std::vector<uint8_t>(packet->length);
+	packetBuffer.resize(len + sizeof(uint32_t)* 2);
 
-	int remaining = packet->length;
+	auto packetValue = packetBuffer.data() + sizeof(uint32_t)* 2;
+
+	int remaining = len;
 	while (remaining > 0)
 	{
 		//boost::asio::read(*socket, boost::asio::buffer(packet->value), boost::asio::transfer_exactly(packet->length), error);
-		ret = UDT::recv(socket, (char*)packet->value.data() + (packet->length - remaining), remaining, 0);
+		ret = UDT::recv(socket, (char*)packetValue + (len - remaining), remaining, 0);
 		if (ret == UDT::ERROR)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
 		remaining -= ret;
 	}
+
+	packet = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(packetBuffer));
 }
 
 #else
@@ -171,7 +174,6 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, boost
 		boost::asio::read(*socket, boost::asio::buffer(packetBuffer), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 		if (error)
 			throw boost::system::system_error(boost::asio::error::interrupted);
-
 
 		uint32_t t = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()));
 		uint32_t len = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()+sizeof(uint32_t)));
@@ -224,9 +226,7 @@ void HoloNetSession::disconnect()
 		for (int i = 0; i < sockets_.size(); i++)
 		{
 #ifdef ENABLE_HOLO_UDT
-			auto disconnectPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket);
-			disconnectPacket->type = HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT;
-			disconnectPacket->length = 0;
+			auto disconnectPacket = boost::shared_ptr<HoloNetPacket>(new HoloNetPacket(HOLO_NET_PACKET_TYPE_GRACEFUL_DISCONNECT, 0));
 
 			try{
 				this->sendPacket(std::move(disconnectPacket));
