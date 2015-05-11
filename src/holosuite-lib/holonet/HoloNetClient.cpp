@@ -13,7 +13,7 @@ HoloNetClient::HoloNetClient() : HoloNetSession()
 #ifndef ENABLE_HOLO_UDT
 	resolver_ = boost::shared_ptr<boost::asio::ip::tcp::resolver>(new boost::asio::ip::tcp::resolver(io_service_));
 #else
-	UDT::startup();
+	//UDT::startup();
 #endif
 }
 
@@ -23,7 +23,7 @@ HoloNetClient::~HoloNetClient()
 	disconnect();
 
 #ifdef ENABLE_HOLO_UDT
-	UDT::cleanup();
+	//UDT::cleanup();
 #endif
 }
 
@@ -53,18 +53,20 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 
 	UDTSOCKET socket = UDT::socket(local->ai_family, local->ai_socktype, local->ai_protocol);
 
-	//int ret = UDT::setsockopt(socket, 0, UDT_MSS, new int(9000), sizeof(int));
-	//ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
-	//ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
-	//ret = UDT::setsockopt(socket, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
-	//ret = UDT::setsockopt(socket, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
+	int ret = UDT::setsockopt(socket, 0, UDT_MSS, new int(9000), sizeof(int));
+	ret = UDT::setsockopt(socket, 0, UDT_SNDSYN, new bool(false), sizeof(bool));
+	ret = UDT::setsockopt(socket, 0, UDT_RCVSYN, new bool(true), sizeof(bool));
+	ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(40960000*4), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(40960000*10), sizeof(int));
+	ret = UDT::setsockopt(socket, 0, UDT_SNDBUF, new int(40960000*4), sizeof(int));
+	//ret = UDT::setsockopt(socket, 0, UDP_SNDBUF, new int(40960000*10), sizeof(int));
 
 	freeaddrinfo(local);
 
 	if (0 != getaddrinfo(address.c_str(), portstr.c_str(), &hints, &peer))
 	{
 		LOG4CXX_ERROR(logger_, "Incorrect server/peer address " << address << ":" << port)
-		throw std::exception();
+		throw boost::system::system_error(boost::asio::error::host_not_found);
 	}
 
 	//std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -72,7 +74,10 @@ HoloNetProtocolHandshake HoloNetClient::connect(std::string address, int port, H
 	if (UDT::ERROR == UDT::connect(socket, peer->ai_addr, peer->ai_addrlen))
 	{
 		LOG4CXX_ERROR(logger_, "Connecting UDT socket: " << UDT::getlasterror().getErrorMessage())
-		throw std::exception();
+		freeaddrinfo(peer);
+		//int z = UDT::close(socket);
+		//UDT::cleanup();
+		throw boost::system::system_error(boost::asio::error::connection_refused);
 	}
 
 	freeaddrinfo(peer);

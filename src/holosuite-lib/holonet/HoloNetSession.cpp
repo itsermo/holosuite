@@ -94,7 +94,7 @@ void HoloNetSession::sendPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSO
 	//while (remaining > 0)
 	//{
 		//ret = UDT::send(socket, (const char*)packetPtr + (dataLength - remaining), remaining, 0);
-		ret = UDT::sendmsg(socket, (const char*)packetPtr + (dataLength - remaining), dataLength);
+		ret = UDT::sendmsg(socket, (const char*)packetPtr, dataLength,-1,true);
 		if (ret == UDT::ERROR)
 			throw boost::system::system_error(boost::asio::error::interrupted);
 
@@ -113,13 +113,14 @@ void HoloNetSession::recvPacket(boost::shared_ptr<HoloNetPacket> & packet, UDTSO
 	size_t received = 0;
 
 	//std::vector<uint8_t> packetBuffer(sizeof(uint32_t)* 2);
-	std::vector<uint8_t> packetBuffer(1000000);
+	std::vector<uint8_t> packetBuffer(900000);
 	//boost::asio::read(*socket, boost::asio::buffer(typeLength), boost::asio::transfer_exactly(sizeof(uint32_t)* 2), error);
 	//ret = UDT::recvmsg(socket, (char*)packetBuffer.data(), sizeof(uint32_t)* 2, 0);
 
-	ret = UDT::recvmsg(socket, (char*)packetBuffer.data(), 1000000);
+	ret = UDT::recvmsg(socket, (char*)packetBuffer.data(), 900000);
 	if (ret == UDT::ERROR)
 		throw boost::system::system_error(boost::asio::error::interrupted);
+
 
 	uint32_t t = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data()));
 	uint32_t len = boost::asio::detail::socket_ops::network_to_host_long(*reinterpret_cast<uint32_t*>(packetBuffer.data() + sizeof(uint32_t)));

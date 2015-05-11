@@ -80,9 +80,11 @@ void HoloNetServer::listenLoop()
 	}
 
 	UDTSOCKET serv = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	int ret = UDT::setsockopt(serv, 0, UDT_MSS, new int(9000), sizeof(int));
-	ret = UDT::setsockopt(serv, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
-	ret = UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
+	//int ret = UDT::setsockopt(serv, 0, UDT_MSS, new int(90000), sizeof(int));
+	//int ret = UDT::setsockopt(serv, 0, UDT_RCVBUF, new int(40960000/2), sizeof(int));
+	//ret = UDT::setsockopt(serv, 0, UDP_RCVBUF, new int(40960000*10), sizeof(int));
+	//ret = UDT::setsockopt(serv, 0, UDT_SNDBUF, new int(40960000/2), sizeof(int));
+	//ret = UDT::setsockopt(serv, 0, UDP_SNDBUF, new int(40960000*10), sizeof(int));
 
 	if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen))
 	{
@@ -129,9 +131,9 @@ void HoloNetServer::listenLoop()
 			return;
 		}
 
-		//ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(10000000), sizeof(int));
+		//ret = UDT::setsockopt(socket, 0, UDT_RCVBUF, new int(40960000), sizeof(int));
 		//ret = UDT::setsockopt(socket, 0, UDP_RCVBUF, new int(10000000), sizeof(int));
-		//ret = UDT::setsockopt(socket, 0, UDT_SNDBUF, new int(10000000), sizeof(int));
+		//ret = UDT::setsockopt(socket, 0, UDT_SNDBUF, new int(40960000), sizeof(int));
 		//ret = UDT::setsockopt(socket, 0, UDP_SNDBUF, new int(10000000), sizeof(int));
 #else
 		auto socket = boost::shared_ptr<boost::asio::ip::tcp::socket>(new boost::asio::ip::tcp::socket(*io_service_));
