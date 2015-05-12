@@ -89,43 +89,44 @@ void HoloRenderOpenGL::deinit()
 
 void HoloRenderOpenGL::glutInitLoop()
 {
-
 #ifdef ENABLE_HOLO_ZSPACE
+	if (this->enableZSpaceRendering_)
+	{
+		ZSError error;
 
-	ZSError error;
+		// Initialize the zSpace SDK. This MUST be called before
+		// calling any other zSpace API.
+		error = zsInitialize(&zSpaceContext_);
+		CHECK_ERROR(error);
 
-	// Initialize the zSpace SDK. This MUST be called before
-	// calling any other zSpace API.
-	error = zsInitialize(&zSpaceContext_);
-	CHECK_ERROR(error);
+		// Create a stereo buffer to handle L/R detection.
+		error = zsCreateStereoBuffer(zSpaceContext_, ZS_RENDERER_QUAD_BUFFER_GL, 0, &bufferHandle_);
+		CHECK_ERROR(error);
 
-	// Create a stereo buffer to handle L/R detection.
-	error = zsCreateStereoBuffer(zSpaceContext_, ZS_RENDERER_QUAD_BUFFER_GL, 0, &bufferHandle_);
-	CHECK_ERROR(error);
+		// Create a zSpace viewport object and grab its associated frustum. 
+		// Note: The zSpace viewport is abstract and not an actual window/viewport
+		// that is created and registered through the Windows OS. It manages
+		// a zSpace stereo frustum, which is responsible for various stereoscopic 
+		// 3D calculations such as calculating the view and projection matrices for 
+		// each eye.
+		error = zsCreateViewport(zSpaceContext_, &viewportHandle_);
+		CHECK_ERROR(error);
 
-	// Create a zSpace viewport object and grab its associated frustum. 
-	// Note: The zSpace viewport is abstract and not an actual window/viewport
-	// that is created and registered through the Windows OS. It manages
-	// a zSpace stereo frustum, which is responsible for various stereoscopic 
-	// 3D calculations such as calculating the view and projection matrices for 
-	// each eye.
-	error = zsCreateViewport(zSpaceContext_, &viewportHandle_);
-	CHECK_ERROR(error);
+		error = zsFindFrustum(viewportHandle_, &frustumHandle_);
+		CHECK_ERROR(error);
 
-	error = zsFindFrustum(viewportHandle_, &frustumHandle_);
-	CHECK_ERROR(error);
+		// Grab a handle to the stylus target.
+		error = zsFindTargetByType(zSpaceContext_, ZS_TARGET_TYPE_PRIMARY, 0, &stylusHandle_);
+		CHECK_ERROR(error);
 
-	// Grab a handle to the stylus target.
-	error = zsFindTargetByType(zSpaceContext_, ZS_TARGET_TYPE_PRIMARY, 0, &stylusHandle_);
-	CHECK_ERROR(error);
+		// Find the zSpace display and set the window's position
+		// to be the top left corner of the zSpace display.
+		error = zsFindDisplayByType(zSpaceContext_, ZS_DISPLAY_TYPE_ZSPACE, 0, &displayHandle_);
+		CHECK_ERROR(error);
 
-	// Find the zSpace display and set the window's position
-	// to be the top left corner of the zSpace display.
-	error = zsFindDisplayByType(zSpaceContext_, ZS_DISPLAY_TYPE_ZSPACE, 0, &displayHandle_);
-	CHECK_ERROR(error);
-
-	error = zsGetDisplayPosition(displayHandle_, &windowX_, &windowY_);
-	CHECK_ERROR(error);
+		error = zsGetDisplayPosition(displayHandle_, &windowX_, &windowY_);
+		CHECK_ERROR(error);
+	}
 #endif
 
 	GLenum glError = GL_NO_ERROR;
