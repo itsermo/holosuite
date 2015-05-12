@@ -94,6 +94,10 @@ HoloRender3DObject::HoloRender3DObject(const std::string objectName, unsigned in
 	objectTransform_.bounding_sphere.z = miniball3f.center()[2];
 	objectTransform_.bounding_sphere.w = miniball3f.squared_radius();
 
+	objectTransform_.scale.x = 1.f;
+	objectTransform_.scale.y = 1.f;
+	objectTransform_.scale.z = 1.f;
+
 	delete[] ap;
 
 	stringSize_ = objectName_.size();
@@ -237,6 +241,88 @@ HoloRender3DObject::HoloRender3DObject(const boost::shared_ptr<HoloNetPacket>& o
 	normFuture.wait();
 	colorFuture.wait();
 }
+
+boost::shared_ptr<HoloRender3DObject> HoloRender3DObject::CreateSimpleObject(const std::string objectName, SIMPLE_OBJECT objectType, float x, float y, float z, float size)
+{
+
+	HoloTransform trans = { 0 };
+	boost::shared_ptr<HoloRender3DObject> obj;
+	unsigned int numIndecies = 0;
+	unsigned int numVertices = 0;
+
+	std::vector<float> vertices;
+	std::vector<float> normals;
+	std::vector<float> colors;
+
+	switch (objectType)
+	{
+	case SIMPLE_OBJECT_CIRCLE:
+
+		break;
+	case SIMPLE_OBJECT_SQUARE:
+	{
+		numIndecies = 4;
+		numVertices = 4 * 6;
+		vertices = {
+			1.f, 1.f, -1.f, -1.f, 1.f, -1.f, -1.f, 1.f, 1.f, 1.f, 1.f, 1.f,		//top panel
+			1.f, -1.f, 1.f, -1.f, -1.f, 1.f, -1.f, -1.f, -1.f, 1.f, -1.f, -1.f,	//bottom panel
+			1.f, 1.f, 1.f, -1.f, 1.f, 1.f, -1.f, -1.f, 1.f, 1.f, -1.f, 1.f,		//front panel
+			1.f, -1.f, -1.f, -1.f, -1.f, -1.f, -1.f, 1.f, -1.f, 1.f, 1.f, -1.f,	//back panel
+			-1.f, 1.f, 1.f, -1.f, 1.f, -1.f, -1.f, -1.f, -1.f, -1.f, -1.f, 1.f,	//left panel
+			1.f, 1.f, -1.f, 1.f, 1.f, 1.f, 1.f, -1.f, 1.f, 1.f, -1.f, -1.f			//right panel
+		};
+
+		normals = {
+			0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f,
+			0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f,
+			0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f,
+			0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f,
+			-1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f,
+			1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f
+		};
+
+		colors = {
+			0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f,
+			1.f, 0.5f, 0.f, 1.f, 0.5f, 0.f, 1.f, 0.5f, 0.f, 1.f, 0.5f, 0.f,
+			1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+			1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f,
+			0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f,
+			1.f, 0.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 1.f
+		};
+
+		trans.bounding_sphere.x = 0.f;
+		trans.bounding_sphere.y = 0.f;
+		trans.bounding_sphere.z = 0.f;
+		trans.bounding_sphere.w = 4.f;
+
+		trans.translate.x = x;
+		trans.translate.y = y;
+		trans.translate.z = z;
+
+		trans.scale.x = size;
+		trans.scale.y = size;
+		trans.scale.z = size;
+	}
+
+		break;
+	case SIMPLE_OBJECT_TRIANGLE:
+		break;
+	}
+
+	obj = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(objectName,
+		numIndecies,
+		numVertices,
+		vertices.data(),
+		normals.data(),
+		colors.size() > 0 ? colors.data() : nullptr,
+		3,
+		3));
+	obj->SetTransform(trans);
+
+	return obj;
+}
+
+
 
 const boost::shared_ptr<HoloNetPacket> HoloRender3DObject::CreateNetPacket() const
 {

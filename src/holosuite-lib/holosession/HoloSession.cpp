@@ -491,9 +491,13 @@ void HoloSession::interactionLoop()
 {
 
 	bool firstRightPinch = true;
+	bool firstLeftPinch = true;
 
 	HoloVec3f rightHandOffset = {};
 	HoloVec3f rightHandRotationOffset = {};
+
+	HoloVec3f leftHandOffset = {};
+	HoloVec3f leftHandRotationOffset = {};
 
 	while (shouldInteract_)
 	{
@@ -510,10 +514,67 @@ void HoloSession::interactionLoop()
 
 		for (auto interactionSample : localInteractionData)
 		{
+			if (interactionSample.haveLeftHand)
+			{
+				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_CIRCLE)
+				{
+					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_SQUARE);
+					objectTracker_->Add3DObject(obj);
+
+					if (netSession_)
+					{
+						auto packet = obj->CreateNetPacket();
+						netSession_->sendPacketAsync(std::move(packet));
+					}
+				}
+
+				if (interactionSample.leftHand.pinchStrength > 0.6f)
+				{
+					for (auto obj : objectTracker_->Get3DObjects())
+					{
+						if (obj.second->GetAmOwner())
+						{
+							auto trans = obj.second->GetTransform();
+
+							if (firstLeftPinch)
+							{
+								leftHandOffset = interactionSample.leftHand.palmPosition;
+								leftHandOffset.x *= 30.f;
+								leftHandOffset.y *= 30.f;
+								leftHandOffset.z *= 30.f;
+								leftHandOffset.x -= trans.scale.x;
+								leftHandOffset.y -= trans.scale.y;
+								leftHandOffset.z -= trans.scale.z;
+								leftHandRotationOffset.x = trans.rotation.x;
+								leftHandRotationOffset.y = trans.rotation.y;
+								leftHandRotationOffset.z = trans.rotation.z;
+								firstLeftPinch = false;
+							}
+
+							trans.scale.z = (interactionSample.leftHand.palmPosition.z * 30.f - leftHandOffset.z);
+
+							obj.second->SetTransform(trans);
+
+							if (netSession_)
+							{
+								auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+								netSession_->sendPacketAsync(std::move(packet));
+							}
+						}
+					}
+				}
+				else
+				{
+					firstLeftPinch = true;
+					leftHandOffset = {};
+					leftHandRotationOffset = {};
+				}
+			}
+
 			if (interactionSample.haveRightHand)
 			{
 
-				if (interactionSample.rightHand.gesture != holo::input::GESTURE_TYPE_NONE)
+				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
 					for (auto obj : objectTracker_->Get3DObjects())
 					{
 						auto trans = obj.second->GetTransform();

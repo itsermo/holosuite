@@ -21,7 +21,11 @@ HoloInputDeviceLeapSDK::~HoloInputDeviceLeapSDK()
 bool HoloInputDeviceLeapSDK::init()
 {
 	controller_.enableGesture(Leap::Gesture::Type::TYPE_SCREEN_TAP);
+	controller_.enableGesture(Leap::Gesture::Type::TYPE_CIRCLE);
 	controller_.addListener(*this);
+
+	controller_.config().setFloat("Gesture.Circle.MinArc", 1.8*M_PI);
+	//controller_.config().save();
 
 	std::unique_lock<std::mutex> initLG(initMutex_);
 	
@@ -188,7 +192,8 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 		switch (gesture.type()) {
 		case Gesture::TYPE_CIRCLE:
 		{
-			holoHand->gesture = holo::input::GESTURE_TYPE_CIRCLE;
+			if (gesture.state() == Leap::Gesture::STATE_STOP)
+				holoHand->gesture = holo::input::GESTURE_TYPE_CIRCLE;
 			break;
 		}
 		case Gesture::TYPE_SWIPE:

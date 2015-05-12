@@ -701,13 +701,21 @@ void HoloRenderOpenGL::drawObjects()
 			//	glTranslatef(0.15, 0.f, 0.f);
 			
 			if (amOwner)
+			{
 				glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
+				glRotatef(-transform.rotation.z* 180.f / M_PI, 0, 1, 0);
+			}
 			else
+			{
 				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
+				glRotatef(transform.rotation.z* 180.f / M_PI, 0, 1, 0);
+			}
 
-			
+			glScalef(transform.scale.x, transform.scale.y, transform.scale.z);
 			glScalef(isLocal ? scaleFactor*0.1f : -scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
-			glRotatef(isLocal ? -transform.rotation.z * 180.0f / M_PI : transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
+			if (!isLocal)
+				glRotatef(180.f, 0, 1, 0);
+			//glRotatef(isLocal ? transform.rotation.z * 180.0f / M_PI : -transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
 			if (!obj.second->GetHasGLBuffers())

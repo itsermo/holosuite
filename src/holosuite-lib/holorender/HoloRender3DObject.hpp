@@ -49,6 +49,8 @@ namespace holo
 			void SetGLColorBufID(unsigned int glColorBufID) { glColorBufID_ = glColorBufID; }
 			unsigned int GetGLColorBufID() const { return glColorBufID_; }
 
+			static boost::shared_ptr<HoloRender3DObject> CreateSimpleObject(const std::string objectName, SIMPLE_OBJECT objectType, float x = 0.f, float y = 0.f, float z = 0.f, float size = 1.f);
+
 		private:
 			std::string objectName_;
 			HoloTransform objectTransform_;
