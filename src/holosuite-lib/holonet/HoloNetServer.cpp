@@ -94,7 +94,7 @@ void HoloNetServer::listenLoop()
 
 	freeaddrinfo(res);
 
-	LOG4CXX_INFO(logger_, "UDT server is ready at port: " << port_)
+	LOG4CXX_INFO(logger_, "UDT server is listening on port: " << port_)
 
 	if (UDT::ERROR == UDT::listen(serv, 10))
 	{
