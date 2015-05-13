@@ -96,7 +96,7 @@ namespace holo
 			void glutInitLoop();
 			void glCheckErrors();
 
-			void drawPointCloud();
+			void drawPointCloud(GLuint glCloudBuffer, HoloCloudPtr & theCloud);
 			void drawObjects();
 			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
 			void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius);
@@ -170,7 +170,7 @@ namespace holo
 
 			std::string displayEnv_;
 
-			GLuint cloudGLBuffer_;
+			GLuint cloudGLBuffer_[2];
 			bool haveCloudGLBuffer_;
 			bool enableMeshConstruction_;
 

@@ -38,13 +38,15 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	prevWindowX_(0),
 	prevWindowY_(0),
 	haveCloudGLBuffer_(false),
-	cloudGLBuffer_(0),
 	enableMeshConstruction_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
 	gCurrentOpenGLInstance = this;
 	LOG4CXX_DEBUG(logger_, "Done instantiating HoloRenderOpenGL object");
+
+	cloudGLBuffer_[0] = 0;
+	cloudGLBuffer_[1] = 0;
 }
 
 HoloRenderOpenGL::~HoloRenderOpenGL()
@@ -81,9 +83,12 @@ bool HoloRenderOpenGL::init()
 
 void HoloRenderOpenGL::deinit()
 {
-	glutLeaveMainLoop();
-	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	glutInitThread_.join();
+	if (isInit_)
+	{
+		glutLeaveMainLoop();
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		glutInitThread_.join();
+	}
 }
 
 
@@ -232,6 +237,8 @@ void HoloRenderOpenGL::glutInitLoop()
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 
+	glGenBuffers(2, cloudGLBuffer_);
+
 	glutMainLoop();
 
 #ifdef ENABLE_HOLO_ZSPACE
@@ -242,6 +249,8 @@ void HoloRenderOpenGL::glutInitLoop()
 		zsShutdown(zSpaceContext_);
 	}
 #endif
+
+	glDeleteBuffers(2, cloudGLBuffer_);
 
 	hasQuitCV_.notify_all();
 }
@@ -342,10 +351,10 @@ void HoloRenderOpenGL::display()
 		{
 #endif
 
-			float distance = 0.46f;
-			float camX = distance * -sinf(viewPhi_*(M_PI / 180)) * cosf((viewTheta_)*(M_PI / 180));
-			float camY = distance * -sinf((viewTheta_)*(M_PI / 180)) + 0.3;
-			float camZ = -distance * cosf((viewPhi_)*(M_PI / 180)) * cosf((viewTheta_)*(M_PI / 180));
+			//float distance = 0.46f;
+			//float camX = distance * -sinf(viewPhi_*(M_PI / 180)) * cosf((viewTheta_)*(M_PI / 180));
+			//float camY = distance * -sinf((viewTheta_)*(M_PI / 180)) + 0.3;
+			//float camZ = -distance * cosf((viewPhi_)*(M_PI / 180)) * cosf((viewTheta_)*(M_PI / 180));
 
 			glViewport(0, 0, (GLsizei)windowWidth_, (GLsizei)windowHeight_);
 			glMatrixMode(GL_PROJECTION);
@@ -353,15 +362,14 @@ void HoloRenderOpenGL::display()
 			gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.001f, 10.0f);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
-			gluLookAt(camX, camY+0.02f, camZ,   // Eye
+			gluLookAt(0, 0.22, 0.16f,   // Eye
 				0.0f, 0.0f, 1.0f,     // Center
 				0.0f, 1.0f, 1.0f);
 
+			glTranslatef(0.0, 0.0, viewDepth_);
 
-			glTranslatef(0.0, 0.0, viewDepth_ - 0.68f);
-
-			//glRotatef(-viewTheta_, 1.0, 0.0, 0.0);
-			//glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
+			glRotatef(-viewTheta_, 1.0, 0.0, 0.0);
+			glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -372,7 +380,7 @@ void HoloRenderOpenGL::display()
 			glPushMatrix();
 			glTranslatef(-.1f, 0.05, -0.09);
 
-			this->drawPointCloud();
+			this->drawPointCloud(cloudGLBuffer_[1], remoteCloud_);
 
 			glPopMatrix();
 
@@ -390,6 +398,34 @@ void HoloRenderOpenGL::display()
 			glDisable(GL_LIGHTING);
 			glDisable(GL_LIGHT0);
 			glDisable(GL_NORMALIZE);
+
+
+			glViewport(windowWidth_/32, windowHeight_/32, (GLsizei)windowWidth_/8, (GLsizei)windowHeight_/8);
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(45.0f, static_cast<float>(windowWidth_) / static_cast<float>(windowHeight_), 0.001f, 10.0f);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(0.f, 0.f, 0.f,   // Eye
+				0.0f, 0.0f, 1.0f,     // Center
+				0.0f, 1.0f, 1.0f);
+
+			//glScalef(0.001f, 0.001f, 0.001f);
+			//glTranslatef(-.1f, 0.05, viewDepth_-.3f);
+			//glTranslatef(camX+0.2, camY + 0.02f, camZ);
+			//glRotatef(180.f, 0, 1, 0);
+			std::unique_lock<std::mutex> localCloudLock(localCloudMutex_);
+
+			glTranslatef(0.f, 0.f, 0.6f);
+			glScalef(-1.f, 1.f, 1.f);
+			glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
+
+			glDisable(GL_DEPTH_TEST);
+			this->drawPointCloud(cloudGLBuffer_[0], localCloud_);
+			glEnable(GL_DEPTH_TEST);
+
+			haveNewLocalCloud_.store(false);
+			localCloudLock.unlock();
 
 			glFinish();
 
@@ -476,7 +512,9 @@ void HoloRenderOpenGL::glutCleanup(void)
 
 void HoloRenderOpenGL::updateLocalPointCloud(HoloCloudPtr && pointCloud)
 {
-
+	std::lock_guard<std::mutex> lg(localCloudMutex_);
+	localCloud_ = std::move(pointCloud);
+	haveNewLocalCloud_.store(true);
 }
 
 void HoloRenderOpenGL::updateRemotePointCloud(HoloCloudPtr && pointCloud)
@@ -579,21 +617,16 @@ void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat
 	glDisable(GL_LINE_SMOOTH);
 }
 
-void HoloRenderOpenGL::drawPointCloud()
+void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCloud)
 {
-	if (!haveCloudGLBuffer_)
-	{
-		glGenBuffers(1, &cloudGLBuffer_);
-		haveCloudGLBuffer_ = true;
-	}
-
-	glDisable(GL_BLEND);
+	if (cloudGLBuffer == 2)
+		glDisable(GL_BLEND);
 
 	if (enableMeshConstruction_)
 	{
-		if (remoteCloud_->size() > 0)
+		if (theCloud->size() > 0)
 		{
-			organizedFastMesh_.setInputCloud(remoteCloud_);
+			organizedFastMesh_.setInputCloud(theCloud);
 			organizedFastMesh_.reconstruct(*organizedFastMeshVertices_);
 
 			glBegin(GL_TRIANGLES);
@@ -615,19 +648,19 @@ void HoloRenderOpenGL::drawPointCloud()
 	else
 	{
 		glEnable(GL_POINT_SMOOTH);
-		glPointSize(voxelSize_ * 4);
+		glPointSize(cloudGLBuffer == 2 ? voxelSize_ * 4 : 1.f);
 
-		if (haveCloudGLBuffer_)
+		if (cloudGLBuffer > 0)
 		{
-			glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer_);
-			glBufferData(GL_ARRAY_BUFFER, remoteCloud_->points.size() * sizeof(HoloPoint3D), remoteCloud_->points.data(), GL_STREAM_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer);
+			glBufferData(GL_ARRAY_BUFFER, theCloud->points.size() * sizeof(HoloPoint3D), theCloud->points.data(), GL_STREAM_DRAW);
 			glEnableClientState(GL_VERTEX_ARRAY);
 			glEnableClientState(GL_COLOR_ARRAY);
 
 			glVertexPointer(3, GL_FLOAT, sizeof(HoloPoint3D), 0);
 			glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(HoloPoint3D), (void*)(sizeof(float)* 4));
 
-			glDrawArrays(GL_POINTS, 0, remoteCloud_->points.size());
+			glDrawArrays(GL_POINTS, 0, theCloud->points.size());
 
 			glDisableClientState(GL_VERTEX_ARRAY);
 			glDisableClientState(GL_COLOR_ARRAY);
@@ -638,9 +671,9 @@ void HoloRenderOpenGL::drawPointCloud()
 			glBegin(GL_POINTS);
 
 			const float gain = 1 / 255.0; // converting from char units to float
-			HoloPoint3D *pointIdx = remoteCloud_->points.data();
+			HoloPoint3D *pointIdx = theCloud->points.data();
 			float luma = 0.0f;
-			for (int i = 0; i < remoteCloud_->size(); i++)
+			for (int i = 0; i < theCloud->size(); i++)
 			{
 				if (pointIdx->z == HOLO_CLOUD_BAD_POINT)
 					continue;
@@ -655,7 +688,8 @@ void HoloRenderOpenGL::drawPointCloud()
 		glDisable(GL_POINT_SMOOTH);
 	}
 
-	glEnable(GL_BLEND);
+	if (cloudGLBuffer == 1)
+		glEnable(GL_BLEND);
 }
 
 void HoloRenderOpenGL::drawObjects()
@@ -951,7 +985,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glPushMatrix();
 	glTranslatef(0.1f, 0.05, -0.09);
 
-	this->drawPointCloud();
+	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud_);
 
 	glPopMatrix();
 

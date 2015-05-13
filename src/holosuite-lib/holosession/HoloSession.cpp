@@ -8,6 +8,8 @@
 
 #include <boost/smart_ptr.hpp>
 
+#include <pcl/filters/approximate_voxel_grid.h>
+
 using namespace holo;
 using namespace holo::net;
 
@@ -450,8 +452,23 @@ void HoloSession::captureLoop()
 		localRGBAZ_->z = cv::Mat(remoteInfo_.rgbazHeight, remoteInfo_.rgbazWidth, CV_16UC1);
 	}
 
+	auto localCaptureInfo = capture_->getCaptureInfo();
+
+	HoloCloudPtr localCloud;
+	holo::capture::WorldConvertCache wc;
+
+	wc.xzFactor = tan(localCaptureInfo.rgbHOV / 2) * 2;
+	wc.yzFactor = tan(localCaptureInfo.rgbVOV / 2) * 2;
+	wc.resolutionX = localCaptureInfo.zWidth;
+	wc.resolutionY = localCaptureInfo.zHeight;
+	wc.halfResX = wc.resolutionX / 2;
+	wc.halfResY = wc.resolutionY / 2;
+	wc.coeffX = wc.resolutionX / wc.xzFactor;
+	wc.coeffY = wc.resolutionY / wc.yzFactor;
+
 	while (shouldCapture_)
 	{
+		//std::future<void> localCloudFuture;
 
 		if (rgbazEncoder_)
 		{
@@ -460,10 +477,29 @@ void HoloSession::captureLoop()
 			ulLocalPixMaps.unlock();
 			haveLocalRGBAZ_ = true;
 			haveLocalRGBAZCV_.notify_all();
+
+			if (render_)
+			{
+				localCloud = HoloCloudPtr(new HoloCloud(localCaptureInfo.zWidth, localCaptureInfo.zHeight));
+				localCloud->is_dense = false;
+				localCloud->sensor_origin_.setZero();
+				localCloud->sensor_orientation_.setIdentity();
+
+
+				utils::ReprojectToRealWorld(localCloud, *localRGBAZ_, wc);
+
+				auto filteredCloud = HoloCloudPtr(new HoloCloud);
+				
+				pcl::ApproximateVoxelGrid<HoloPoint3D> voxelFilter;
+				voxelFilter.setInputCloud(localCloud);
+				voxelFilter.setLeafSize(0.01f, 0.01f, 0.01f);
+				voxelFilter.filter(*filteredCloud);
+
+				render_->updateLocalPointCloud(std::move(filteredCloud));
+			}
 		}
 		else if (cloudEncoder_)
 		{
-			HoloCloudPtr localCloud;
 			capture_->waitAndGetNextPointCloud(localCloud);
 			std::unique_lock<std::mutex> ulLocalCloud(localCloudMutex_);
 			localCloud_ = localCloud;
@@ -483,7 +519,7 @@ void HoloSession::captureLoop()
 			haveRemoteCloudCV_.notify_all();
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
@@ -824,12 +860,14 @@ void HoloSession::renderLoop()
 					continue;
 			}
 
-			HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
+			//HoloCloudPtr renderCloud = HoloCloudPtr(new HoloCloud((const HoloCloud)*remoteCloud_));
 			
+			render_->updateRemotePointCloud(std::move(remoteCloud_));
+
+
 			haveRemoteCloud_ = false;
 			ulRemoteCloud.unlock();
 
-			render_->updateRemotePointCloud(std::move(renderCloud));
 		}
 
 	}
