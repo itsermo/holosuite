@@ -709,25 +709,25 @@ void HoloRenderOpenGL::drawObjects(bool overrideColor)
 			glMatrixMode(GL_MODELVIEW);
 			glPushMatrix();
 
-			//if (isLocal)
-			//	glTranslatef(-0.15, 0.f, 0.f);
-			//else
-			//glTranslatef(0.15, 0.f, 0.f);
-			
-			if (!isLocal)
-				glScalef(-1.f, 1.f, -1.f);
 
 			if (amOwner)
-				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
-			else
 				glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
+			else
+				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
 
 			glScalef(transform.scale.x, transform.scale.y, transform.scale.z);
 			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
-			//if (!isLocal)
-			//	glRotatef(180.f, 0, 1, 0);
-			glRotatef(isLocal ? transform.rotation.z * 180.0f / M_PI : -transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
+
+			if (amOwner)
+				glRotatef(-transform.rotation.y * 180.0f / M_PI, 0, 1, 0);
+			else
+				glRotatef(transform.rotation.y * 180.0f / M_PI, 0, 1, 0);
+
+			if (!isLocal)
+				glScalef(-1.f, 1.f, -1.f);
+
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
+
 
 			if (!obj.second->GetHasGLBuffers())
 			{
