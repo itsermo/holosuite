@@ -485,17 +485,8 @@ void HoloSession::captureLoop()
 				localCloud->sensor_origin_.setZero();
 				localCloud->sensor_orientation_.setIdentity();
 
-
 				utils::ReprojectToRealWorld(localCloud, *localRGBAZ_, wc);
-
-				auto filteredCloud = HoloCloudPtr(new HoloCloud);
-				
-				pcl::ApproximateVoxelGrid<HoloPoint3D> voxelFilter;
-				voxelFilter.setInputCloud(localCloud);
-				voxelFilter.setLeafSize(0.01f, 0.01f, 0.01f);
-				voxelFilter.filter(*filteredCloud);
-
-				render_->updateLocalPointCloud(std::move(filteredCloud));
+				render_->updateLocalPointCloud(std::move(localCloud));
 			}
 		}
 		else if (cloudEncoder_)
@@ -611,28 +602,29 @@ void HoloSession::interactionLoop()
 			{
 
 				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
-					for (auto obj : objectTracker_->Get3DObjects())
+				for (auto obj : objectTracker_->Get3DObjects())
+				{
+					auto trans = obj.second->GetTransform();
+
+					//LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
+					if (netSession_)
 					{
-						auto trans = obj.second->GetTransform();
 
-						//LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
-						if (netSession_)
-						{
+						auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
+						trans.translate.x = -trans.translate.x;
 
-							auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
+						if (obj.second->GetAmOwner())
+							trans.translate.z = -0.1f;
+						else
+							trans.translate.z = 0.1f;
 
-							if (obj.second->GetAmOwner())
-								trans.translate.z = -0.1f;
-							else
-								trans.translate.z = 0.05f;
+						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+						netSession_->sendPacketAsync(std::move(packet));
+						netSession_->sendPacketAsync(std::move(changeOwnerPacket));
 
-							auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
-							netSession_->sendPacketAsync(std::move(packet));
-							netSession_->sendPacketAsync(std::move(changeOwnerPacket));
-
-							obj.second->SetTransform(trans);
-						}
+						obj.second->SetTransform(trans);
 					}
+				}
 
 				if (interactionSample.rightHand.pinchStrength > 0.6f)
 				{
@@ -680,6 +672,8 @@ void HoloSession::interactionLoop()
 				}
 			}
 		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 

@@ -393,7 +393,7 @@ void HoloRenderOpenGL::display()
 
 			glTranslatef(0.0, .15f, 0.37);
 
-			this->drawObjects();
+			this->drawObjects(false);
 
 			glDisable(GL_LIGHTING);
 			glDisable(GL_LIGHT0);
@@ -420,9 +420,9 @@ void HoloRenderOpenGL::display()
 			glScalef(-1.f, 1.f, 1.f);
 			glRotatef(-viewPhi_, 0.0, 1.0, 0.0);
 
-			glDisable(GL_DEPTH_TEST);
+			//glDisable(GL_DEPTH_TEST);
 			this->drawPointCloud(cloudGLBuffer_[0], localCloud_);
-			glEnable(GL_DEPTH_TEST);
+			//glEnable(GL_DEPTH_TEST);
 
 			haveNewLocalCloud_.store(false);
 			localCloudLock.unlock();
@@ -648,7 +648,7 @@ void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCl
 	else
 	{
 		glEnable(GL_POINT_SMOOTH);
-		glPointSize(cloudGLBuffer == 2 ? voxelSize_ * 4 : 1.f);
+		glPointSize(cloudGLBuffer == 2 ? voxelSize_ * 3 : 1.f);
 
 		if (cloudGLBuffer > 0)
 		{
@@ -692,7 +692,7 @@ void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCl
 		glEnable(GL_BLEND);
 }
 
-void HoloRenderOpenGL::drawObjects()
+void HoloRenderOpenGL::drawObjects(bool overrideColor)
 {
 	if (objectTracker_)
 	{
@@ -712,24 +712,21 @@ void HoloRenderOpenGL::drawObjects()
 			//if (isLocal)
 			//	glTranslatef(-0.15, 0.f, 0.f);
 			//else
-			//	glTranslatef(0.15, 0.f, 0.f);
+			//glTranslatef(0.15, 0.f, 0.f);
 			
+			if (!isLocal)
+				glScalef(-1.f, 1.f, -1.f);
+
 			if (amOwner)
-			{
-				glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
-				glRotatef(-transform.rotation.z* 180.f / M_PI, 0, 1, 0);
-			}
-			else
-			{
 				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
-				glRotatef(transform.rotation.z* 180.f / M_PI, 0, 1, 0);
-			}
+			else
+				glTranslatef(-transform.translate.x, transform.translate.y, -transform.translate.z);
 
 			glScalef(transform.scale.x, transform.scale.y, transform.scale.z);
-			glScalef(isLocal ? scaleFactor*0.1f : -scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
-			if (!isLocal)
-				glRotatef(180.f, 0, 1, 0);
-			//glRotatef(isLocal ? transform.rotation.z * 180.0f / M_PI : -transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
+			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
+			//if (!isLocal)
+			//	glRotatef(180.f, 0, 1, 0);
+			glRotatef(isLocal ? transform.rotation.z * 180.0f / M_PI : -transform.rotation.z * 180.0f / M_PI, 0, 1, 0);
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
 			if (!obj.second->GetHasGLBuffers())
@@ -775,7 +772,7 @@ void HoloRenderOpenGL::drawObjects()
 				glEnableClientState(GL_VERTEX_ARRAY);
 				glVertexPointer(info.num_points_per_vertex, GL_FLOAT, info.vertex_stride, 0);
 
-				if (amOwner)
+				if (amOwner || overrideColor)
 				{
 					if (obj.second->GetColorBuffer())
 					{
@@ -995,17 +992,42 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 
 	glTranslatef(0.0, 0.30, -0.60);
 
-	this->drawObjects();
+	glEnable(GL_BLEND);
+	this->drawObjects(false);
+	glDisable(GL_BLEND);
 
-	glPushMatrix();
-	glTranslatef(-0.15, 0.30, -0.6);
+	//glPushMatrix();
+	//glTranslatef(-0.15, 0.30, -0.6);
 
-	glutSolidSphere(0.035f, 16, 16);
+	//glutSolidSphere(0.035f, 16, 16);
 
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
-
 	glDisable(GL_NORMALIZE);
+
+	glPushMatrix();
+	glTranslatef(.2f, -.1f, -.1f);
+	glScalef(-0.1, 0.1, 0.1);
+
+	this->drawPointCloud(cloudGLBuffer_[0], localCloud_);
+
+	//glTranslatef(0.0, 0.30, -0.60);
+
+	glPushMatrix();
+
+	glScalef(-3.f,3.f,-3.f);
+	glTranslatef(0., 0.1f, 0.f);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_BLEND);
+	this->drawObjects(true);
+	glDisable(GL_BLEND);
+	glDisable(GL_LIGHTING);
+	glDisable(GL_LIGHT0);
+	glDisable(GL_NORMALIZE);
+
 	glPopMatrix();
 
 	// Restore the mono (non-stereoscopic) model-view and projection matrices.
@@ -1161,13 +1183,16 @@ void HoloRenderOpenGL::draw()
 	// Set the application window's rendering context as the current rendering context.
 	//wglMakeCurrent(g_hDC, g_hRC);
 	std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
+	std::unique_lock<std::mutex> localCloudLock(localCloudMutex_);
 
 	// Draw the scene for each eye.
 	drawSceneForEye(ZS_EYE_LEFT);
 	drawSceneForEye(ZS_EYE_RIGHT);
 
 	haveNewRemoteCloud_.store(false);
+	haveNewLocalCloud_.store(false);
 	cloudLock.unlock();
+	localCloudLock.unlock();
 
 	// Flush the render buffers.
 	glutSwapBuffers();

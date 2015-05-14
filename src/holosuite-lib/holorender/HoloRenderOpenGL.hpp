@@ -97,7 +97,7 @@ namespace holo
 			void glCheckErrors();
 
 			void drawPointCloud(GLuint glCloudBuffer, HoloCloudPtr & theCloud);
-			void drawObjects();
+			void drawObjects(bool overrideColor);
 			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
 			void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius);
 
