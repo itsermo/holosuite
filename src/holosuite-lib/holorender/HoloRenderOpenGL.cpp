@@ -1005,6 +1005,8 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glDisable(GL_LIGHT0);
 	glDisable(GL_NORMALIZE);
 
+	glMatrixMode(GL_MODELVIEW);
+
 	glPushMatrix();
 	glTranslatef(.2f, -.1f, -.1f);
 	glScalef(-0.1, 0.1, 0.1);
@@ -1013,10 +1015,8 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 
 	//glTranslatef(0.0, 0.30, -0.60);
 
-	glPushMatrix();
-
 	glScalef(-3.f,3.f,-3.f);
-	glTranslatef(0., 0.1f, 0.f);
+	glTranslatef(0.f, 0.1f, 0.f);
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -1193,6 +1193,8 @@ void HoloRenderOpenGL::draw()
 	haveNewLocalCloud_.store(false);
 	cloudLock.unlock();
 	localCloudLock.unlock();
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 	// Flush the render buffers.
 	glutSwapBuffers();

@@ -545,7 +545,7 @@ void HoloSession::interactionLoop()
 			{
 				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_CIRCLE)
 				{
-					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_SQUARE);
+					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_TRIANGLE);
 					objectTracker_->Add3DObject(obj);
 
 					if (netSession_)
