@@ -613,16 +613,9 @@ void HoloSession::interactionLoop()
 						auto amOwner = obj.second->GetAmOwner();
 						auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
 
-
 						trans.rotation.y = -trans.rotation.y;
 						trans.translate.z = amOwner ? .1f : -trans.translate.z;
 						trans.translate.x = -trans.translate.x;
-
-
-						//if (obj.second->GetAmOwner())
-						//	trans.translate.z = isLocal ? -0.1f : 0.1f;
-						//else
-						//	trans.translate.z = isLocal ? 0.1f : -0.1f;
 
 						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
 						netSession_->sendPacketAsync(std::move(packet));
@@ -656,11 +649,7 @@ void HoloSession::interactionLoop()
 							trans.translate.y = (interactionSample.rightHand.palmPosition.y - rightHandOffset.y);
 							trans.translate.z = (interactionSample.rightHand.palmPosition.z - rightHandOffset.z);
 
-							//trans.rotation.x = interactionSample.rightHand.palmNormal.x + rightHandRotationOffset.x;
-							//trans.rotation.y = interactionSample.rightHand.palmNormal.y + rightHandRotationOffset.y;
-							//trans.rotation.z = interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.z;
-
-							trans.rotation.y = interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.z;
+							trans.rotation.y = (interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.y);
 
 							obj.second->SetTransform(trans);
 
