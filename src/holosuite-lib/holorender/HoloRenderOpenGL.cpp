@@ -91,7 +91,11 @@ void HoloRenderOpenGL::deinit()
 bool HoloRenderOpenGL::initWindow(GLFWwindow** window, bool shouldFullScreen)
 {
 	glfwWindowHint(GLFW_STEREO, enableZSpaceRendering_ ? GL_TRUE : GL_FALSE);
-
+	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
+	
 	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
 	if (shouldFullScreen)
@@ -275,7 +279,8 @@ void HoloRenderOpenGL::renderLoop()
 		}
 
 		display();
-		glfwPollEvents();
+
+		glfwWaitEvents();
 	}
 
 	deinitWindow(&window_);
@@ -1207,6 +1212,8 @@ void HoloRenderOpenGL::draw()
 	drawSceneForEye(ZS_EYE_LEFT);
 	drawSceneForEye(ZS_EYE_RIGHT);
 
+	glfwSwapBuffers(window_);
+
 	haveNewRemoteCloud_.store(false);
 	haveNewLocalCloud_.store(false);
 	cloudLock.unlock();
@@ -1215,7 +1222,7 @@ void HoloRenderOpenGL::draw()
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 	// Flush the render buffers.
-	glfwSwapBuffers(window_);
+	
 }
 
 #endif
