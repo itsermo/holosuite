@@ -85,7 +85,7 @@ void HoloRenderOpenGL::deinit()
 {
 	if (isInit_)
 	{
-		glutLeaveMainLoop();
+		//glutLeaveMainLoop();
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		glutInitThread_.join();
 	}
@@ -140,7 +140,7 @@ void HoloRenderOpenGL::glutInitLoop()
 	//char fakeParam[] = "dscp2";
 	const char *fakeargv[] = { "holosuite", NULL };
 	int fakeargc = 1;
-#elif defined(__linux) || defined(__unix) || defined(__posix)
+#elif defined(__linux) || defined(__unix) || defined(__posix) || defined(__APPLE__)
 	char displayEnvArg[1024];
 	strncpy(displayEnvArg, displayEnv_.c_str(), displayEnv_.length());
 
@@ -153,7 +153,7 @@ void HoloRenderOpenGL::glutInitLoop()
 	// Initialize GLUT window and callbacks
 	glutInit(&fakeargc, const_cast<char**>(fakeargv));
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-	glutInitContextVersion(3, 1);
+	//glutInitContextVersion(3, 1);
 	glutInitWindowSize(windowWidth_, windowHeight_);
 
 	if (enableZSpaceRendering_)
@@ -235,7 +235,7 @@ void HoloRenderOpenGL::glutInitLoop()
 		organizedFastMeshVertices_ = boost::shared_ptr<std::vector<pcl::Vertices>>(new std::vector<pcl::Vertices>);
 	}
 
-	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 
 	glGenBuffers(2, cloudGLBuffer_);
 
@@ -276,8 +276,8 @@ void HoloRenderOpenGL::idle()
 {
 	if (gShouldRun_)
 		glutPostRedisplay();
-	else
-		glutLeaveMainLoop();
+	//else
+		//glutLeaveMainLoop();
 }
 
 void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
@@ -316,7 +316,7 @@ void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
 		break;
 
 	case 27: /* Esc key */
-		glutLeaveMainLoop();
+		//glutLeaveMainLoop();
 		//gShouldRun_ = false;
 		break;
 	}
@@ -435,8 +435,8 @@ void HoloRenderOpenGL::display()
 		}
 #endif
 	}
-	else
-		glutLeaveMainLoop();
+	//else
+	//	glutLeaveMainLoop();
 	//std::this_thread::sleep_for(std::chrono::milliseconds(13));
 }
 

@@ -37,6 +37,8 @@ endif()
 #using c++ 11 standard for GCC, requires GCC 4.7 or greater to compile
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	list(APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	list(APPEND CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 endif()
 
 # Get rid of CMP0020 warning

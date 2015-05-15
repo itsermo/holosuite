@@ -86,7 +86,7 @@ bool HoloCaptureOpenNI2::init(int which)
 	LOG4CXX_INFO(logger_, "Z Height: " << zHeight_);
 	LOG4CXX_INFO(logger_, "Z FPS: " << zFPS_);
 
-	Status rc = Status::STATUS_OK;
+	Status rc = STATUS_OK;
 
 	initOpenNI2();
 
@@ -112,7 +112,7 @@ bool HoloCaptureOpenNI2::init(int which)
 		LOG4CXX_INFO(logger_, "Opening ONI file \"" << inputFilePath_ << "\"...");
 
 	rc = inputFilePath_.empty() ? device_.open(deviceArray[which].getUri()) : device_.open(inputFilePath_.c_str());
-	if (rc != Status::STATUS_OK)
+	if (rc != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not open device");
 		return false;
@@ -121,83 +121,83 @@ bool HoloCaptureOpenNI2::init(int which)
 	if (device_.isFile())
 	{
 		rc = device_.setProperty<int>(openni::DEVICE_PROPERTY_PLAYBACK_REPEAT_ENABLED, 1);
-		if (rc != Status::STATUS_OK)
+		if (rc != STATUS_OK)
 		{
 			LOG4CXX_WARN(logger_, "Could not set repeat mode enabled for .oni file playback");
 		}
 	}
 
 	rc = device_.setDepthColorSyncEnabled(true);
-	if (rc != Status::STATUS_OK)
+	if (rc != STATUS_OK)
 		LOG4CXX_WARN(logger_, "Could not framelock depth and color streams");
 
 	rc = depthStream_.create(device_, openni::SENSOR_DEPTH);
-	if (rc != Status::STATUS_OK)
+	if (rc != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not create depth stream");
 		return false;
 	}
 
 	rc = colorStream_.create(device_, openni::SENSOR_COLOR);
-	if (rc != Status::STATUS_OK)
+	if (rc != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not create color stream");
 		return false;
 	}
 
 	VideoMode colorstreamMode;
-	colorstreamMode.setPixelFormat(PixelFormat::PIXEL_FORMAT_RGB888);
+	colorstreamMode.setPixelFormat(PIXEL_FORMAT_RGB888);
 	colorstreamMode.setResolution(rgbWidth_, rgbHeight_);
 	colorstreamMode.setFps(rgbFPS_);
 
 	VideoMode depthstreamMode;
-	depthstreamMode.setPixelFormat(PixelFormat::PIXEL_FORMAT_DEPTH_1_MM);
+	depthstreamMode.setPixelFormat(PIXEL_FORMAT_DEPTH_1_MM);
 	depthstreamMode.setResolution(zWidth_,zHeight_);
 	depthstreamMode.setFps(zFPS_);
 
 	if (!device_.isFile())
 	{
 		rc = colorStream_.setVideoMode(colorstreamMode);
-		if (rc != Status::STATUS_OK)
+		if (rc != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "Could not set color stream mode");
 			return false;
 		}
 
 		rc = depthStream_.setVideoMode(depthstreamMode);
-		if (rc != Status::STATUS_OK)
+		if (rc != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "Could not set depth stream mode");
 			return false;
 		}
 	}
 
-	if (colorStream_.start() != Status::STATUS_OK)
+	if (colorStream_.start() != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not start either color stream");
 		return false;
 	}
 
-	//if (colorStream_.addNewFrameListener(&colorListener_) != Status::STATUS_OK)
+	//if (colorStream_.addNewFrameListener(&colorListener_) != STATUS_OK)
 	//{
 	//	LOG4CXX_ERROR(logger_, "Could not set color stream event listener");
 	//	return false;
 	//}
 
-	if (depthStream_.start() != Status::STATUS_OK)
+	if (depthStream_.start() != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not start either depth stream");
 		return false;
 	}
 
-	//if (depthStream_.addNewFrameListener(&depthListener_) != Status::STATUS_OK)
+	//if (depthStream_.addNewFrameListener(&depthListener_) != STATUS_OK)
 	//{
 	//	LOG4CXX_ERROR(logger_, "Could not set depth stream event listener");
 	//	return false;
 	//}
 
 	rc = device_.setImageRegistrationMode(openni::ImageRegistrationMode::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
-	if (rc != Status::STATUS_OK)
+	if (rc != STATUS_OK)
 	{
 		LOG4CXX_WARN(logger_, "Could not register the depth map to color map");
 	}
@@ -216,7 +216,7 @@ bool HoloCaptureOpenNI2::init(int which)
 	zHeight_ = depthstreamMode.getResolutionY();
 	zFPS_ = depthstreamMode.getFps();
 
-	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &zHOV_) != Status::STATUS_OK)
+	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &zHOV_) != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not get horizontal field-of-view from depth stream");
 		return false;
@@ -228,7 +228,7 @@ bool HoloCaptureOpenNI2::init(int which)
 		LOG4CXX_WARN(logger_, "Got a bogus horizontal field-of-view from depth stream. Setting HOV to 58 deg.")
 	}
 
-	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &zVOV_) != Status::STATUS_OK)
+	if (depthStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &zVOV_) != STATUS_OK)
 	{
 		LOG4CXX_ERROR(logger_, "Could not get vertical field-of-view from depth stream");
 		return false;
@@ -240,7 +240,7 @@ bool HoloCaptureOpenNI2::init(int which)
 		LOG4CXX_WARN(logger_, "Got a bogus vertical field-of-view from depth stream. Setting VOV to 45 deg.")
 	}
 
-	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &rgbHOV_) != Status::STATUS_OK)
+	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_HORIZONTAL_FOV, &rgbHOV_) != STATUS_OK)
 	{
 		LOG4CXX_WARN(logger_, "Could not get HOV from color stream. Using depth value instead.");
 		rgbHOV_ = zHOV_;
@@ -252,7 +252,7 @@ bool HoloCaptureOpenNI2::init(int which)
 		LOG4CXX_WARN(logger_, "Got a bogus horizontal field-of-view from color stream. Setting HOV to 58 deg.")
 	}
 
-	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &rgbVOV_) != Status::STATUS_OK)
+	if (colorStream_.getProperty<float>(ONI_STREAM_PROPERTY_VERTICAL_FOV, &rgbVOV_) != STATUS_OK)
 	{
 		LOG4CXX_WARN(logger_, "Could not get VOV from color stream. Using depth value instead.");
 		rgbVOV_ = zVOV_;
@@ -284,13 +284,13 @@ bool HoloCaptureOpenNI2::init(int which)
 	if (shouldRecord_)
 	{
 		LOG4CXX_INFO(logger_, "Starting OpenNI2 recorder with file path \"" << outputFilePath_ << "\" ...")
-		if (recorder_.create(outputFilePath_.c_str()) != Status::STATUS_OK)
+		if (recorder_.create(outputFilePath_.c_str()) != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "Could not create OpenNI2 recorder device");
 			return false;
 		}
 
-		if (recorder_.attach(colorStream_) != Status::STATUS_OK)
+		if (recorder_.attach(colorStream_) != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "Could not attach color stream to OpenNI2 recorder device");
 			return false;
@@ -302,7 +302,7 @@ bool HoloCaptureOpenNI2::init(int which)
 			return false;
 		}
 
-		if (recorder_.start() != Status::STATUS_OK)
+		if (recorder_.start() != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "Could not start OpenNI2 recorder device");
 			return false;
@@ -456,7 +456,7 @@ bool HoloCaptureOpenNI2::initOpenNI2()
 	{
 		LOG4CXX_DEBUG(logger_, "Calling OpenNI::initialize...");
 		rc = OpenNI::initialize();
-		if (rc != Status::STATUS_OK)
+		if (rc != STATUS_OK)
 		{
 			LOG4CXX_ERROR(logger_, "OpenNI2 library could not initialize. Error status: " << rc)
 			return false;

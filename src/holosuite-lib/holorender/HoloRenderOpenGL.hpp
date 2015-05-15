@@ -13,8 +13,12 @@
 #include <Windows.h>
 #endif
 
+#ifndef __APPLE__
 #include <GL/gl.h>
 #include <GL/glu.h>
+#else
+#include <OpenGL/gl.h>
+#endif
 #include <GL/freeglut.h>
 
 #include <thread>

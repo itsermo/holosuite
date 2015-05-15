@@ -44,7 +44,7 @@ void HoloCaptureOpenNI2Listener::getDepthFrame(cv::Mat& depthOut)
 	}
 
 	depthOut = cv::Mat(depthFrame_.getHeight(), depthFrame_.getWidth(), CV_16UC1);
-	memcpy(depthOut.datastart, depthFrame_.getData(), depthFrame_.getDataSize());
+	memcpy((void*)depthOut.datastart, depthFrame_.getData(), depthFrame_.getDataSize());
 
 	haveNewDepthFrame_ = false;
 	frameLock.unlock();
