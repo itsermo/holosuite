@@ -545,7 +545,7 @@ void HoloSession::interactionLoop()
 			{
 				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_CIRCLE)
 				{
-					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_SQUARE);
+					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_TRIANGLE);
 					objectTracker_->Add3DObject(obj);
 
 					if (netSession_)
@@ -609,14 +609,13 @@ void HoloSession::interactionLoop()
 					//LOG4CXX_DEBUG(logger_, "Got screen tap from input device")
 					if (netSession_)
 					{
-
+						auto isLocal = obj.second->GetIsLocal();
+						auto amOwner = obj.second->GetAmOwner();
 						auto changeOwnerPacket = obj.second->ToggleOwnerAndGetOwnerChangePacket();
-						trans.translate.x = -trans.translate.x;
 
-						if (obj.second->GetAmOwner())
-							trans.translate.z = -0.1f;
-						else
-							trans.translate.z = 0.1f;
+						trans.rotation.y = -trans.rotation.y;
+						trans.translate.z = amOwner ? .1f : -trans.translate.z;
+						trans.translate.x = -trans.translate.x;
 
 						auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
 						netSession_->sendPacketAsync(std::move(packet));
@@ -650,9 +649,7 @@ void HoloSession::interactionLoop()
 							trans.translate.y = (interactionSample.rightHand.palmPosition.y - rightHandOffset.y);
 							trans.translate.z = (interactionSample.rightHand.palmPosition.z - rightHandOffset.z);
 
-							trans.rotation.x = interactionSample.rightHand.palmNormal.x + rightHandRotationOffset.x;
-							trans.rotation.y = interactionSample.rightHand.palmNormal.y + rightHandRotationOffset.y;
-							trans.rotation.z = interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.z;
+							trans.rotation.y = (interactionSample.rightHand.palmNormal.z + rightHandRotationOffset.y);
 
 							obj.second->SetTransform(trans);
 
