@@ -163,7 +163,7 @@ namespace holo
 			void updateCamera();
 
 			void draw();
-			void drawSceneForEye(ZSEye eye);
+			void drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, HoloCloudPtr &remoteCloud);
 
 			void setRenderTarget(ZSEye eye);
 			bool setViewMatrix(ZSEye eye);

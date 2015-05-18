@@ -92,9 +92,9 @@ bool HoloRenderOpenGL::initWindow(GLFWwindow** window, bool shouldFullScreen)
 {
 	glfwWindowHint(GLFW_STEREO, enableZSpaceRendering_ ? GL_TRUE : GL_FALSE);
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
+	//glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
 	
 	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
@@ -263,6 +263,7 @@ void HoloRenderOpenGL::renderLoop()
 
 	while (!glfwWindowShouldClose(window_) && shouldRun_)
 	{
+
 		if (shouldToggleFullScreen_)
 		{
 			if (!isFullScreen_)
@@ -280,7 +281,8 @@ void HoloRenderOpenGL::renderLoop()
 
 		display();
 
-		glfwWaitEvents();
+		glfwPollEvents();
+
 	}
 
 	deinitWindow(&window_);
@@ -642,6 +644,9 @@ void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat
 
 void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCloud)
 {
+	static unsigned int cloudSizes[2];
+	cloudSizes[cloudGLBuffer - 1] = theCloud == nullptr ? cloudSizes[cloudGLBuffer - 1] : theCloud->points.size();
+
 	if (cloudGLBuffer == 2)
 		glDisable(GL_BLEND);
 
@@ -676,14 +681,19 @@ void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCl
 		if (cloudGLBuffer > 0)
 		{
 			glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer);
-			glBufferData(GL_ARRAY_BUFFER, theCloud->points.size() * sizeof(HoloPoint3D), theCloud->points.data(), GL_STREAM_DRAW);
+
+			if (theCloud != nullptr && cloudSizes[cloudGLBuffer - 1] > 0)
+				glBufferData(GL_ARRAY_BUFFER, cloudSizes[cloudGLBuffer-1] * sizeof(HoloPoint3D), theCloud->points.data(), GL_STATIC_DRAW);
+			
 			glEnableClientState(GL_VERTEX_ARRAY);
 			glEnableClientState(GL_COLOR_ARRAY);
 
 			glVertexPointer(3, GL_FLOAT, sizeof(HoloPoint3D), 0);
 			glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(HoloPoint3D), (void*)(sizeof(float)* 4));
 
-			glDrawArrays(GL_POINTS, 0, theCloud->points.size());
+			//int size = theCloud->points.size();
+
+			glDrawArrays(GL_POINTS, 0, cloudSizes[cloudGLBuffer - 1]);
 
 			glDisableClientState(GL_VERTEX_ARRAY);
 			glDisableClientState(GL_COLOR_ARRAY);
@@ -978,7 +988,7 @@ void HoloRenderOpenGL::updateCamera()
 	previousTime_ = currentTime;
 }
 
-void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
+void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, HoloCloudPtr &remoteCloud)
 {
 	// Push the stereo view and projection matrices onto the OpenGL matrix 
 	// stack so that we can pop them off after we're done rendering the 
@@ -1005,7 +1015,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glPushMatrix();
 	glTranslatef(0.1f, 0.05, -0.09);
 
-	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud_);
+	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud);
 
 	glPopMatrix();
 
@@ -1034,7 +1044,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 	glTranslatef(.2f, -.1f, -.1f);
 	glScalef(-0.1, 0.1, 0.1);
 
-	this->drawPointCloud(cloudGLBuffer_[0], localCloud_);
+	this->drawPointCloud(cloudGLBuffer_[0], localCloud);
 
 	//glTranslatef(0.0, 0.30, -0.60);
 
@@ -1198,6 +1208,12 @@ void HoloRenderOpenGL::matrixInverse(const float m[16], float i[16])
 
 void HoloRenderOpenGL::draw()
 {
+
+	HoloCloudPtr localCloud = nullptr;
+	HoloCloudPtr remoteCloud = nullptr;
+	std::unique_lock<std::mutex> localCloudLock;
+	std::unique_lock<std::mutex> remoteCloudLock;
+
 	// This must be called every frame on the rendering thread in order 
 	// to handle the initial sync and any subsequent pending sync requests 
 	// for left/right frame detection.
@@ -1205,23 +1221,37 @@ void HoloRenderOpenGL::draw()
 
 	// Set the application window's rendering context as the current rendering context.
 	//wglMakeCurrent(g_hDC, g_hRC);
-	std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
-	std::unique_lock<std::mutex> localCloudLock(localCloudMutex_);
+	if (haveNewRemoteCloud_)
+	{
+		remoteCloudLock = std::unique_lock<std::mutex>(remoteCloudMutex_);
+		remoteCloud = remoteCloud_;
+	}
+
+	if (haveNewLocalCloud_)
+	{
+		localCloudLock = std::unique_lock<std::mutex>(localCloudMutex_);
+		localCloud = localCloud_;
+	}
 
 	// Draw the scene for each eye.
-	drawSceneForEye(ZS_EYE_LEFT);
-	drawSceneForEye(ZS_EYE_RIGHT);
+	drawSceneForEye(ZS_EYE_LEFT, localCloud, remoteCloud);
+	drawSceneForEye(ZS_EYE_RIGHT, localCloud, remoteCloud);
 
 	glfwSwapBuffers(window_);
 
-	haveNewRemoteCloud_.store(false);
-	haveNewLocalCloud_.store(false);
-	cloudLock.unlock();
-	localCloudLock.unlock();
+	haveNewRemoteCloud_.store(remoteCloud ? false : haveNewRemoteCloud_.load());
+	haveNewLocalCloud_.store(localCloud ? false : haveNewLocalCloud_.load());
+	//cloudLock.unlock();
+	//localCloudLock.unlock();
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-	// Flush the render buffers.
+	//// Flush the render buffers.
+	//if (localCloud)
+	//	localCloudLock.unlock();
+
+	//if (remoteCloud)
+	//	remoteCloudLock.unlock();
 	
 }
 
