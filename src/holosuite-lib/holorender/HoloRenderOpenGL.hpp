@@ -19,8 +19,7 @@
 #else
 #include <OpenGL/gl.h>
 #endif
-
-#include <GLFW/glfw3.h>
+#include <GL/freeglut.h>
 
 #include <thread>
 #include <mutex>
@@ -79,32 +78,32 @@ namespace holo
 				objectTracker_.reset();
 			}
 
-			bool getIsFullScreen() { return isFullScreen_; }
-			void setFullScreen(bool shouldFullScreen);
-			void toggleFullScreen(){ shouldToggleFullScreen_ = true; }
-
-			void setFrameBufferSize(int width, int height) { windowWidth_ = width; windowHeight_ = height; }
+			void display(void);
+			void idle(void);
+			void keyboard(unsigned char c, int x, int y);
+			void cleanup(void);
+			void mouse(int button, int state, int x, int y);
+			void mouseMotion(int x, int y);
+			void reshape(int width, int height);
 
 		private:
 
-			void display();
+			// GL and GLUT related functions
+			static void glutDisplay();
+			static void glutIdle();
+			static void glutKeyboard(unsigned char c, int x, int y);
+			static void glutCleanup();
+			static void glutMouse(int button, int state, int x, int y);
+			static void glutMouseMotion(int x, int y);
+			static void glutReshape(int width, int height);
 
-			bool initWindow(GLFWwindow** window, bool shouldFullscreen);
-			void deinitWindow(GLFWwindow** window);
-
-			static void keyboardEvent(GLFWwindow* window, int key, int scancode, int action, int mods);
-			static void frameBufferResizeEvent(GLFWwindow* window, int width, int height);
-
-			void renderLoop();
+			void glutInitLoop();
 			void glCheckErrors();
 
 			void drawPointCloud(GLuint glCloudBuffer, HoloCloudPtr & theCloud);
 			void drawObjects(bool overrideColor);
 			void drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat depth);
 			void drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radius);
-
-			GLFWwindow* window_;
-			std::atomic<bool> shouldToggleFullScreen_;
 
 			std::mutex localCloudMutex_;
 			HoloCloudPtr localCloud_;
@@ -114,7 +113,7 @@ namespace holo
 
 			std::atomic<bool> haveNewRemoteCloud_;
 			std::atomic<bool> haveNewLocalCloud_;
-			std::thread renderThread_;
+			std::thread glutInitThread_;
 
 			bool isInit_;
 			bool firstInit_;
@@ -163,7 +162,7 @@ namespace holo
 			void updateCamera();
 
 			void draw();
-			void drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, HoloCloudPtr &remoteCloud);
+			void drawSceneForEye(ZSEye eye);
 
 			void setRenderTarget(ZSEye eye);
 			bool setViewMatrix(ZSEye eye);

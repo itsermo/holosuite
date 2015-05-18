@@ -3,6 +3,8 @@
 using namespace holo;
 using namespace holo::render;
 
+std::atomic<bool> gShouldRun_;
+
 HoloRenderOpenGL::HoloRenderOpenGL() : HoloRenderOpenGL(HOLO_RENDER_OPENGL_ENABLE_ZSPACE_RENDERING, HOLO_RENDER_OPENGL_DEFAULT_VOXEL_SIZE)
 {
 
@@ -23,22 +25,20 @@ HoloRenderOpenGL::HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering) :
 	mouseRightButton_(0),
 	mouseDownX_(0),
 	mouseDownY_(0),
-	windowX_(80),
-	windowY_(80),
+	windowX_(0),
+	windowY_(0),
 	windowWidth_(1024),
 	windowHeight_(768),
 	viewPhi_(0.0f),
 	viewTheta_(0.0f),
 	viewDepth_(0.2f),
 	isFullScreen_(false),
-	prevWindowWidth_(1024),
-	prevWindowHeight_(768),
-	prevWindowX_(80),
-	prevWindowY_(80),
+	prevWindowWidth_(0),
+	prevWindowHeight_(0),
+	prevWindowX_(0),
+	prevWindowY_(0),
 	haveCloudGLBuffer_(false),
-	enableMeshConstruction_(false),
-	window_(nullptr),
-	shouldToggleFullScreen_(false)
+	enableMeshConstruction_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.opengl");
 	LOG4CXX_DEBUG(logger_, "Instantiating HoloRenderOpenGL object...");
@@ -70,11 +70,13 @@ bool HoloRenderOpenGL::init()
 		organizedFastMesh_.setTriangulationType(pcl::OrganizedFastMesh<HoloPoint3D>::TRIANGLE_ADAPTIVE_CUT);
 	}
 
-	shouldRun_ = true;
-	renderThread_ = std::thread(&HoloRenderOpenGL::renderLoop, this);
+	gShouldRun_ = true;
+	glutInitThread_ = std::thread(&HoloRenderOpenGL::glutInitLoop, this);
 
 	std::unique_lock<std::mutex> lg(hasInitMutex_);
 	hasInitCV_.wait(lg);
+
+
 
 	return isInit_;
 }
@@ -83,92 +85,15 @@ void HoloRenderOpenGL::deinit()
 {
 	if (isInit_)
 	{
-		shouldRun_ = false;
-		//renderThread_.join();
+		//glutLeaveMainLoop();
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		glutInitThread_.join();
 	}
 }
 
-bool HoloRenderOpenGL::initWindow(GLFWwindow** window, bool shouldFullScreen)
+
+void HoloRenderOpenGL::glutInitLoop()
 {
-	glfwWindowHint(GLFW_STEREO, enableZSpaceRendering_ ? GL_TRUE : GL_FALSE);
-	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	//glfwWindowHint(GLFW_CONTEXT_RELEASE_BEHAVIOR, GLFW_RELEASE_BEHAVIOR_FLUSH);
-	
-	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-	if (shouldFullScreen)
-	{
-		glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-		glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-		glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-		*window = glfwCreateWindow(mode->width, mode->height, "edu.mit.media.obm.holosuite", glfwGetPrimaryMonitor(), NULL);
-	}
-	else
-		*window = glfwCreateWindow(prevWindowWidth_, prevWindowHeight_, "edu.mit.media.obm.holosuite", NULL, NULL);
-	
-	if (!*window)
-	{
-		return false;
-	}
-
-	if (!shouldFullScreen)
-		glfwSetWindowPos(*window, prevWindowX_, prevWindowY_);
-
-	glfwGetWindowPos(*window, &windowX_, &windowY_);
-	glfwGetWindowSize(*window, &windowWidth_, &windowHeight_);
-
-	glfwMakeContextCurrent(*window);
-	glfwSwapInterval(1);
-
-	glfwSetWindowUserPointer(*window, this);
-
-	// Set callbacks
-	glfwSetKeyCallback(*window, &HoloRenderOpenGL::keyboardEvent);
-	
-	if (!shouldFullScreen)
-		glfwSetFramebufferSizeCallback(*window, &HoloRenderOpenGL::frameBufferResizeEvent);
-
-	GLfloat lightAmbientColor[] = { 0.6, 0.3, 0.3, 1 };
-	GLfloat lightDiffuseColor[] = { 0.6, 1, 1, 1 };
-	GLfloat lightSpecularColor[] = { 0.2, 0.2, 0.2, 1 };
-	GLfloat lightGlobalAmbient[] = { 0.2, 0.2, 0.2, 1 };
-
-	GLfloat materialSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat materialShininess[] = { 50.0 };
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
-
-	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularColor);
-
-	//glLightModelfv(GL_AMBIENT, lightGlobalAmbient);
-
-	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
-	glMaterialfv(GL_FRONT, GL_SHININESS, materialShininess);
-
-	//glEnable(GL_LIGHTING);
-	//glEnable(GL_LIGHT0);
-
-	//Takes care of occlusions for point cloud
-	glEnable(GL_DEPTH_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	gluLookAt(0.0f, 0.345f, 0.222f,   // Eye
-		0.0f, 0.0f, 1.0f,     // Center
-		0.0f, 1.0f, 1.0f);    // Up
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 #ifdef ENABLE_HOLO_ZSPACE
 	if (this->enableZSpaceRendering_)
 	{
@@ -196,8 +121,8 @@ bool HoloRenderOpenGL::initWindow(GLFWwindow** window, bool shouldFullScreen)
 		CHECK_ERROR(error);
 
 		// Grab a handle to the stylus target.
-		//error = zsFindTargetByType(zSpaceContext_, ZS_TARGET_TYPE_PRIMARY, 0, &stylusHandle_);
-		//CHECK_ERROR(error);
+		error = zsFindTargetByType(zSpaceContext_, ZS_TARGET_TYPE_PRIMARY, 0, &stylusHandle_);
+		CHECK_ERROR(error);
 
 		// Find the zSpace display and set the window's position
 		// to be the top left corner of the zSpace display.
@@ -209,45 +134,98 @@ bool HoloRenderOpenGL::initWindow(GLFWwindow** window, bool shouldFullScreen)
 	}
 #endif
 
-	return true;
-}
-
-void HoloRenderOpenGL::deinitWindow(GLFWwindow** window)
-{
-
-#ifdef ENABLE_HOLO_ZSPACE
-	if (enableZSpaceRendering_)
-	{
-		zsDestroyViewport(viewportHandle_);
-		zsDestroyStereoBuffer(bufferHandle_);
-		zsShutdown(zSpaceContext_);
-	}
-#endif
-
-	glfwDestroyWindow(*window);
-	*window = nullptr;
-}
-
-
-void HoloRenderOpenGL::renderLoop()
-{
 	GLenum glError = GL_NO_ERROR;
 
-	if (!glfwInit())
-	{
-		LOG4CXX_ERROR(logger_, "Could not initialize GLFW library")
-		isInit_ = false;
-		hasInitCV_.notify_all();
-		return;
-	}
+#ifdef WIN32
+	//char fakeParam[] = "dscp2";
+	const char *fakeargv[] = { "holosuite", NULL };
+	int fakeargc = 1;
+#elif defined(__linux) || defined(__unix) || defined(__posix) || defined(__APPLE__)
+	char displayEnvArg[1024];
+	strncpy(displayEnvArg, displayEnv_.c_str(), displayEnv_.length());
 
-	if (!initWindow(&window_, false))
-	{
-		glfwTerminate();
-		LOG4CXX_ERROR(logger_, "Could not create GLFW window")
-		isInit_ = false;
-		hasInitCV_.notify_all();
-	}
+	const char *fakeargv[] = { "holosuite", "-display", displayEnvArg, NULL };
+	int fakeargc = 3;
+#endif
+
+	//glCheckErrors();
+
+	// Initialize GLUT window and callbacks
+	glutInit(&fakeargc, const_cast<char**>(fakeargv));
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	//glutInitContextVersion(3, 1);
+	glutInitWindowSize(windowWidth_, windowHeight_);
+
+	if (enableZSpaceRendering_)
+		glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STEREO);
+	else
+		glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
+
+	std::stringstream ss;
+	ss << "holosuite";
+	glutCreateWindow(ss.str().c_str());
+
+	glCheckErrors();
+
+	glutDisplayFunc(this->glutDisplay);
+	glutKeyboardFunc(this->glutKeyboard);
+	glutIdleFunc(this->glutIdle);
+	glutMouseFunc(this->glutMouse);
+	glutMotionFunc(this->glutMouseMotion);
+	glutReshapeFunc(this->glutReshape);
+	atexit(this->glutCleanup);
+
+	GLfloat lightAmbientColor[] = { 0.6, 0.3, 0.3, 1 };
+	GLfloat lightDiffuseColor[] = { 0.6, 1, 1, 1 };
+	GLfloat lightSpecularColor[] = { 0.2, 0.2, 0.2, 1 };
+	GLfloat lightGlobalAmbient[] = { 0.2, 0.2, 0.2, 1 };
+
+	GLfloat materialSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat materialShininess[] = { 50.0 };
+
+	// GLUT settings
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
+
+	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientColor);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseColor);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularColor);
+
+	//glLightModelfv(GL_AMBIENT, lightGlobalAmbient);
+
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, materialShininess);
+
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
+
+	//Takes care of occlusions for point cloud
+	glEnable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	gluLookAt(0.0f, 0.345f, 0.222f,   // Eye
+	0.0f, 0.0f, 1.0f,     // Center
+	0.0f, 1.0f, 1.0f);    // Up
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//glDisable(GL_LIGHTING);
+
+	glCheckErrors();
+
+#ifndef _DEBUG
+	prevWindowWidth_ = glutGet(GLUT_WINDOW_WIDTH);
+	prevWindowHeight_ = glutGet(GLUT_WINDOW_HEIGHT);
+	prevWindowX_ = glutGet(GLUT_WINDOW_X);
+	prevWindowY_ = glutGet(GLUT_WINDOW_Y);
+	glutFullScreen();
+	isFullScreen_ = true;
+#endif
 
 	glewInit();
 
@@ -261,35 +239,18 @@ void HoloRenderOpenGL::renderLoop()
 
 	glGenBuffers(2, cloudGLBuffer_);
 
-	while (!glfwWindowShouldClose(window_) && shouldRun_)
+	glutMainLoop();
+
+#ifdef ENABLE_HOLO_ZSPACE
+	if (enableZSpaceRendering_)
 	{
-
-		if (shouldToggleFullScreen_)
-		{
-			if (!isFullScreen_)
-			{
-				glfwGetWindowPos(window_, &prevWindowX_, &prevWindowY_);
-				glfwGetWindowSize(window_, &prevWindowWidth_, &prevWindowHeight_);
-			}
-
-			deinitWindow(&window_);
-			initWindow(&window_, !isFullScreen_);
-
-			isFullScreen_ = !isFullScreen_;
-			shouldToggleFullScreen_ = false;
-		}
-
-		display();
-
-		glfwPollEvents();
-
+		zsDestroyViewport(viewportHandle_);
+		zsDestroyStereoBuffer(bufferHandle_);
+		zsShutdown(zSpaceContext_);
 	}
-
-	deinitWindow(&window_);
+#endif
 
 	glDeleteBuffers(2, cloudGLBuffer_);
-
-	isInit_ = false;
 
 	hasQuitCV_.notify_all();
 }
@@ -304,36 +265,75 @@ void HoloRenderOpenGL::glCheckErrors()
 	}
 }
 
-void HoloRenderOpenGL::keyboardEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
+void HoloRenderOpenGL::reshape(int width, int height)
 {
-	HoloRenderOpenGL * renderer = static_cast<HoloRenderOpenGL*>(glfwGetWindowUserPointer(window));
-
-	if (action == GLFW_PRESS)
-	{
-		switch (key)
-		{
-		case GLFW_KEY_F11:
-			renderer->toggleFullScreen();
-			break;
-		case GLFW_KEY_ESCAPE:
-			renderer->deinit();
-			break;
-		default:
-			break;
-		}
-	}
-
+	windowWidth_ = width;
+	windowHeight_ = height;
+	glutPostRedisplay();
 }
 
-void HoloRenderOpenGL::frameBufferResizeEvent(GLFWwindow* window, int width, int height)
+void HoloRenderOpenGL::idle()
 {
-	HoloRenderOpenGL * renderer = static_cast<HoloRenderOpenGL*>(glfwGetWindowUserPointer(window));
+	if (gShouldRun_)
+		glutPostRedisplay();
+	//else
+		//glutLeaveMainLoop();
+}
 
-	renderer->setFrameBufferSize(width, height);
+void HoloRenderOpenGL::keyboard(unsigned char c, int x, int y)
+{
+	//printf("keyboard \n");
+	switch (c)
+	{
+	case 'w':
+		viewDepth_ += 0.05;
+		break;
+	case 's':
+		viewDepth_ -= 0.05;
+		break;
+	case 'f':
+		if (!isFullScreen_)
+		{
+			prevWindowWidth_ = glutGet(GLUT_WINDOW_WIDTH);
+			prevWindowHeight_ = glutGet(GLUT_WINDOW_HEIGHT);
+			prevWindowX_ = glutGet(GLUT_WINDOW_X);
+			prevWindowY_ = glutGet(GLUT_WINDOW_Y);
+			glutFullScreen();
+			isFullScreen_ = true;
+		}
+		else
+		{
+			glutPositionWindow(prevWindowX_, prevWindowY_);
+			glutReshapeWindow(prevWindowWidth_, prevWindowHeight_);
+			isFullScreen_ = false;
+		}
+		break;
+	case '1':
+		glEnable(GL_LIGHTING);
+		break;
+	case '2':
+		glDisable(GL_LIGHTING);
+		break;
+
+	case 27: /* Esc key */
+		//glutLeaveMainLoop();
+		//gShouldRun_ = false;
+		break;
+	}
+
+	//int mods = glutGetModifiers();
+	//if (mods != 0)
+	//{
+
+	//}
+
+	glutPostRedisplay();
 }
 
 void HoloRenderOpenGL::display()
 {
+	if (gShouldRun_)
+	{
 		if (firstInit_)
 		{
 			firstInit_ = false;
@@ -429,111 +429,86 @@ void HoloRenderOpenGL::display()
 
 			glFinish();
 
-			glfwSwapBuffers(window_);
+			glutSwapBuffers();
 
 #ifdef ENABLE_HOLO_ZSPACE
 		}
 #endif
-
+	}
+	//else
+	//	glutLeaveMainLoop();
+	//std::this_thread::sleep_for(std::chrono::milliseconds(13));
 }
 
-void HoloRenderOpenGL::setFullScreen(bool shouldFullscreen)
+void HoloRenderOpenGL::cleanup()
 {
-	if (shouldFullscreen != isFullScreen_)
+	//deinit();
+}
+
+void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
+{
+	mouseDownX_ = x; mouseDownY_ = y;
+
+	if (button == 3)
 	{
-		if (shouldFullscreen)
-		{
-			glfwGetWindowSize(window_, &prevWindowWidth_, &prevWindowHeight_);
-			glfwGetWindowPos(window_, &prevWindowX_, &prevWindowY_);
-
-			auto monitor = glfwGetPrimaryMonitor();
-			auto vidMode = glfwGetVideoMode(monitor);
-
-			glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-
-			glfwSetWindowPos(window_, 0, 0);
-			glfwSetWindowSize(window_, vidMode->width, vidMode->height);
-		}
-		else
-		{
-			glfwWindowHint(GLFW_DECORATED, GL_TRUE);
-			glfwSetWindowPos(window_, prevWindowX_, prevWindowY_);
-			glfwSetWindowSize(window_, prevWindowWidth_, prevWindowHeight_);
-		}
-
-		isFullScreen_ = shouldFullscreen;
+		if (state == GLUT_UP)
+			viewDepth_ += 0.05;
+	}
+	else if (button == 4)
+	{
+		if (state == GLUT_UP)
+			viewDepth_ -= 0.05;
+	}
+	else
+	{
+		mouseLeftButton_ = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
+		mouseMiddleButton_ = ((button == GLUT_MIDDLE_BUTTON) && (state == GLUT_DOWN));
+		glutPostRedisplay();
 	}
 }
 
-//void HoloRenderOpenGL::cleanup()
-//{
-//	//deinit();
-//}
-//
-//void HoloRenderOpenGL::mouse(int button, int state, int x, int y)
-//{
-//	mouseDownX_ = x; mouseDownY_ = y;
-//
-//	if (button == 3)
-//	{
-//		if (state == GLUT_UP)
-//			viewDepth_ += 0.05;
-//	}
-//	else if (button == 4)
-//	{
-//		if (state == GLUT_UP)
-//			viewDepth_ -= 0.05;
-//	}
-//	else
-//	{
-//		mouseLeftButton_ = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
-//		mouseMiddleButton_ = ((button == GLUT_MIDDLE_BUTTON) && (state == GLUT_DOWN));
-//		glutPostRedisplay();
-//	}
-//}
-//
-//void HoloRenderOpenGL::mouseMotion(int x, int y)
-//{
-//	if (mouseLeftButton_){ viewPhi_ -= (float)(x - mouseDownX_) / 10.0; viewTheta_ += (float)(mouseDownY_ - y) / 10.0; } // rotate
-//	if (mouseMiddleButton_){ viewDepth_ += (float)(mouseDownY_ - y) / 100.0; } // scale
-//	mouseDownX_ = x;   mouseDownY_ = y;
-//	glutPostRedisplay();
-//}
-//
-//void HoloRenderOpenGL::glutReshape(int width, int height)
-//{
-//	gCurrentOpenGLInstance->reshape(width, height);
-//}
-//
-//void HoloRenderOpenGL::glutDisplay(void)
-//{
-//	gCurrentOpenGLInstance->display();
-//}
-//
-//void HoloRenderOpenGL::glutIdle(void)
-//{
-//	gCurrentOpenGLInstance->idle();
-//}
-//
-//void HoloRenderOpenGL::glutKeyboard(unsigned char c, int x, int y)
-//{
-//	gCurrentOpenGLInstance->keyboard(c, x, y);
-//}
-//
-//void HoloRenderOpenGL::glutMouse(int button, int state, int x, int y) 
-//{
-//	gCurrentOpenGLInstance->mouse(button, state, x, y);
-//}
-//
-//void HoloRenderOpenGL::glutMouseMotion(int x, int y)
-//{
-//	gCurrentOpenGLInstance->mouseMotion(x, y);
-//}
-//
-//void HoloRenderOpenGL::glutCleanup(void)
-//{
-//	gCurrentOpenGLInstance->cleanup();
-//}
+void HoloRenderOpenGL::mouseMotion(int x, int y)
+{
+	if (mouseLeftButton_){ viewPhi_ -= (float)(x - mouseDownX_) / 10.0; viewTheta_ += (float)(mouseDownY_ - y) / 10.0; } // rotate
+	if (mouseMiddleButton_){ viewDepth_ += (float)(mouseDownY_ - y) / 100.0; } // scale
+	mouseDownX_ = x;   mouseDownY_ = y;
+	glutPostRedisplay();
+}
+
+void HoloRenderOpenGL::glutReshape(int width, int height)
+{
+	gCurrentOpenGLInstance->reshape(width, height);
+}
+
+void HoloRenderOpenGL::glutDisplay(void)
+{
+	gCurrentOpenGLInstance->display();
+}
+
+void HoloRenderOpenGL::glutIdle(void)
+{
+	gCurrentOpenGLInstance->idle();
+}
+
+void HoloRenderOpenGL::glutKeyboard(unsigned char c, int x, int y)
+{
+	gCurrentOpenGLInstance->keyboard(c, x, y);
+}
+
+void HoloRenderOpenGL::glutMouse(int button, int state, int x, int y) 
+{
+	gCurrentOpenGLInstance->mouse(button, state, x, y);
+}
+
+void HoloRenderOpenGL::glutMouseMotion(int x, int y)
+{
+	gCurrentOpenGLInstance->mouseMotion(x, y);
+}
+
+void HoloRenderOpenGL::glutCleanup(void)
+{
+	gCurrentOpenGLInstance->cleanup();
+}
 
 void HoloRenderOpenGL::updateLocalPointCloud(HoloCloudPtr && pointCloud)
 {
@@ -644,9 +619,6 @@ void HoloRenderOpenGL::drawBackgroundGrid(GLfloat width, GLfloat height, GLfloat
 
 void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCloud)
 {
-	static unsigned int cloudSizes[2];
-	cloudSizes[cloudGLBuffer - 1] = theCloud == nullptr ? cloudSizes[cloudGLBuffer - 1] : theCloud->points.size();
-
 	if (cloudGLBuffer == 2)
 		glDisable(GL_BLEND);
 
@@ -681,19 +653,14 @@ void HoloRenderOpenGL::drawPointCloud(GLuint cloudGLBuffer, HoloCloudPtr & theCl
 		if (cloudGLBuffer > 0)
 		{
 			glBindBuffer(GL_ARRAY_BUFFER, cloudGLBuffer);
-
-			if (theCloud != nullptr && cloudSizes[cloudGLBuffer - 1] > 0)
-				glBufferData(GL_ARRAY_BUFFER, cloudSizes[cloudGLBuffer-1] * sizeof(HoloPoint3D), theCloud->points.data(), GL_STATIC_DRAW);
-			
+			glBufferData(GL_ARRAY_BUFFER, theCloud->points.size() * sizeof(HoloPoint3D), theCloud->points.data(), GL_STREAM_DRAW);
 			glEnableClientState(GL_VERTEX_ARRAY);
 			glEnableClientState(GL_COLOR_ARRAY);
 
 			glVertexPointer(3, GL_FLOAT, sizeof(HoloPoint3D), 0);
 			glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(HoloPoint3D), (void*)(sizeof(float)* 4));
 
-			//int size = theCloud->points.size();
-
-			glDrawArrays(GL_POINTS, 0, cloudSizes[cloudGLBuffer - 1]);
+			glDrawArrays(GL_POINTS, 0, theCloud->points.size());
 
 			glDisableClientState(GL_VERTEX_ARRAY);
 			glDisableClientState(GL_COLOR_ARRAY);
@@ -896,7 +863,7 @@ void HoloRenderOpenGL::drawSphere(GLfloat x, GLfloat y, GLfloat z, GLfloat radiu
 {
 	glPushMatrix();
 	glTranslatef(x, y, z);
-//	glutSolidSphere(radius, 16, 16);
+	glutSolidSphere(radius, 16, 16);
 	glPopMatrix();
 }
 
@@ -988,7 +955,7 @@ void HoloRenderOpenGL::updateCamera()
 	previousTime_ = currentTime;
 }
 
-void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, HoloCloudPtr &remoteCloud)
+void HoloRenderOpenGL::drawSceneForEye(ZSEye eye)
 {
 	// Push the stereo view and projection matrices onto the OpenGL matrix 
 	// stack so that we can pop them off after we're done rendering the 
@@ -1015,7 +982,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, Holo
 	glPushMatrix();
 	glTranslatef(0.1f, 0.05, -0.09);
 
-	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud);
+	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud_);
 
 	glPopMatrix();
 
@@ -1044,7 +1011,7 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, Holo
 	glTranslatef(.2f, -.1f, -.1f);
 	glScalef(-0.1, 0.1, 0.1);
 
-	this->drawPointCloud(cloudGLBuffer_[0], localCloud);
+	this->drawPointCloud(cloudGLBuffer_[0], localCloud_);
 
 	//glTranslatef(0.0, 0.30, -0.60);
 
@@ -1208,12 +1175,6 @@ void HoloRenderOpenGL::matrixInverse(const float m[16], float i[16])
 
 void HoloRenderOpenGL::draw()
 {
-
-	HoloCloudPtr localCloud = nullptr;
-	HoloCloudPtr remoteCloud = nullptr;
-	std::unique_lock<std::mutex> localCloudLock;
-	std::unique_lock<std::mutex> remoteCloudLock;
-
 	// This must be called every frame on the rendering thread in order 
 	// to handle the initial sync and any subsequent pending sync requests 
 	// for left/right frame detection.
@@ -1221,38 +1182,22 @@ void HoloRenderOpenGL::draw()
 
 	// Set the application window's rendering context as the current rendering context.
 	//wglMakeCurrent(g_hDC, g_hRC);
-	if (haveNewRemoteCloud_)
-	{
-		remoteCloudLock = std::unique_lock<std::mutex>(remoteCloudMutex_);
-		remoteCloud = remoteCloud_;
-	}
-
-	if (haveNewLocalCloud_)
-	{
-		localCloudLock = std::unique_lock<std::mutex>(localCloudMutex_);
-		localCloud = localCloud_;
-	}
+	std::unique_lock<std::mutex> cloudLock(remoteCloudMutex_);
+	std::unique_lock<std::mutex> localCloudLock(localCloudMutex_);
 
 	// Draw the scene for each eye.
-	drawSceneForEye(ZS_EYE_LEFT, localCloud, remoteCloud);
-	drawSceneForEye(ZS_EYE_RIGHT, localCloud, remoteCloud);
+	drawSceneForEye(ZS_EYE_LEFT);
+	drawSceneForEye(ZS_EYE_RIGHT);
 
-	glfwSwapBuffers(window_);
-
-	haveNewRemoteCloud_.store(remoteCloud ? false : haveNewRemoteCloud_.load());
-	haveNewLocalCloud_.store(localCloud ? false : haveNewLocalCloud_.load());
-	//cloudLock.unlock();
-	//localCloudLock.unlock();
+	haveNewRemoteCloud_.store(false);
+	haveNewLocalCloud_.store(false);
+	cloudLock.unlock();
+	localCloudLock.unlock();
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-	//// Flush the render buffers.
-	//if (localCloud)
-	//	localCloudLock.unlock();
-
-	//if (remoteCloud)
-	//	remoteCloudLock.unlock();
-	
+	// Flush the render buffers.
+	glutSwapBuffers();
 }
 
 #endif
