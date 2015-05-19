@@ -297,7 +297,7 @@ boost::shared_ptr<HoloRender3DObject> HoloRender3DObject::CreateSimpleObject(con
 
 		trans.scale.x = size;
 		trans.scale.y = size;
-		trans.scale.z = size;
+		trans.scale.z = 0.f;
 		break;
 	case SIMPLE_OBJECT_SQUARE:
 	{
@@ -341,7 +341,7 @@ boost::shared_ptr<HoloRender3DObject> HoloRender3DObject::CreateSimpleObject(con
 
 		trans.scale.x = size;
 		trans.scale.y = size;
-		trans.scale.z = size;
+		trans.scale.z = 0.f;
 	}
 
 		break;

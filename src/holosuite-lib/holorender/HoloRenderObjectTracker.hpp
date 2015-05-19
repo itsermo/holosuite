@@ -33,6 +33,9 @@ namespace holo
 
 			std::list<boost::shared_ptr<holo::net::HoloNetPacket>> Create3DObjectsStatePacketList();
 
+			bool getDesignModeEnabled() const { return designModeEnabled_; }
+			void setDesignModeEnabled(bool designModeEnabled) { designModeEnabled_ = designModeEnabled; }
+
 		private:
 			std::mutex objectMapMutex_;
 			std::map<const std::string,boost::shared_ptr<HoloRender3DObject>> objectMap_;
@@ -41,7 +44,7 @@ namespace holo
 #ifdef ENABLE_HOLO_ASSIMP
 			Assimp::Importer assetImporter_;
 #endif
-
+			std::atomic<bool> designModeEnabled_;
 
 		};
 	}

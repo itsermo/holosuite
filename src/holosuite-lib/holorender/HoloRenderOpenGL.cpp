@@ -721,143 +721,159 @@ void HoloRenderOpenGL::drawObjects(bool overrideColor)
 			else
 				glTranslatef(transform.translate.x, transform.translate.y, transform.translate.z);
 
-			glScalef(transform.scale.x, transform.scale.y, transform.scale.z);
-			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
-
 			if (amOwner)
 				glRotatef(-transform.rotation.y * 180.0f / M_PI, 0, 1, 0);
 			else
 				glRotatef(transform.rotation.y * 180.0f / M_PI, 0, 1, 0);
+
+			glScalef(transform.scale.x, transform.scale.y, transform.scale.z);
+			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
 
 			if (!isLocal)
 				glScalef(-1.f, 1.f, -1.f);
 
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
-
-			if (!obj.second->GetHasGLBuffers())
-			{
-				GLuint vertBuf = 0;
-				GLuint normalBuf = 0;
-				GLuint colorBuf = 0;
-				glGenBuffers(1, &vertBuf);
-
-				if (obj.second->GetNormalBuffer())
-					glGenBuffers(1, &normalBuf);
-
-				if (obj.second->GetColorBuffer())
-					glGenBuffers(1, &colorBuf);
-
-				glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
-				glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
-				if (obj.second->GetNormalBuffer())
-				{
-					glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
-					glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
-				}
-
-				if (obj.second->GetColorBuffer())
-				{
-					glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
-					glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
-				}
-
-				obj.second->SetGLVertexBufID(vertBuf);
-				obj.second->SetGLNormalBufID(normalBuf);
-				obj.second->SetGLColorBufID(colorBuf);
-				obj.second->SetHasGLBuffers(true);
-			}
-
-			if (obj.second->GetHasGLBuffers())
+			if (obj.second->GetObjectName() == "circle")
 			{
 				glEnable(GL_COLOR_MATERIAL);
 				glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 				glEnable(GL_NORMALIZE);
-
-				glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLVertexBufID());
-				glEnableClientState(GL_VERTEX_ARRAY);
-				glVertexPointer(info.num_points_per_vertex, GL_FLOAT, info.vertex_stride, 0);
-
-				if (amOwner || overrideColor)
-				{
-					if (obj.second->GetColorBuffer())
-					{
-						glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLColorBufID());
-						glEnableClientState(GL_COLOR_ARRAY);
-						glColorPointer(info.num_color_channels, GL_FLOAT, info.color_stride, 0);
-					}
-					else
-						glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
-				}
-				else
-				{
-					glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
-				}
-
-				if (obj.second->GetNormalBuffer())
-				{
-					glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLNormalBufID());
-					glEnableClientState(GL_NORMAL_ARRAY);
-					glNormalPointer(GL_FLOAT, info.vertex_stride, 0);
-				}
-
-				GLenum faceMode = 0;
-				switch (info.num_indecies)
-				{
-				case 1: faceMode = GL_POINTS; break;
-				case 2: faceMode = GL_LINES; break;
-				case 3: faceMode = GL_TRIANGLES; break;
-				case 4: faceMode = GL_QUADS; break;
-				default: faceMode = GL_POLYGON; break;
-				}
-
-				glDrawArrays(faceMode, 0, info.num_vertices);
-				glDisableClientState(GL_VERTEX_ARRAY);
-				glDisableClientState(GL_NORMAL_ARRAY);
-				glDisableClientState(GL_COLOR_ARRAY);
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-
+				glRotatef(180.f, 0.f, 1.f, 0.f);
+				glColor4f(1.f, 1.f, 0.f, 0.8f);
+				glutSolidCylinder(1.f, 1.f, 32, 8);
 				glDisable(GL_NORMALIZE);
 				glDisable(GL_COLOR_MATERIAL);
-
 			}
 			else
 			{
-				glEnable(GL_NORMALIZE);
 
-				auto amOwner = obj.second->GetAmOwner();
-
-				glEnable(GL_COLOR_MATERIAL);
-				glBegin(GL_TRIANGLES);
-
-				bool haveNormals = obj.second->GetNormalBuffer() == nullptr ? false : true;
-				bool haveColors = obj.second->GetColorBuffer() == nullptr ? false : true;
-
-				float * vp = (float*)obj.second->GetVertexBuffer();
-				float * cp = (float*)obj.second->GetColorBuffer();
-				float * np = (float*)obj.second->GetNormalBuffer();
-
-				for (int i = 0; i < info.num_vertices; i++, vp+=info.num_indecies, np+=info.num_indecies, cp+=info.num_color_channels)
+				if (!obj.second->GetHasGLBuffers())
 				{
-					glVertex3f(*vp, *(vp+1), *(vp+2));
+					GLuint vertBuf = 0;
+					GLuint normalBuf = 0;
+					GLuint colorBuf = 0;
+					glGenBuffers(1, &vertBuf);
 
-					if (haveNormals)
-						glNormal3f(*np, *(np + 1), *(np + 2));
+					if (obj.second->GetNormalBuffer())
+						glGenBuffers(1, &normalBuf);
 
-					if (amOwner && haveColors)
-						glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp + 3));
-					else if (!haveColors)
-						glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
-					else
-						glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+					if (obj.second->GetColorBuffer())
+						glGenBuffers(1, &colorBuf);
+
+					glBindBuffer(GL_ARRAY_BUFFER, vertBuf);
+					glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetVertexBuffer(), GL_STREAM_DRAW);
+					if (obj.second->GetNormalBuffer())
+					{
+						glBindBuffer(GL_ARRAY_BUFFER, normalBuf);
+						glBufferData(GL_ARRAY_BUFFER, info.vertex_stride * info.num_vertices, obj.second->GetNormalBuffer(), GL_STREAM_DRAW);
+					}
+
+					if (obj.second->GetColorBuffer())
+					{
+						glBindBuffer(GL_ARRAY_BUFFER, colorBuf);
+						glBufferData(GL_ARRAY_BUFFER, info.color_stride * info.num_vertices, obj.second->GetColorBuffer(), GL_STREAM_DRAW);
+					}
+
+					obj.second->SetGLVertexBufID(vertBuf);
+					obj.second->SetGLNormalBufID(normalBuf);
+					obj.second->SetGLColorBufID(colorBuf);
+					obj.second->SetHasGLBuffers(true);
 				}
+				
+				if (obj.second->GetHasGLBuffers())
+				{
+					glEnable(GL_COLOR_MATERIAL);
+					glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+					glEnable(GL_NORMALIZE);
 
-				glEnd();
-				glDisable(GL_NORMALIZE);
+					glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLVertexBufID());
+					glEnableClientState(GL_VERTEX_ARRAY);
+					glVertexPointer(info.num_points_per_vertex, GL_FLOAT, info.vertex_stride, 0);
 
-				if (amOwner)
+					if (amOwner || overrideColor)
+					{
+						if (objectTracker_->getDesignModeEnabled())
+							glColor4f(1.0f, 0.5f, 0.5f, 0.5f);
+						else if (obj.second->GetColorBuffer())
+						{
+							glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLColorBufID());
+							glEnableClientState(GL_COLOR_ARRAY);
+							glColorPointer(info.num_color_channels, GL_FLOAT, info.color_stride, 0);
+						}
+						else
+							glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+					}
+					else
+					{
+						glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+					}
+
+					if (obj.second->GetNormalBuffer())
+					{
+						glBindBuffer(GL_ARRAY_BUFFER, obj.second->GetGLNormalBufID());
+						glEnableClientState(GL_NORMAL_ARRAY);
+						glNormalPointer(GL_FLOAT, info.vertex_stride, 0);
+					}
+
+					GLenum faceMode = 0;
+					switch (info.num_indecies)
+					{
+					case 1: faceMode = GL_POINTS; break;
+					case 2: faceMode = GL_LINES; break;
+					case 3: faceMode = GL_TRIANGLES; break;
+					case 4: faceMode = GL_QUADS; break;
+					default: faceMode = GL_POLYGON; break;
+					}
+
+					glDrawArrays(faceMode, 0, info.num_vertices);
+					glDisableClientState(GL_VERTEX_ARRAY);
+					glDisableClientState(GL_NORMAL_ARRAY);
+					glDisableClientState(GL_COLOR_ARRAY);
+					glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+					glDisable(GL_NORMALIZE);
 					glDisable(GL_COLOR_MATERIAL);
 
+				}
+				else
+				{
+					glEnable(GL_NORMALIZE);
+
+					auto amOwner = obj.second->GetAmOwner();
+
+					glEnable(GL_COLOR_MATERIAL);
+					glBegin(GL_TRIANGLES);
+
+					bool haveNormals = obj.second->GetNormalBuffer() == nullptr ? false : true;
+					bool haveColors = obj.second->GetColorBuffer() == nullptr ? false : true;
+
+					float * vp = (float*)obj.second->GetVertexBuffer();
+					float * cp = (float*)obj.second->GetColorBuffer();
+					float * np = (float*)obj.second->GetNormalBuffer();
+
+					for (int i = 0; i < info.num_vertices; i++, vp += info.num_indecies, np += info.num_indecies, cp += info.num_color_channels)
+					{
+						glVertex3f(*vp, *(vp + 1), *(vp + 2));
+
+						if (haveNormals)
+							glNormal3f(*np, *(np + 1), *(np + 2));
+
+						if (amOwner && haveColors)
+							glColor4f(*cp, *(cp + 1), *(cp + 2), *(cp + 3));
+						else if (!haveColors)
+							glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+						else
+							glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+					}
+
+					glEnd();
+					glDisable(GL_NORMALIZE);
+
+					if (amOwner)
+						glDisable(GL_COLOR_MATERIAL);
+
+				}
 			}
 
 			glPopMatrix();

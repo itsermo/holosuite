@@ -543,62 +543,73 @@ void HoloSession::interactionLoop()
 		{
 			if (interactionSample.haveLeftHand)
 			{
-				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_CIRCLE)
+				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
 				{
-					auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("cube", holo::render::SIMPLE_OBJECT_TRIANGLE);
-					objectTracker_->Add3DObject(obj);
-
-					if (netSession_)
-					{
-						auto packet = obj->CreateNetPacket();
-						netSession_->sendPacketAsync(std::move(packet));
-					}
+					objectTracker_->setDesignModeEnabled(!objectTracker_->getDesignModeEnabled());
 				}
 
-				if (interactionSample.leftHand.pinchStrength > 0.6f)
+				if (objectTracker_->getDesignModeEnabled())
 				{
-					for (auto obj : objectTracker_->Get3DObjects())
+
+					if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_CIRCLE)
 					{
-						if (obj.second->GetAmOwner())
+						auto obj = holo::render::HoloRender3DObject::CreateSimpleObject("circle", holo::render::SIMPLE_OBJECT_CIRCLE);
+						objectTracker_->Add3DObject(obj);
+
+						if (netSession_)
 						{
-							auto trans = obj.second->GetTransform();
+							auto packet = obj->CreateNetPacket();
+							netSession_->sendPacketAsync(std::move(packet));
+						}
+					}
 
-							if (firstLeftPinch)
+					if (interactionSample.leftHand.pinchStrength > 0.6f)
+					{
+						for (auto obj : objectTracker_->Get3DObjects())
+						{
+							if (obj.second->GetAmOwner())
 							{
-								leftHandOffset = interactionSample.leftHand.palmPosition;
-								leftHandOffset.x *= 30.f;
-								leftHandOffset.y *= 30.f;
-								leftHandOffset.z *= 30.f;
-								leftHandOffset.x -= trans.scale.x;
-								leftHandOffset.y -= trans.scale.y;
-								leftHandOffset.z -= trans.scale.z;
-								leftHandRotationOffset.x = trans.rotation.x;
-								leftHandRotationOffset.y = trans.rotation.y;
-								leftHandRotationOffset.z = trans.rotation.z;
-								firstLeftPinch = false;
-							}
+								auto trans = obj.second->GetTransform();
 
-							trans.scale.z = (interactionSample.leftHand.palmPosition.z * 30.f - leftHandOffset.z);
+								if (firstLeftPinch)
+								{
+									leftHandOffset = interactionSample.leftHand.palmPosition;
+									leftHandOffset.x *= 30.f;
+									leftHandOffset.y *= 30.f;
+									leftHandOffset.z *= 30.f;
+									leftHandOffset.x -= trans.scale.x;
+									leftHandOffset.y -= trans.scale.y;
+									leftHandOffset.z -= trans.scale.z;
+									leftHandRotationOffset.x = trans.rotation.x;
+									leftHandRotationOffset.y = trans.rotation.y;
+									leftHandRotationOffset.z = trans.rotation.z;
+									firstLeftPinch = false;
+								}
 
-							obj.second->SetTransform(trans);
+								//trans.scale.z = floor(interactionSample.leftHand.palmPosition.z * 30.f - leftHandOffset.z);
 
-							if (netSession_)
-							{
-								auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
-								netSession_->sendPacketAsync(std::move(packet));
+								trans.scale.z = std::max<float>(interactionSample.leftHand.palmPosition.z * 30.f - leftHandOffset.z, 0.01f);
+
+								obj.second->SetTransform(trans);
+
+								if (netSession_)
+								{
+									auto packet = obj.second->CreateNetPacketFromTransform(std::tuple<std::string, holo::render::HoloTransform>(obj.second->GetObjectName(), trans));
+									netSession_->sendPacketAsync(std::move(packet));
+								}
 							}
 						}
 					}
-				}
-				else
-				{
-					firstLeftPinch = true;
-					leftHandOffset = {};
-					leftHandRotationOffset = {};
+					else
+					{
+						firstLeftPinch = true;
+						leftHandOffset = {};
+						leftHandRotationOffset = {};
+					}
 				}
 			}
 
-			if (interactionSample.haveRightHand)
+			if (interactionSample.haveRightHand && !objectTracker_->getDesignModeEnabled())
 			{
 
 				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)

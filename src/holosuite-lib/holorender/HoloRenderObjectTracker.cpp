@@ -11,7 +11,7 @@ using namespace holo;
 using namespace holo::net;
 using namespace holo::render;
 
-HoloRenderObjectTracker::HoloRenderObjectTracker()
+HoloRenderObjectTracker::HoloRenderObjectTracker() : designModeEnabled_(false)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.render.objecttracker");
 }
