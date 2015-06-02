@@ -57,7 +57,7 @@ HoloRenderOpenGL::~HoloRenderOpenGL()
 	gCurrentOpenGLInstance = nullptr;
 }
 
-bool HoloRenderOpenGL::init()
+bool HoloRenderOpenGL::init(bool enableMirrorVisualFeedback)
 {
 	LOG4CXX_INFO(logger_, "Initializing OpenGL render algorithm...");
 
@@ -76,7 +76,7 @@ bool HoloRenderOpenGL::init()
 	std::unique_lock<std::mutex> lg(hasInitMutex_);
 	hasInitCV_.wait(lg);
 
-
+	enableMirrorVisualFeedback_ = enableMirrorVisualFeedback;
 
 	return isInit_;
 }
@@ -85,7 +85,7 @@ void HoloRenderOpenGL::deinit()
 {
 	if (isInit_)
 	{
-		//glutLeaveMainLoop();
+		glutLeaveMainLoop();
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		glutInitThread_.join();
 	}
@@ -427,7 +427,7 @@ void HoloRenderOpenGL::display()
 			haveNewLocalCloud_.store(false);
 			localCloudLock.unlock();
 
-			glFinish();
+			//glFinish();
 
 			glutSwapBuffers();
 
@@ -1002,10 +1002,8 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, Holo
 	this->drawBackgroundGrid(4, 2, 5);
 
 	glPushMatrix();
-	glTranslatef(0.1f, 0.05, -0.09);
-
-	this->drawPointCloud(cloudGLBuffer_[1], remoteCloud);
-
+		glTranslatef(0.1f, 0.05, -0.09);
+		this->drawPointCloud(cloudGLBuffer_[1], remoteCloud);
 	glPopMatrix();
 
 	glEnable(GL_LIGHTING);
@@ -1027,30 +1025,34 @@ void HoloRenderOpenGL::drawSceneForEye(ZSEye eye, HoloCloudPtr &localCloud, Holo
 	glDisable(GL_LIGHT0);
 	glDisable(GL_NORMALIZE);
 
-	glMatrixMode(GL_MODELVIEW);
+	if (enableMirrorVisualFeedback_)\
+	{
+		glMatrixMode(GL_MODELVIEW);
 
-	glPushMatrix();
-	glTranslatef(.2f, -.1f, -.1f);
-	glScalef(-0.1, 0.1, 0.1);
+		glPushMatrix();
 
-	this->drawPointCloud(cloudGLBuffer_[0], localCloud);
+		glTranslatef(.2f, -.1f, -.1f);
+		glScalef(-0.1, 0.1, 0.1);
 
-	//glTranslatef(0.0, 0.30, -0.60);
+		this->drawPointCloud(cloudGLBuffer_[0], localCloud);
 
-	glScalef(-3.f,3.f,-3.f);
-	glTranslatef(0.f, 0.1f, 0.f);
+		glScalef(-3.f, 3.f, -3.f);
+		glTranslatef(0.f, 0.1f, 0.f);
 
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_BLEND);
-	this->drawObjects(true);
-	glDisable(GL_BLEND);
-	glDisable(GL_LIGHTING);
-	glDisable(GL_LIGHT0);
-	glDisable(GL_NORMALIZE);
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_NORMALIZE);
+		glEnable(GL_BLEND);
 
-	glPopMatrix();
+		this->drawObjects(true);
+
+		glDisable(GL_BLEND);
+		glDisable(GL_LIGHTING);
+		glDisable(GL_LIGHT0);
+		glDisable(GL_NORMALIZE);
+
+		glPopMatrix();
+	}
 
 	// Restore the mono (non-stereoscopic) model-view and projection matrices.
 	glMatrixMode(GL_PROJECTION);

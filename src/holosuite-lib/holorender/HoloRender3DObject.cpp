@@ -392,6 +392,53 @@ boost::shared_ptr<HoloRender3DObject> HoloRender3DObject::CreateSimpleObject(con
 	}
 
 		break;
+	case SIMPLE_OBJECT_POINTER:
+		numIndecies = 3;
+		numVertices = 6;
+
+		vertices = {
+			-0.5f, 0.f, 0.5f,
+			0.f, 1.f, 0.5f,
+			0.5f, 1.f, 0.5f,
+			-0.5f, 0.f, -0.5f,
+			0.f, 1.f, -0.5f,
+			0.5f, 1.f, -0.5f
+		};
+
+		normals = {
+			0.f, 0.f, 1.f,
+			0.f, 0.f, 1.f,
+			0.f, 0.f, 1.f,
+			0.f, 0.f, -1.f,
+			0.f, 0.f, -1.f,
+			0.f, 0.f, -1.f
+		};
+
+		colors = {
+			1.f, 0.f, 0.f,
+			0.f, 1.f, 0.f,
+			0.f, 0.f, 1.f,
+			1.f, 0.f, 0.f,
+			0.f, 1.f, 0.f,
+			0.f, 0.f, 1.f
+		};
+
+		trans.bounding_sphere.x = 0.f;
+		trans.bounding_sphere.y = 0.f;
+		trans.bounding_sphere.z = 0.f;
+		trans.bounding_sphere.w = 4.f;
+
+		trans.translate.x = x;
+		trans.translate.y = y;
+		trans.translate.z = z;
+
+		trans.scale.x = size;
+		trans.scale.y = size;
+		trans.scale.z = size;
+		break;
+
+	default:
+		break;
 	}
 
 	obj = boost::shared_ptr<HoloRender3DObject>(new HoloRender3DObject(objectName,

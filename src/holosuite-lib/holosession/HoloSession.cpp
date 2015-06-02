@@ -29,7 +29,8 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
 	boost::shared_ptr<holo::render::IHoloRender> && render,
 	std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
-	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
+	std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
+	bool enableVisualFeedback
 	) :
 	shouldCallback_(false),
 	shouldCapture_(false),
@@ -44,7 +45,8 @@ HoloSession::HoloSession(std::unique_ptr<holo::capture::IHoloCapture> && capture
 	localAudioCallback_(nullptr),
 	remoteCloudCallback_(nullptr),
 	remoteRGBAZCallback_(nullptr),
-	remoteAudioCallback_(nullptr)
+	remoteAudioCallback_(nullptr),
+	enableVisualFeedback_(enableVisualFeedback)
 {
 	logger_ = log4cxx::Logger::getLogger("edu.mit.media.obmg.holosuite.session");
 
@@ -320,6 +322,9 @@ HoloSession::~HoloSession()
 
 void HoloSession::objectTrackerLoop()
 {
+
+	objectTracker_->Add3DObject(holo::render::HoloRender3DObject::CreateSimpleObject("pointer", holo::render::SIMPLE_OBJECT_POINTER));
+
 	while (shouldTrackObjects_)
 	{
 		std::unique_lock<std::mutex> ulObjectTracker(remoteObjectDataMutex_);
@@ -478,7 +483,7 @@ void HoloSession::captureLoop()
 			haveLocalRGBAZ_ = true;
 			haveLocalRGBAZCV_.notify_all();
 
-			if (render_)
+			if (render_ && enableVisualFeedback_)
 			{
 				localCloud = HoloCloudPtr(new HoloCloud(localCaptureInfo.zWidth, localCaptureInfo.zHeight));
 				localCloud->is_dense = false;
@@ -543,6 +548,13 @@ void HoloSession::interactionLoop()
 		{
 			if (interactionSample.haveLeftHand)
 			{
+				holo::render::HoloTransform pointerTranslation = objectTracker_->Get3DObjects().find("pointer")->second->GetTransform();
+				pointerTranslation.translate.x = interactionSample.leftHand.index.bones[3].center.x;
+				pointerTranslation.translate.y = interactionSample.leftHand.index.bones[3].center.y - .24f;
+				pointerTranslation.translate.z = interactionSample.leftHand.index.bones[3].center.z + .12f;
+				
+				objectTracker_->Update3DObjectTransform(std::make_tuple("pointer", pointerTranslation));
+
 				if (interactionSample.leftHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
 				{
 					objectTracker_->setDesignModeEnabled(!objectTracker_->getDesignModeEnabled());
@@ -611,7 +623,6 @@ void HoloSession::interactionLoop()
 
 			if (interactionSample.haveRightHand && !objectTracker_->getDesignModeEnabled())
 			{
-
 				if (interactionSample.rightHand.gesture == holo::input::GESTURE_TYPE_SCREEN_TAP)
 				for (auto obj : objectTracker_->Get3DObjects())
 				{

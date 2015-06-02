@@ -14,7 +14,7 @@ namespace holo
 		{
 		public:
 			virtual ~IHoloRender() = 0;
-			virtual bool init() = 0;
+			virtual bool init(bool enableMirrorVisualFeedback = false) = 0;
 			virtual void deinit() = 0;
 
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;

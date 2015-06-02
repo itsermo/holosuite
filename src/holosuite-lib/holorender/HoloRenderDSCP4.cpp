@@ -28,7 +28,7 @@ HoloRenderDSCP4::~HoloRenderDSCP4()
 	dscp4_DestroyContext(&context_);
 }
 
-bool HoloRenderDSCP4::init()
+bool HoloRenderDSCP4::init(bool enableMirrorVisualFeedback)
 {
 	if (context_)
 		return dscp4_InitRenderer(context_);

@@ -347,7 +347,7 @@ void HoloCaptureOpenNI2::waitAndGetNextFrame(cv::Mat& rgbaImage, cv::Mat& zImage
 		short * dsrc = (short*)depth.getData();
 		short * ddest = (short*)depthImage_.data;
 		for (int i = 0; i < zWidth_ * zHeight_; i++, dsrc++, ddest++)
-			*ddest = *dsrc < 1000 ? *dsrc : 0;
+			*ddest = *dsrc < 1800 ? *dsrc : 0;
 
 		zImage = depthImage_;
 

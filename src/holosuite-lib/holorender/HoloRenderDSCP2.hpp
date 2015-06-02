@@ -73,7 +73,7 @@ namespace holo
 			HoloRenderDSCP2(int headNumber, std::string displayEnv);
 			~HoloRenderDSCP2();
 
-			bool init();
+			bool init(bool enableMirrorVisualFeedback = false);
 			void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
 			void updateRemotePointCloud(HoloCloudPtr && pointCloud);

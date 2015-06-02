@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	holo::HoloAudioFormat audioCaptureFormat = { 0 };
 	holo::HoloAudioFormat audioRenderFormat = { 0 };
 	bool enableMeshConstruction = HOLO_RENDER_VISUALIZER_DEFAULT_ENABLE_MESH_CONSTRUCTION;
-
+	bool enableVisualFeedback = false;
 
 #ifdef ENABLE_HOLO_DSCP2
 	int dscp2HeadNumber = 0;
@@ -205,6 +205,9 @@ int main(int argc, char *argv[])
 		("render-settings",
 		boost::program_options::value<std::string>()->composing(),
 		"Render display settings [voxel size, enable fast mesh construction]")
+		("visual-feedback",
+		boost::program_options::value<bool>()->default_value(false),
+		"Show your own capture in on the bottom-left corner")
 		;
 
 #ifdef ENABLE_HOLO_DSCP2
@@ -788,6 +791,15 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (vm.count("visual-feedback") == 0)
+	{
+		std::cout << "You must choose whether to enable visual feedback or not." << std::endl << std::endl;
+		std::cout << render_options << std::endl;
+		return -1;
+	}
+	else
+		enableVisualFeedback = vm["visual-feedback"].as<bool>();
+
 	std::cout << "                '" << std::endl;
 	std::cout << "               /=\\" << std::endl;
 	std::cout << "              /===\\ \\" << std::endl;
@@ -1123,7 +1135,7 @@ int main(int argc, char *argv[])
 
 				if (renderer)
 				{
-					if (!renderer->init())
+					if (!renderer->init(enableVisualFeedback))
 					{
 						LOG4CXX_FATAL(logger_main, "Could not intitalize the renderer.  Exiting holosuite...");
 						return -1;
@@ -1172,7 +1184,7 @@ int main(int argc, char *argv[])
 					std::move(renderer),
 					std::move(audioRenderer),
 					nullptr,
-					localInfo
+					localInfo, enableVisualFeedback
 					));
 				directSession->start();
 			}
@@ -1192,7 +1204,7 @@ int main(int argc, char *argv[])
 					std::move(renderer),
 					std::move(audioRenderer),
 					server,
-					infoFromClient
+					infoFromClient, enableVisualFeedback
 					));
 				serverSession->start();
 			}
@@ -1212,7 +1224,7 @@ int main(int argc, char *argv[])
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(renderer) : nullptr,
 					sessionMode == holo::HOLO_SESSION_MODE_CLIENT ? std::move(audioRenderer) : nullptr,
 					client,
-					infoFromServer
+					infoFromServer, enableVisualFeedback
 					));
 				clientSession->start();
 			}

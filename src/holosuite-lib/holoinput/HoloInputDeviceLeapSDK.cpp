@@ -127,7 +127,7 @@ void HoloInputDeviceLeapSDK::onFrame(const Leap::Controller& controller)
 		holoHand->palmPosition.x = position.x * 0.001f;
 		holoHand->palmPosition.y = position.y * 0.001f;
 		holoHand->palmPosition.z = position.z * 0.001f;
-		
+
 		hand.basis().toArray4x4(holoHand->palmOrientation);
 
 		holoHand->grabStrength = hand.grabStrength();

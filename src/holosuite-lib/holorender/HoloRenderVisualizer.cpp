@@ -28,7 +28,7 @@ HoloRenderVisualizer::~HoloRenderVisualizer()
 	deinit();
 }
 
-bool HoloRenderVisualizer::init()
+bool HoloRenderVisualizer::init(bool enableMirrorVisualFeedback)
 {
 	LOG4CXX_INFO(logger_, "Initializing point cloud visualizer...");
 

@@ -60,7 +60,8 @@ namespace holo
 			std::unique_ptr<holo::codec::IHoloCodec<std::vector<uchar>>> && audioDecoder,
 			boost::shared_ptr<holo::render::IHoloRender> && render,
 			std::unique_ptr<holo::render::IHoloRenderAudio> && audioRender,
-			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo
+			std::shared_ptr<holo::net::HoloNetSession> netSession, holo::net::HoloNetProtocolHandshake remoteInfo,
+			bool enableVisualFeedback
 			);
 		~HoloSession();
 
@@ -84,6 +85,8 @@ namespace holo
 	private:
 		
 		//void stop(std::thread::id callingThread);
+
+		bool enableVisualFeedback_;
 
 		std::string localName_;
 		

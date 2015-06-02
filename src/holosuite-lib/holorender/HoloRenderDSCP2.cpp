@@ -134,7 +134,7 @@ HoloRenderDSCP2::~HoloRenderDSCP2()
 	LOG4CXX_DEBUG(logger_, "Done destroying HoloRenderDSCP2 object");
 }
 
-bool HoloRenderDSCP2::init()
+bool HoloRenderDSCP2::init(bool enableMirrorVisualFeedback)
 {
 	LOG4CXX_INFO(logger_, "Initializing DSCP2 render algorithm...");
 

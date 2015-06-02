@@ -22,7 +22,7 @@ namespace holo
 				unsigned int verbosity, void * logAppender = nullptr);
 			~HoloRenderDSCP4();
 
-			bool init();
+			bool init(bool enableMirrorVisualFeedback = false);
 			void deinit();
 
 			void updateRemotePointCloud(HoloCloudPtr && pointCloud);

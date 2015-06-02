@@ -61,7 +61,7 @@ namespace holo
 			HoloRenderOpenGL();
 			HoloRenderOpenGL(int voxelSize, bool enableZSpaceRendering);
 			~HoloRenderOpenGL();
-			bool init();
+			bool init(bool enableMirrorVisualFeedback = false);
 			void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
 			void updateLocalPointCloud(HoloCloudPtr && pointCloud);
@@ -183,6 +183,8 @@ namespace holo
 			pcl::PolygonMesh::Ptr mesh_;
 
 			std::atomic<bool> shouldRun_;
+
+			bool enableMirrorVisualFeedback_;
 
 			log4cxx::LoggerPtr logger_;
 		};

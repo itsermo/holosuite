@@ -24,7 +24,7 @@ namespace holo
 			HoloRenderVisualizer();
 			HoloRenderVisualizer(int voxelSize, bool enableMeshContruction);
 			~HoloRenderVisualizer();
-			bool init();
+			bool init(bool enableMirrorVisualFeedback = false);
 			void deinit();
 			//virtual void updateFromMats(cv::Mat rgbaImage, cv::Mat depthImage) = 0;
 			void updateRemotePointCloud(HoloCloudPtr && pointCloud);
