@@ -730,7 +730,7 @@ void HoloRenderOpenGL::drawObjects(bool overrideColor)
 			glScalef(scaleFactor*0.1f, scaleFactor*0.1f, scaleFactor*0.1f);
 
 			if (!isLocal)
-				glScalef(-1.f, 1.f, -1.f);
+				glScalef(1.f, 1.f, -1.f);
 
 			glTranslatef(-transform.bounding_sphere.x, -transform.bounding_sphere.y, -transform.bounding_sphere.z);
 
