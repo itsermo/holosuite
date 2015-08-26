@@ -978,7 +978,7 @@ void HoloRenderDSCP2::drawPointCloud()
 				continue;
 
 			luma = (pointIdx->r + pointIdx->g + pointIdx->b)/3 * gain;
-			glVertex4f(pointIdx->x, pointIdx->y, pointIdx->z, 1.0f);
+			glVertex4f(pointIdx->x, -pointIdx->y, pointIdx->z, 1.0f);
 			glColor3f(luma, luma, luma);
 			pointIdx+=ystride;
 		}
